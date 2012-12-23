@@ -89,12 +89,15 @@ Miscellaneous
 
 There are other keys also mapped to some actions. Will document as i go. and these keys are not fixed yet.
 
-e.g. navigate to a sibling directory. Press "[" (square bracket open) to see sibling directories. Select one to jump to it.
-The menu offers directories from the "dirs" command. I think this only works if you source the file, otherwise the new shell does not execute .zshrc and do contains a blank "dirs". This helps to jump to oft viewed directories.
-The menu Bookmark option (I used that since "f" and "F" are both taken) shows files from your .viminfo file, so you can jump to recent files. If you use some other editor, we need to plug that in or use some environment variable for favorite files.
-I intend to provide another option for doing what "cd OLD NEW" does. It will offer parts of the current path, select one, and see the alternatives and select the other. Hopes to be faster than typing this on the command line. These things are required for jumping between large project structures.
+e.g. navigate to a *sibling* directory. Press "[" (square bracket open) to see sibling directories. Select one to jump to it.  
 
-Currently, I am using zsh v5.0.x (homebrew OSX Mountain Lion). I am facing some issues with backspace during "vared" and even inside "vim". I don't know if this is an issue with zsh, or only inside a zsh files since possibly zsh has not loaded all files expecting this to be non-interactive. Or maybe I have a configured zpresto install which is messed up. 
+The menu offers directories from the "*dirs*" command. I think this only works if you source the file, otherwise the new shell does not execute .zshrc and do contains a blank "dirs". This helps to jump to oft viewed directories.  
+
+The menu *Bookmark* option (I used that since "f" and "F" are both taken) shows files from your .viminfo file, so you can jump to recent files. If you use some other editor, we need to plug that in or use some environment variable for favorite files.  
+
+Provided an option for doing what "*cd OLD NEW*" does. It will offer parts of the current path, select one, and see the alternatives and select the other. Hopes to be faster than typing this on the command line. These things are required for jumping between large project structures.  Need to figure out what key to map it to, currently "]" (square bracket clase).  
+
+Currently, I am using zsh v5.0.x (homebrew OSX Mountain Lion) inside iTerm and tmux.
 
 
 Installation
