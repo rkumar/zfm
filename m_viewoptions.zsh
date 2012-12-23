@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 
 # for menu_loop we need to source
-source menu.zsh
+source $ZFM_DIR/menu.zsh
 # for vared stty
 stty erase 
 setopt EXTENDED_GLOB
