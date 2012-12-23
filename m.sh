@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-24 00:31
+#  Last update: 2012-12-24 00:40
 #   This is the new kind of file browser that allows section based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -340,7 +340,7 @@ subcommand() {
         "?"|"h"|"help")
             print "Commands are save (S), pop (P), help (h)"
             echo
-            pause
+        ;;
         *)
         eval "$dcommand"
         ;;
