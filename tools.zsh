@@ -1,4 +1,5 @@
 #!/usr/bin/env zsh
+ZFM_DIR=${ZFM_DIR:~/bin}
 # Created: 2012-12-10 - 18:30 
 # TODO make a set of methods in a file to be sourced
 # that return files for a query. then use these in various utils
@@ -32,7 +33,7 @@ b_hour() {
     (( $#files > 0 )) && tar zcvf $arch $(print -rl -- $files)
 }
 backup...() {
-    source ~/bin/files.zsh
+    source $ZFM_DIR/files.zsh
     ddate=$(date +%Y%m%d_%H%M)
     arch="arch${x}_${ddate}.tgz"
     menu_loop ">Backup Menu" "today week month hour" "twmh"
@@ -155,7 +156,7 @@ others...(){
 }
 OPT=${OPT:-"-l"}
 export OPT
-source ~/bin/menu.zsh
+source ${ZFM_DIR}/menu.zsh
 
 while (true); do
     menu_loop "Options Menu" "v vifm ranger vshnu list listquery backup... others... brew..." "v r l zob"
