@@ -9,7 +9,7 @@ The first 9 files or dirs in any view are given hotkeys from 1-9. After that wit
 
 The "," key (lower case of "&lt;") is used to go up directory levels. There are many other shortcuts that allow for other usual operations to be done fast such as accessing favorite directories and files, and navigating deep structures quickly.
 
-Paging of long listings is done using the SPACEBAR. If you have dirs with lots of files containing spaces, you may want to change the PAGE_KEY to <ENTER>.
+Paging of long listings is done using the SPACEBAR. If you have dirs with lots of files containing spaces, you may want to change the ZFM_PAGE_KEY to ENTER.
 
 
 A Quick Session
@@ -37,6 +37,12 @@ In my case, "tmp" is the 2nd entry so i press 2. If i use this often I only need
 I could also press "tm" and if there is no other entry starting with "tm" we automatically go into "tmp".
 
 You may also press "backspace" to erase the pattern one by one. Please note that the pattern accumulates. Usually a stray untrapped key results in the pattern being cleared completely. Otherwise, the "," (BACK key) will take you a level up and clear the pattern. (FIXME need to have a defined way of clearing pattern)
+
+Press the ZFM_GOTO_KEY (currently "+" (plus sign)). You are prompted for a path. Type /usr/local/lib, pressing the tab after lo and li. Press ENTER to jump to that directory.
+
+Press the colon (":") and type an arbitrary shell command. You can type "q" or "quit" to quit.
+
+Currently "q" is never mapped to a file, it quits. This is a feature cum bug. I need to find another quit key and release the "q" so the "qt" guys don't sue me :)
 
 The Menu
 
