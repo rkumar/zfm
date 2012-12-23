@@ -17,13 +17,14 @@ A Quick Session
 
 I would rather you first try this out without sourceing the file. This way your existing zsh process is not modified. (However, the option of doing this both ways has to be done)
 
-Ensure you have all the files in the path. Source the m.sh file (preferably place in ~/bin since there may be some internal source commands that point at ~/bin FIXME use a variable such as MFM_DIR)
-   
-     source m.sh
+You may either place all these files in your $HOME/bin folder (there are internal links to each other). Or place them somewhere in path and set a ZFM_DIR variable to that path.
 
-preferably alias the function:
+In your shell, type "m.sh"
 
-    alias m="myzfm"
+
+If you like it, alias m or some other unused character to ~/bin/m.sh in your shell and later in your .zshrc.
+
+    alias m='~/bin/m.sh'
 
 Now type "m":
 
@@ -53,6 +54,7 @@ Some dirs such as Downloads may contain very long file names containing the same
 Other downloaded files may contain funny or unusual characters such as quotes or brackets that i ignore or use for other purposes. Let me know if this is an issue, or use FULL_INDEXING for these cases.
 
 Match from start or anywhere:
+-----------------------------
 
 The default when you type characters is to match from start. If you type "^" anywhere during the command, the match toggles between start and match anywhere in string. Once you start remembering file positions, it helps to always keep in the match-from-start position.
 
@@ -65,7 +67,7 @@ By default this is off. You can either go to the setting to change the option or
 Sorting and Filtering
 ---------------------
 
-You can change the sort order of listings by pressing the MENU_KEY (backtick). You can also filter the lists in the menu so you only see today's files or recent files etc whenever you visit a directory.
+You can change the sort order of listings by pressing the ZFM_MENU_KEY (backtick). You can also filter the lists in the menu so you only see today's files or recent files etc whenever you visit a directory.
 
 Multiple Selection of files
 ---------------------------
@@ -116,6 +118,12 @@ Disadvantage:
 - Preferences changed will not be saved (I am not using any config
 file at present)
 
+
+If you want to source the m.sh file then you must remove the last line which calls myzfm.
+Now you can put this in your .zshrc:
+
+    source ~/bin/m.sh
+    alias m=myzfm
 
 Please use and give feedback. How can navigation be made faster / easier. 
 What common use cases have i missed?
