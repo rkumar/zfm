@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-23 22:15
+#  Last update: 2012-12-24 00:31
 #   This is the new kind of file browser that allows section based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -22,7 +22,9 @@
 #    TODO maybe some spec *.txt etc
 #    TODO select deselect ranges
 #  Specify automatic action for files when selected, so menu not popped up.
-#  TODO jump withing deeply nested structures like we do "cd extras experimental" bookmark ?
+# TODO jump back to last dir (esp after using +) or allow to mark before excursion
+# and pop back. allow him to push onto a stack so he can pop back with - or some POP_KEY
+# TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
 export ZFM_DIR
@@ -261,6 +263,9 @@ list_printer() {
                 }
                 break
                 ;;
+            "$ZFM_RESET_PATTERN_KEY")
+                patt=""
+                ;;
 
 
             *) echo "default got :$ans:"
@@ -320,6 +325,55 @@ check_patt() {
         echo $lines
     #fi
 }
+subcommand() {
+    dcommand=${dcommand:-""}
+    vared -p "Enter command: " dcommand
+    [[ "$dcommand" = "q" || $dcommand = "quit" ]] && break
+    case "$dcommand" in
+        "S"|"save")
+            push_pwd
+            echo "$ZFM_DIR_STACK"
+        ;;
+        "P"|"pop")
+            pop_pwd
+        ;;
+        "?"|"h"|"help")
+            print "Commands are save (S), pop (P), help (h)"
+            echo
+            pause
+        *)
+        eval "$dcommand"
+        ;;
+    esac
+    pause
+}
+
+#  add current dir to stack so we can pop back
+#  We add it backwards so i can shift 
+push_pwd() {
+    ZFM_DIR_STACK=(
+    $ZFM_DIR_STACK
+    $PWD:q
+    )
+}
+pop_pwd() {
+    # remove from end
+    newd=$ZFM_DIR_STACK[-1]
+    ZFM_DIR_STACK[-1]=()
+    # put it back on top (first)
+    ZFM_DIR_STACK=(
+    $newd:q
+    $ZFM_DIR_STACK
+    )
+    cd $newd
+    pwd
+    post_cd
+}
+#  executed when dir changed
+post_cd() {
+    filterstr=${filterstr:-M}
+    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+}
 
 # utility }
 # main {
@@ -331,6 +385,9 @@ echo "zfm $ZFM_VERSION 2012/12/23"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
+typeset -U ZFM_DIR_STACK
+ZFM_DIR_STACK=()
+#let ZFM_DIR_STACK_CTR=0
 
 #  defaults
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
@@ -338,6 +395,7 @@ ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-' '}  # trying out enter if files have spaces and i
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
 ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
+ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'/'}  # reset the pattern, use something else
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*'
@@ -361,7 +419,9 @@ param=$(print -rl -- *(M))
                     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                     ;;
                 "$ZFM_GOTO_DIR_KEY")
+                    push_pwd
                     ppath="/"
+                    ppath="$HOME/"
                     #stty erase 
                     # FIXME backspace etc issues in vared here, hist not working
                     vared -h -p "Enter path: " ppath
@@ -373,12 +433,10 @@ param=$(print -rl -- *(M))
                 ":")
                     selection=
                     # COMMAND SECTION on directory level
+                    # This could be made into something much more
                     #
-                    dcommand=${dcommand:-""}
-                    vared -p "Enter command: " dcommand
+                    subcommand
                     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && break
-                    eval "$dcommand"
-                    pause
                     ;;
                 "$ZFM_MENU_KEY")
                     local olddir=$PWD
@@ -490,7 +548,7 @@ param=$(print -rl -- *(M))
         #case $selection in 
     done
     echo "bye"
-}
+} # myzfm
 # }
 # comment out next line if sourcing .. sorry could not find a cleaner way
 myzfm
