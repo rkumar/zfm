@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-23 11:42
+#  Last update: 2012-12-23 17:05
 #   This is the new kind of file browser that allows section based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -25,7 +25,8 @@
 #  Specify automatic action for files when selected, so menu not popped up.
 #  TODO jump withing deeply nested structures like we do "cd extras experimental" bookmark ?
 # header }
-source menu.zsh
+ZFM_DIR=${ZFM_DIR:-~/bin}
+source ${ZFM_DIR}/menu.zsh
 setopt MARK_DIRS
 M_VERBOSE=1
 export M_FULL_INDEXING=
@@ -354,7 +355,7 @@ param=$(print -rl -- *(M))
                     ;;
                 "\`")
                     olddir=$PWD
-                    source m_viewoptions.zsh
+                    source $ZFM_DIR/m_viewoptions.zsh
                     view_menu
                     [[ $olddir == $PWD ]] || {
                         filterstr=${filterstr:-M}
