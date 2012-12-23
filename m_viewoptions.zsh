@@ -2,8 +2,8 @@
 
 # for menu_loop we need to source
 source $ZFM_DIR/menu.zsh
-# for vared stty
-stty erase 
+# for vared stty -- but messes with vim !
+#stty erase 
 setopt EXTENDED_GLOB
 # pass in a list of files using a command such as:
 # Displays a list of files and prompts user for a row number
@@ -284,14 +284,20 @@ viewoptions() {
             print "Filenames containing pattern:"
             read patt
             files=$(eval "listdir.pl ${M_REC_STRING}*${patt}*(.)" | nl)
+            print ${M_REC_STRING}*${patt}*(.)
+            listdir.pl ${M_REC_STRING}*${patt}*(.)
+            echo
             selectmulti $files
             #[[ -n $M_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "ack" )
-            print "Files containing string:"
+            print "List / select Files containing string"
             cpattern=${cpattern:-""}
             vared -p "Enter pattern to search for: " cpattern
-            files=$(eval "listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern)" | nl)
+            #files=$(eval "listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern)" | nl)
+            # somehow with eval only first row was coming through
+            # maybe due to newlines
+            files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern) | nl)
             selectmulti $files
             #[[ -n $M_VERBOSE ]] && echo "file: $selected_file"
             ;;
