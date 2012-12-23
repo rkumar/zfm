@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-23 17:05
+#  Last update: 2012-12-23 17:41
 #   This is the new kind of file browser that allows section based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -43,13 +43,13 @@ list_printer() {
     local width=30
     local title=$1
     shift
-    myargs=$@
+    local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
     local cols=3
     local tot=$#myopts
     local sta=1
-    patt="."
-    patt=""
+    #local patt="."
+    local patt=""
     while (true)
     do
         (( fin = sta + $PAGESZ )) # 60
@@ -105,7 +105,7 @@ list_printer() {
                 patt="."
                 patt=""
                 ;;
-            $M_PAGE_KEY)
+            $ZFM_PAGE_KEY)
                 # SPACE space, however may change to ENTER due to spaces in filenames
                 (( sta += $PAGESZ1 ))
                 [[ $fin -gt $tot ]] && fin=$tot
@@ -302,15 +302,16 @@ check_patt() {
 #   alias this to some signle letter after sourceing this file in .zshrc
 myzfm() {
 ##  global section
-M_VERSION="0.0.0"
-echo "zfm $M_VERSION 2012/12/23"
+ZFM_VERSION="0.0.0"
+echo "zfm $ZFM_VERSION 2012/12/23"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
 
 #  defaults
-#M_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
-M_PAGE_KEY=${M_PAGE_KEY:-' '}  # trying out enter if files have spaces and i need to type a space
+#ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
+ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-' '}  # trying out enter if files have spaces and i need to type a space
+ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\''}  # trying out enter if files have spaces and i need to type a space
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*'
@@ -353,8 +354,8 @@ param=$(print -rl -- *(M))
                     eval "$dcommand"
                     pause
                     ;;
-                "\`")
-                    olddir=$PWD
+                "$ZFM_MENU_KEY")
+                    local olddir=$PWD
                     source $ZFM_DIR/m_viewoptions.zsh
                     view_menu
                     [[ $olddir == $PWD ]] || {
@@ -465,3 +466,5 @@ param=$(print -rl -- *(M))
     echo "bye"
 }
 # }
+# comment out next line if sourcing .. sorry could not find a cleaner way
+myzfm

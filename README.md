@@ -13,6 +13,7 @@ Paging of long listings is done using the SPACEBAR. If you have dirs with lots o
 
 
 A Quick Session
+---------------
 
 I would rather you first try this out without sourceing the file. This way your existing zsh process is not modified. (However, the option of doing this both ways has to be done)
 
@@ -43,6 +44,7 @@ At present I have a menu triggered by pressing the backtick (lower tilde). This 
 One example is "ft". After triggering the menu with MENU_KEY, "f" jumps to "File listing" and "t" shows a listing of files modified today.
 
 Edge Cases:
+-----------
 
 While navigating a directory which has many files with numbers, you may be unable to access certain numbered files. There is a check for numbered files that clash with the numbered hotkey (M_SWITCH_OFF_DUPE_CHECK) that can be set. I have not used this by default just to reduce processing.
 
@@ -56,14 +58,17 @@ The default when you type characters is to match from start. If you type "^" any
 
 
 Matching dot-files
+------------------
 
 By default this is off. You can either go to the setting to change the option or if you type a dot at the beggining of a file name, I switch on GLOB_DOTS.
 
 Sorting and Filtering
+---------------------
 
 You can change the sort order of listings by pressing the MENU_KEY (backtick). You can also filter the lists in the menu so you only see today's files or recent files etc whenever you visit a directory.
 
 Multiple Selection of files
+---------------------------
 
 There are 2 ways of Multiple Selection. One is from the menu: select any file listing or recursive listing and choose the line numbers. Press ENTER when done and chose a command, or enter a command to execute. This way you may zip or move or delete or view multiple files.
 
@@ -72,6 +77,7 @@ The second way is from the file manager itself. There is a toggle key for SELECT
 The first method from the menu, shows selected files highlighted so it's nicer. At this time, the main file manager does not use any coloring or highlighting (it may do so later, not a priority).
 
 Miscellaneous
+-------------
 
 There are other keys also mapped to some actions. Will document as i go. and these keys are not fixed yet.
 
@@ -84,6 +90,7 @@ Currently, I am using zsh v5.0.x (homebrew OSX Mountain Lion). I am facing some 
 
 
 Installation
+------------
 
 You can either run this as an external application in its own shell or source the file. I suggest NOT sourcing it in the beginning.
 
