@@ -5,19 +5,15 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-23 11:40
+#  Last update: 2012-12-23 22:19
 # ----------------------------------------------------------------------------- #
-# NOTE TODO passing a global variable means we can't have
-# a menu within a menu !!  passing in options means i can't send shortcuts
-# see test.zsh for how to use:
+# see tools.zsh for how to use:
 # source this file
 # set myhash and myopts
 #      - myhash is a hash, myopts is an array with commands to be executed
 #      - myhash contains mnemonics or shortcuts for some of commands in myopts
 # call menu_loop
 
-# I don't know why the backspace is misbehaving in some situations such as vared and if i open vim from here
-stty erase 
 export COLOR_DEFAULT="\\033[0m"
 export COLOR_RED="\\033[1;31m"
 export COLOR_GREEN="\\033[1;32m"
@@ -61,10 +57,13 @@ print_title() {
 default="1"
 
 #  Display a menu using numbering and hotkeys if provided
-#  Returns selected char in "ans"
+#  Returns selected char in "menu_char"
 print_menu() {
     print_title "$1"
     local mnem="$3"
+    # trying out, if you are generating some data i could give you more hotkeys
+    [[ -z "$mnem" ]] && mnem="         abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
     local myopts
     read -A myopts <<< "$2"
     local c=1
@@ -73,16 +72,17 @@ print_menu() {
         echo "$c ${mnem[$c]})  $f"
         let c++
     done
-    echo -n "Enter choice 1-${#myopts} [${mnem}]: "
-    read -r -k ans
+    echo -n "Enter choice 1-${#myopts} [${mnem}] (q=quit): "
+    read -r -k menu_char
 }
 
 #  Display menu, hotkeys, convert selected char to actual selection
 #  Updates  menu_text
 #  Try to keep options to 9, and add a mnemonic for options that go beyond
 menu_loop () {
-    menu_key=""
-    menu_text=""
+    menu_text=""  # this contains the text of menu such as command
+    menu_char="" # contains actual character pressed could be numeric or hotkey (earlier ans)
+    menu_index=0 # this contain index numeric
 
     mnem="$3"
 # we read only one char, so if the options go beyond 9 then we are royally screwed, take off -1
@@ -93,34 +93,38 @@ do
     read -A myopts <<< "$2"
     print_menu "$@"
     echo
-    #perror "key is 1 $ans"
+    #perror "key is 1 $menu_char"
     # next line crashes program on ESC
-    [[ $ans = "" ]] && { perror "Got a ESC XXX"; ans="q" }
-    ans=$(echo "$ans" | tr -d '[\n\r\t ]')
-    #perror "key is 2 $ans"
-    #[[ -z $ans ]] && ans="$default"
-    if [[ -z $ans ]] ;
+    [[ $menu_char = "" ]] && { perror "Got a ESC XXX"; menu_char="q" }
+    menu_char=$(echo "$menu_char" | tr -d '[\n\r\t ]')
+    #perror "key is 2 $menu_char"
+    #[[ -z $menu_char ]] && menu_char="$default"
+    if [[ -z $menu_char ]] ;
     then
         echo "whazzup ?" 1>&2
         #print_menu 
     else
-        [[ "$ans" =~ [q,\!] ]] && { break }
+        [[ "$menu_char" =~ [q,\!] ]] && { break }
         echo ""
-        #perror "key is 3 $ans"
+        #perror "key is 3 $menu_char"
         # A ! cause next line to silently exit, so if ! is a hotkey it must be evaluated in caller
         # Now even o is causing an exit 2012-12-22 - 00:14 
         local var
-        if [[ "$ans" == [0-9] ]]; then
-            var="${myopts[$ans]}" # 2>/dev/null
+        if [[ "$menu_char" == [0-9] ]]; then
+            var="${myopts[$menu_char]}" # 2>/dev/null
+            menu_index=$menu_char
         else
-            index=$mnem[(i)$ans]; 
+            index=$mnem[(i)$menu_char]; 
             var=${myopts[$index]} 
+            menu_index=$index
+            # TODO what if caller wants numeric char, should it not go in menu_char
+            # always
         fi
-        #perror "key 4 is $ans"
-        #[[ -z $var1 ]] && { index=$mnem[(i)$ans]; var2=${myopts[$index]} }
-        #var2="${myhash[$ans]}"
+        #perror "key 4 is $menu_char"
+        #[[ -z $var1 ]] && { index=$mnem[(i)$menu_char]; var2=${myopts[$index]} }
+        #var2="${myhash[$menu_char]}"
         #var=${var1:-$var2}
-        if [[ "$ans" = "?" ]]; then
+        if [[ "$menu_char" = "?" ]]; then
             #echo "${COLOR_BOLD}Mnemonics are:${COLOR_DEFAULT}"
             print_title "   Mnemonics are:"
             #for f (${(k)myhash}) do
@@ -136,7 +140,7 @@ do
             read -q hitenter
             echo
         elif [[ -z "$var" ]] ; then
-            perror "Wrong option $ans, q - quit, <ENTER> - menu" 
+            perror "Wrong option $menu_char, q - quit, <ENTER> - menu" 
         elif [[ -n "$var" ]] ; then
             perror "returning $var"
             menu_text=$var
@@ -224,8 +228,8 @@ multifileopt() {
     # eval otherwise files with spaces will cause an error
     eval "ls -lh $files"
     menu_loop "File operations:" "zip cmd grep mv rmtrash gitadd gitcom" "z!gmra"
-    [[ -n $M_VERBOSE ]] && perror "returned $ans, $menutext "
-    [[ "$ans" = "!" ]] && menu_text="cmd"
+    [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
             [[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
@@ -237,8 +241,8 @@ multifileopt() {
             eval "$command $files $postcommand"
             ;;
         "")
-            [[ "$ans" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in fileopt $ans. Coud be programmer error or key needs to be handled"
+            [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
+            perror "got nothing in fileopt $menu_char. Coud be programmer error or key needs to be handled"
             }
             ;;
         "mv") 
@@ -293,8 +297,8 @@ textfileopt() {
     file $files
     ls -lh $files
     menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open" "v!lcmrzthwo"
-    [[ -n $M_VERBOSE ]] && perror "returned $ans, $menutext "
-    [[ "$ans" = "!" ]] && menu_text="cmd"
+    [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
             [[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
@@ -303,14 +307,19 @@ textfileopt() {
             eval "$command $files"
             ;;
         "")
-            [[ "$ans" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in fileopt $ans. Coud be programmer error or key needs to be handled"
+            [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
+            perror "got nothing in fileopt $menu_char. Coud be programmer error or key needs to be handled"
             }
             ;;
         "mv") 
             echo -n "Enter target: "
             read target
-            [[ -n $target ]] && { echo $menu_text $files $target }
+            target=${target:-""}
+            vared -p "Enter target: " target
+            [[ -n $target ]] && { 
+            echo $menu_text $files $target 
+            eval "$menu_text $files $target"
+            }
             ;;
         "archive") 
             ddate=$(date +%Y%m%d)
@@ -336,8 +345,8 @@ zipfileopt() {
     ls -lh $files
     tar -ztvf $files | head -n 20
     menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "!vlmrd"
-    [[ -n $M_VERBOSE ]] && perror "returned $ans, $menutext "
-    [[ "$ans" = "!" ]] && menu_text="cmd"
+    [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "view") 
             tar ztvf $files
@@ -349,8 +358,8 @@ zipfileopt() {
             eval "$command $files"
             ;;
         "")
-            [[ "$ans" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in zipopt $ans. Coud be programmer error or key needs to be handled"
+            [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
+            perror "got nothing in zipopt $menu_char. Coud be programmer error or key needs to be handled"
             }
             ;;
         "mv") 
@@ -372,8 +381,8 @@ otherfileopt() {
     file $files
     ls -lh $files
     menu_loop "Zip operations:" "cmd open rmtrash od stat" "!ords"
-    [[ -n $M_VERBOSE ]] && perror "returned $ans, $menutext "
-    [[ "$ans" = "!" ]] && menu_text="cmd"
+    [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
             [[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
@@ -383,8 +392,8 @@ otherfileopt() {
             eval "$command $files"
             ;;
         "")
-            [[ "$ans" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in zipopt $ans. Coud be programmer error or key needs to be handled"
+            [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
+            perror "got nothing in zipopt $menu_char. Coud be programmer error or key needs to be handled"
             }
             ;;
         "mv") 
