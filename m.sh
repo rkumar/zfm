@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-23 17:41
+#  Last update: 2012-12-23 22:15
 #   This is the new kind of file browser that allows section based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -16,7 +16,6 @@
 #   Copyright (C) 2012 rahul kumar
 
 #  TODO show dirs in another color _HOWTO since i hand over to print
-#  TODO on a key allow other file options
 #  TODO multiple selection
 #    TODO select all
 #    TODO invert selection
@@ -26,11 +25,12 @@
 #  TODO jump withing deeply nested structures like we do "cd extras experimental" bookmark ?
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
+export ZFM_DIR
 source ${ZFM_DIR}/menu.zsh
 setopt MARK_DIRS
 M_VERBOSE=1
 export M_FULL_INDEXING=
-PAGESZ=59
+PAGESZ=59     # used for incrementing while paging
 #[[ -n "$M_FULL_INDEXING" ]] && PAGESZ=61
 (( PAGESZ1 = PAGESZ + 1 ))
 
@@ -93,7 +93,7 @@ list_printer() {
         echo -n "$patt > "
         bindkey -s "OD" ","
         bindkey -s "OA" "~"
-        read -r -k ans
+        read -k -r ans
         echo
         clear # trying this out
         [[ $ans = $'\t' ]] && perror "Got a TAB XXX"
@@ -238,7 +238,29 @@ list_printer() {
                 param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 break
                 ;;
-                #case $menu_text in
+            "]")
+                # siblings (find a better place to put this, and what if there
+                # are too many options)
+                pbold "This implements the: cd OLD NEW "
+                echo "Part to change :"
+                parts=(${(s:/:)PWD})
+                menu_loop "Parts" "$(print $parts )"
+                pbold "Replace $menu_text"
+                parts[$menu_index]='*'
+                local newpath pp
+                newpath=""
+                for pp in $parts
+                do
+                    newpath="${newpath}/${pp}"
+                done
+                menu_loop "Select target" "$(eval print  $newpath)"
+                [[ -n "$menu_text" ]] && { 
+                    cd $menu_text
+                    filterstr=${filterstr:-M}
+                    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+                }
+                break
+                ;;
 
 
             *) echo "default got :$ans:"
@@ -259,6 +281,8 @@ list_printer() {
                         patt=""
                         ;;
                     *)
+                        [[ "$ans" == "[" ]] && echo "got ["
+                        [[ "$ans" == "{" ]] && echo "got {"
                         perror "Key $ans unhandled and swallowed"
                         #  put key in SWALLOW section to pass to caller
                         patt=""
@@ -311,7 +335,9 @@ selectedfiles=()
 #  defaults
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
 ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-' '}  # trying out enter if files have spaces and i need to type a space
-ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\''}  # trying out enter if files have spaces and i need to type a space
+ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
+ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
+ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*'
@@ -327,16 +353,16 @@ param=$(print -rl -- *(M))
         [[ -z "$selection" ]] && {
             [[ "$ans" = "q" ]] && break
             case $ans in 
-                ",")
+                "$ZFM_GOTO_PARENT_KEY")
                     cd ..
                     #param=$(print -rl -- *${MFM_LISTORDER})
                     #param=$(eval "print -rl -- *${MFM_LISTORDER}")
                     filterstr=${filterstr:-M}
                     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                     ;;
-                "+")
+                "$ZFM_GOTO_DIR_KEY")
                     ppath="/"
-                    stty erase 
+                    #stty erase 
                     # FIXME backspace etc issues in vared here, hist not working
                     vared -h -p "Enter path: " ppath
                     selection=$ppath
