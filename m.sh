@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-24 18:49
+#  Last update: 2012-12-25 00:04
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -85,7 +85,9 @@ list_printer() {
         # NO, vpa is not entire thing, its grepped and filtered
         #let tot=$#vpa
         [[ $fin -gt $tot ]] && fin=$tot
-        print_title "$title $sta to $fin of $tot"
+        local sortorder=""
+        [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
+        print_title "$title $sta to $fin of $tot $sortorder"
         print -rC$cols $(print -rl -- $viewport | nl1.sh -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
@@ -473,37 +475,7 @@ param=$(print -rl -- *(M))
                     fi
                     ;; 
                 "%")
-                    # LIST list section (think of a better key)
-                    menu_loop "Sort Order" "newest oldest largest smallest name rname dirs clear" "nolsmrdc"
-                    case $menu_text in
-                        "newest")
-                            MFM_LISTORDER="om"
-                            ;;
-                        "oldest")
-                            MFM_LISTORDER="Om"
-                            ;;
-                        "largest")
-                            MFM_LISTORDER="OL"
-                            ;;
-                        "smallest")
-                            MFM_LISTORDER="oL"
-                            ;;
-                        "name")
-                            MFM_LISTORDER="on"
-                            ;;
-                        "rname")
-                            MFM_LISTORDER="On"
-                            ;;
-                        "dirs")
-                            MFM_LISTORDER="/"
-                            ;;
-                        "clear")
-                            MFM_LISTORDER=""
-                            ;;
-                    esac
-                    #param=$(eval "print -rl -- *${MFM_LISTORDER}")
-                    filterstr=${filterstr:-M}
-                    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+                    sortoptions
                     ;;
                 "#")
                     filteroptions
