@@ -11,6 +11,7 @@ The "," key (lower case of "&lt;") is used to go up directory levels. There are 
 
 Paging of long listings is done using the SPACEBAR. If you have dirs with lots of files containing spaces, you may want to change the ZFM_PAGE_KEY to ENTER.
 
+The motivation of yet another file manager is to automate as many file-related operations as I can: browsing, operating on multiple files, today's files, filtering file lists. I also use ``z``, ``v``, ``vifm``, and various other great utilitites.
 
 A Quick Session
 ---------------
@@ -44,14 +45,13 @@ Press the colon (":") and type an arbitrary shell command. You can type "q" or "
 
 Currently "q" is never mapped to a file, it quits. This is a feature cum bug. I need to find another quit key and release the "q" so the "qt" guys don't sue me :)
 
-The Menu
+*The Menu*
 
 At present I have a menu triggered by pressing the backtick (lower tilde). This could change based on feedback or be configured. It allows seeing file listings, recursive listings, see just the directories in the current dir or jumping to recently used files etc. These views allow multiple selection of files so that actions can be executed on these files.
 
 One example is "ft". After triggering the menu with MENU_KEY, "f" jumps to "File listing" and "t" shows a listing of files modified today.
 
-Edge Cases:
------------
+###Edge Cases:###
 
 While navigating a directory which has many files with numbers, you may be unable to access certain numbered files. There is a check for numbered files that clash with the numbered hotkey (M_SWITCH_OFF_DUPE_CHECK) that can be set. I have not used this by default just to reduce processing.
 
@@ -59,24 +59,20 @@ Some dirs such as Downloads may contain very long file names containing the same
 
 Other downloaded files may contain funny or unusual characters such as quotes or brackets that i ignore or use for other purposes. Let me know if this is an issue, or use FULL_INDEXING for these cases.
 
-Match from start or anywhere:
------------------------------
+###Match from start or anywhere:###
 
 The default when you type characters is to match from start. If you type "^" anywhere during the command, the match toggles between start and match anywhere in string. Once you start remembering file positions, it helps to always keep in the match-from-start position.
 
 
-Matching dot-files
-------------------
+###Matching dot-files###
 
 By default this is off. You can either go to the setting to change the option or if you type a dot at the beggining of a file name, I switch on GLOB_DOTS.
 
-Sorting and Filtering
----------------------
+###Sorting and Filtering###
 
 You can change the sort order of listings by pressing the ZFM_MENU_KEY (backtick). You can also filter the lists in the menu so you only see today's files or recent files etc whenever you visit a directory.
 
-Multiple Selection of files
----------------------------
+###Multiple Selection of files###
 
 There are 2 ways of Multiple Selection. One is from the menu: select any file listing or recursive listing and choose the line numbers. Press ENTER when done and chose a command, or enter a command to execute. This way you may zip or move or delete or view multiple files.
 
@@ -84,8 +80,7 @@ The second way is from the file manager itself. There is a toggle key for SELECT
 
 The first method from the menu, shows selected files highlighted so it's nicer. At this time, the main file manager does not use any coloring or highlighting (it may do so later, not a priority).
 
-Miscellaneous
--------------
+###Miscellaneous###
 
 There are other keys also mapped to some actions. Will document as i go. and these keys are not fixed yet.
 
@@ -100,8 +95,15 @@ Provided an option for doing what "*cd OLD NEW*" does. It will offer parts of th
 Currently, I am using zsh v5.0.x (homebrew OSX Mountain Lion) inside iTerm and tmux.
 
 
-Installation
-------------
+##Changes##
+
+A summary of version-wise changes to come here. 
+
+###0.0.1###
+
+* coming up soon
+
+##Installation##
 
 You can either run this as an external application in its own shell or source the file. I suggest NOT sourcing it in the beginning.
 
@@ -134,7 +136,9 @@ Now you can put this in your .zshrc:
     source ~/bin/m.sh
     alias m=myzfm
 
+*************************************************
+
 Please use and give feedback. How can navigation be made faster / easier. 
 What common use cases have i missed?
-(I am new to zsh, btw).
+(I am new to zsh, btw. Please point me to links on advanced zsh scripting).
 
