@@ -36,7 +36,11 @@ view_menu() {
             M_EXCLUDE_PATTERN=${M_EXCLUDE_PATTERN:-"~(*.tgz|*.gz|*.z|*.bz2|*.zip)"}
             vared -p "Enter pattern to exclude from listings: " M_EXCLUDE_PATTERN
             ;;
+        "s")
+            sortoptions
+            ;;
         *)
+            perror "Wrong / unhandle option $reply"
             ;;
     esac
 }
@@ -443,6 +447,7 @@ settingsmenu(){
 }
 filteroptions() {
     menu_loop "Filter Options " "Today Files Dirs Recent Oldest Largest Pattern Hidden Clear" "tfdrolphc"
+    # XXX usage of o or O clashes with sort order and gives error, FIXME
     case $menu_text in
         "Files")
             filterstr="."
@@ -477,6 +482,42 @@ filteroptions() {
             filterstr="M"
             ;;
     esac
+    filterstr=${filterstr:-M}
+    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    export param
+}
+sortoptions() {
+    # LIST list section (think of a better key)
+    menu_loop "Sort Order" "newest oldest largest smallest name rname dirs clear" "nolsmrdc"
+    case $menu_text in
+        "newest")
+            MFM_LISTORDER="om"
+            ;;
+        "oldest")
+            MFM_LISTORDER="Om"
+            ;;
+        "largest")
+            MFM_LISTORDER="OL"
+            ;;
+        "smallest")
+            MFM_LISTORDER="oL"
+            ;;
+        "name")
+            MFM_LISTORDER="on"
+            ;;
+        "rname")
+            MFM_LISTORDER="On"
+            ;;
+        "dirs")
+            MFM_LISTORDER="/"
+            ;;
+        "clear")
+            MFM_LISTORDER=""
+            ;;
+    esac
+    ZFM_SORT_ORDER=$menu_text
+    export ZFM_SORT_ORDER
+    #param=$(eval "print -rl -- *${MFM_LISTORDER}")
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     export param
