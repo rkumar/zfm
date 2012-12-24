@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-25 00:04
+#  Last update: 2012-12-25 00:47
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -87,7 +87,7 @@ list_printer() {
         [[ $fin -gt $tot ]] && fin=$tot
         local sortorder=""
         [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
-        print_title "$title $sta to $fin of $tot $sortorder"
+        print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING${COLOR_DEFAULT}"
         print -rC$cols $(print -rl -- $viewport | nl1.sh -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
@@ -383,8 +383,8 @@ post_cd() {
 #   alias this to some signle letter after sourceing this file in .zshrc
 myzfm() {
 ##  global section
-ZFM_VERSION="0.0.1b"
-echo "zfm $ZFM_VERSION 2012/12/24"
+ZFM_VERSION="0.0.1c"
+echo "zfm $ZFM_VERSION 2012/12/25"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -408,6 +408,8 @@ MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*'
 filterstr="M"
 MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+export ZFM_STRING
 param=$(print -rl -- *(M))
     while (true)
     do
