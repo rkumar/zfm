@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-24 18:01
+#  Last update: 2012-12-24 18:49
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -562,3 +562,12 @@ param=$(print -rl -- *(M))
 # }
 # comment out next line if sourcing .. sorry could not find a cleaner way
 myzfm
+#if [ "$(basename $0)" = "m.sh" ]
+#then
+    #myzfm
+    ## this is running a as a command, run myfunc
+#else
+    #echo "This is being sourced"
+    #alias m=myzfm
+    ## this is being sourced, make aliases
+#fi
