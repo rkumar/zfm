@@ -7,13 +7,13 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-24 00:40
-#   This is the new kind of file browser that allows section based on keys
+#  Last update: 2012-12-24 18:01
+#   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
 #   In memory of my dear child Gabbar missing since Nov 13th, 2012.
 # ----------------------------------------------------------------------------- #
-#   Copyright (C) 2012 rahul kumar
+#   Copyright (C) 2012-2013 rahul kumar
 
 #  TODO show dirs in another color _HOWTO since i hand over to print
 #  TODO multiple selection
@@ -22,8 +22,6 @@
 #    TODO maybe some spec *.txt etc
 #    TODO select deselect ranges
 #  Specify automatic action for files when selected, so menu not popped up.
-# TODO jump back to last dir (esp after using +) or allow to mark before excursion
-# and pop back. allow him to push onto a stack so he can pop back with - or some POP_KEY
 # TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
@@ -235,7 +233,7 @@ list_printer() {
                 echo "Siblings of this dir:"
                 menu_loop "Siblings" "$(print ${PWD:h}/*(/) )"
                 echo "selected $menu_text"
-                cd $menu_text
+                $ZFM_CD_COMMAND $menu_text
                 filterstr=${filterstr:-M}
                 param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 break
@@ -257,7 +255,7 @@ list_printer() {
                 done
                 menu_loop "Select target" "$(eval print  $newpath)"
                 [[ -n "$menu_text" ]] && { 
-                    cd $menu_text
+                    $ZFM_CD_COMMAND $menu_text
                     filterstr=${filterstr:-M}
                     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 }
@@ -266,6 +264,9 @@ list_printer() {
             "$ZFM_RESET_PATTERN_KEY")
                 patt=""
                 ;;
+            "$ZFM_POPD_KEY")
+                break
+                ;; 
 
 
             *) echo "default got :$ans:"
@@ -380,14 +381,16 @@ post_cd() {
 #   alias this to some signle letter after sourceing this file in .zshrc
 myzfm() {
 ##  global section
-ZFM_VERSION="0.0.0"
-echo "zfm $ZFM_VERSION 2012/12/23"
+ZFM_VERSION="0.0.1b"
+echo "zfm $ZFM_VERSION 2012/12/24"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
+#  directory stack for jumping back
 typeset -U ZFM_DIR_STACK
 ZFM_DIR_STACK=()
-#let ZFM_DIR_STACK_CTR=0
+ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
+export ZFM_CD_COMMAND
 
 #  defaults
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
@@ -396,6 +399,8 @@ ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
 ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
 ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'/'}  # reset the pattern, use something else
+ZFM_POPD_KEY=${ZFM_POPD_KEY:-"<"}  # goto parent of this dir 
+ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # goto parent of this dir 
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*'
@@ -448,7 +453,12 @@ param=$(print -rl -- *(M))
                     }
                     #pause
                     ;; 
-                "@")
+                "$ZFM_POPD_KEY")
+                    dirs
+                    popd && post_cd
+                    selection=
+                    ;; 
+                "$ZFM_SELECTION_MODE_KEY")
                     # maybe we could toggle
                     #  This switches on selection so files will be added to a list
                     if [[ -n "$M_SELECTION_MODE" ]]; then
@@ -511,7 +521,7 @@ param=$(print -rl -- *(M))
         }
         if [[ -d "$selection" ]]; then
             [[ -n $M_VERBOSE ]] && echo "got a directory $selection"
-            cd $selection
+            $ZFM_CD_COMMAND $selection
             #param=$(print -rl -- *)
             #param=$(eval "print -rl -- *${MFM_LISTORDER}")
             filterstr=${filterstr:-M}
