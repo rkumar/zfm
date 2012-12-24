@@ -5,6 +5,7 @@ source $ZFM_DIR/menu.zsh
 # for vared stty -- but messes with vim !
 #stty erase 
 setopt EXTENDED_GLOB
+ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 # pass in a list of files using a command such as:
 # Displays a list of files and prompts user for a row number
 # Then selects the row and filename
@@ -43,18 +44,39 @@ view_menu() {
 # select a single row, based on line number which has been supplied with data
 # (I know the line number coming in is not a good idea)
 selectrow() {
-    files=$@
-    echo "   No.\t  Size \t  Modified Date  \t  Name"
-    print -rl -- $files 
-    echo -n "Select a row: "
-    read reply
+    local files=$@
     ff=("${(@f)$(print -rl -- $files)}")
-    [[ -z "$reply" ]] && break
-    line="$ff[$reply]"
-    # only a physical tab was working, \t etc was not working
-    # split row with tabs into an array
-    selected_row=("${(s/	/)line}")
-    selected_file=$selected_row[4]
+    local hv=$#ff
+    if [[ $hv -gt 24 ]]; then
+        # split into 2 columns, hopefully only name was sent in and not details
+        echo "   No.\t  Name"
+        #print -rC2 -- $files 
+        print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
+    else
+        echo "   No.\t  Size \t  Modified Date  \t  Name"
+        print -rl -- $files 
+    fi
+    local len=$#hv  # accept only those many characters from user
+    echo -n "Select a row [1-$hv] (blank to cancel): "
+    read -k $len reply
+    echo
+
+    # if using read -k then we need to make enter into a blank
+    reply=$(echo "$reply" | tr -d '[\n\r\t ]')
+
+    [[ -z "$reply" ]] && return
+    #  check for numeric as some values like "o" can cause abort
+    if [[ "$reply" == <-> ]]; then
+        line="$ff[$reply]"
+        # only a physical tab was working, \t etc was not working
+        # split row with tabs into an array
+        selected_row=("${(s/	/)line}")
+        #selected_file=$selected_row[4]
+        # just in case only file name passed as in dirnames
+        selected_file=$selected_row[-1]
+    else
+        perror "Sorry. [$reply] not numeric"
+    fi
 }
 # this implemnents select multiple with deletion of selected item
 # into another buffer, looks nice as the list shrinks, but doesn't
@@ -302,12 +324,19 @@ viewoptions() {
             #[[ -n $M_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "dirs")
-            #listdir.pl --file-type *(/)
-            files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
+            # list dirs under current dir
+            local ff
+            ff=$(print -rl -- *(/) | wc -l)
+            if [[ $ff -gt 24 ]]; then
+                # only send dir name, not details.
+                files=$(eval "print -rl -- ${M_REC_STRING}*(/)" | nl)
+            else
+                files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
+            fi
             selectrow $files
             [[ -n $M_VERBOSE ]] && echo "file: $selected_file"
             [[ -d $selected_file ]] && {
-                cd $selected_file
+                $ZFM_CD_COMMAND $selected_file
             }
             #break
             ;; 
@@ -457,7 +486,7 @@ m_directories() {
     files=$(eval "listdir.pl $(dirs)" | nl)
     selectrow $files
     [[ -d $selected_file ]] && {
-        cd $selected_file
+        $ZFM_CD_COMMAND $selected_file
     }
 
 }
