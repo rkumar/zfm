@@ -1,5 +1,9 @@
 #!/usr/bin/env zsh
-
+# Last update: 2012-12-25 01:05
+# Part of zfm, contains menu portion
+# FIXME Issue this uses its own selection mechanism whereas user would 
+# have got used to key based drill down. This is purely number based
+# ----------------------------------
 # for menu_loop we need to source
 source $ZFM_DIR/menu.zsh
 # for vared stty -- but messes with vim !
@@ -12,7 +16,7 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 # Rows have columns delimited by tabs
 # files=$(listdir.pl --file-type *(.m0) | nl)
 view_menu() {
-    select_menu "Menu" "o) Options and Settings" "f) File Listings" "r) Recursive Listings" "d) Directories" "b) Bookmarks" "x) Exclude Pattern" "F) Filter options" "s) Sort Options"
+    select_menu "Menu" "o) Options and Settings" "f) File Listings" "r) Recursive Listings" "k) Dirstack" "d) Dirs (child)" "b) Bookmarks" "x) Exclude Pattern" "F) Filter options" "s) Sort Options"
     case $reply in
         "o")
             settingsmenu
@@ -24,7 +28,10 @@ view_menu() {
             recviewoptions
             ;;
         "d")
-            m_directories
+            m_child_dirs
+            ;;
+        "k")
+            m_dirstack
             ;;
         "b")
             m_recentfiles
@@ -329,19 +336,7 @@ viewoptions() {
             ;;
         "dirs")
             # list dirs under current dir
-            local ff
-            ff=$(print -rl -- *(/) | wc -l)
-            if [[ $ff -gt 24 ]]; then
-                # only send dir name, not details.
-                files=$(eval "print -rl -- ${M_REC_STRING}*(/)" | nl)
-            else
-                files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
-            fi
-            selectrow $files
-            [[ -n $M_VERBOSE ]] && echo "file: $selected_file"
-            [[ -d $selected_file ]] && {
-                $ZFM_CD_COMMAND $selected_file
-            }
+            m_child_dirs
             #break
             ;; 
     esac
@@ -446,7 +441,7 @@ settingsmenu(){
 
 }
 filteroptions() {
-    menu_loop "Filter Options " "Today Files Dirs Recent Oldest Largest Pattern Hidden Clear" "tfdrolphc"
+    menu_loop "Filter Options " "Today Files Dirs Recent Old Large Pattern Small Hidden Clear" "tfdrolphc"
     # XXX usage of o or O clashes with sort order and gives error, FIXME
     case $menu_text in
         "Files")
@@ -457,23 +452,27 @@ filteroptions() {
             ;;
         "Recent")
             filterstr=".om[1,15]"
+            filterstr=".m-7"
             ;;
         "Today")
             filterstr=".m0"
             ;;
-        "Oldest")
+        "Old")
             filterstr="Om[1,15]"
+            filterstr="m+365"
             ;;
-        "Largest")
+        "Large")
             filterstr="OL[1,15]"
+            filterstr="Lm+2"
             ;;
         "Pattern")
             pattern=${pattern:-'*'}
             vared -p "Enter pattern: " pattern
             pattern=${pattern:-"*"}
             ;;
-        "Smallest")
+        "Small")
             filterstr="oL[1,15]"
+            filterstr="L-1024"
             ;;
         "Hidden")
             filterstr="D${filterstr}"
@@ -483,6 +482,8 @@ filteroptions() {
             ;;
     esac
     filterstr=${filterstr:-M}
+    ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    export ZFM_STRING
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     export param
 }
@@ -519,11 +520,15 @@ sortoptions() {
     export ZFM_SORT_ORDER
     #param=$(eval "print -rl -- *${MFM_LISTORDER}")
     filterstr=${filterstr:-M}
+    ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    export ZFM_STRING
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     export param
 }
 # give directories from dirs command
-m_directories() {
+m_dirstack() {
+    # this only works when this file is sourced
+    pbold "These are directories on internal stack (dirs command)"
     files=$(eval "listdir.pl $(dirs)" | nl)
     selectrow $files
     [[ -d $selected_file ]] && {
@@ -531,7 +536,23 @@ m_directories() {
     }
 
 }
+m_child_dirs() {
+    local ff
+    ff=$(print -rl -- *(/) | wc -l)
+    if [[ $ff -gt 24 ]]; then
+        # only send dir name, not details.
+        files=$(eval "print -rl -- ${M_REC_STRING}*(/)" | nl)
+    else
+        files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
+    fi
+    selectrow $files
+    [[ -n $M_VERBOSE ]] && echo "file: $selected_file"
+    [[ -d $selected_file ]] && {
+    $ZFM_CD_COMMAND $selected_file
+    }
+}
 m_recentfiles() {
+    # recently edited files
     typeset -U files
     files=""
     if [[ -f ~/.viminfo ]]; then
