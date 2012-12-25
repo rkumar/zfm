@@ -99,9 +99,10 @@ Currently, I am using zsh v5.0.x (homebrew OSX Mountain Lion) inside iTerm and t
 
 A summary of version-wise changes to come here. 
 
-###0.0.1###
+###0.0.1g###
 
-* coming up soon
+    * auto-editing on selection AUTO_TEXT_ACTION etc
+    * do not clear pattern on selection, allow it to persist, clear when dir changed
 
 ##Installation##
 
