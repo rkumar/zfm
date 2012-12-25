@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-25 00:47
+#  Last update: 2012-12-25 20:52
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -23,6 +23,7 @@
 #    TODO select deselect ranges
 #  Specify automatic action for files when selected, so menu not popped up.
 # TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
+# TODO what if user wants to send in some args suc as folder to start in, or resume where one left off.
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
 export ZFM_DIR
@@ -172,7 +173,7 @@ list_printer() {
             fi # M_FULL
                 [[ -n "$selection" ]] && break
                 ;;
-            ","|"+"|"~"|":"|"\`"|"@"|"%"|"#")
+            ","|"+"|"~"|":"|"\`"|"@"|"%"|"#"|"?")
                 # we break these keys so caller can handle them, other wise they
                 # get unhandled PLACE SWALLOWED keys here to handle
                 # go down to MARK1 section to put in handling code
@@ -229,7 +230,12 @@ list_printer() {
                     fi
                 fi # M_FULL
                 ;;
-            "[")
+            $ZFM_SIBLING_DIR_KEY)
+                # XXX FIXME TODO this and next should move to caller
+                # This should only have search and drill down functionality
+                # so it can be reused by other parts such as viewoptions
+                # to drill down, should be minimal and keep local stuff
+                #
                 # siblings (find a better place to put this, and what if there
                 # are too many options)
                 echo "Siblings of this dir:"
@@ -240,7 +246,8 @@ list_printer() {
                 param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 break
                 ;;
-            "]")
+            $ZFM_CD_OLD_NEW_KEY)
+                # XXX FIXME TODO this and next should move to caller
                 # siblings (find a better place to put this, and what if there
                 # are too many options)
                 pbold "This implements the: cd OLD NEW "
@@ -322,15 +329,13 @@ check_patt() {
         #echo ""
     #else
         local p=${1:s/^//}
-        #perror "check got pattern:$p:"
         lines=$(print -rl -- ${p}*)
-        #echo $lines | wc -l
         echo $lines
     #fi
 }
 subcommand() {
     dcommand=${dcommand:-""}
-    vared -p "Enter command: " dcommand
+    vared -p "Enter command (? - help): " dcommand
     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && break
     case "$dcommand" in
         "S"|"save")
@@ -377,14 +382,41 @@ post_cd() {
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
 }
+print_help_keys() {
+
+    pbold "$ZFM_APP_NAME some keys"
+    sed -e 's/^    //' <<EndHelp
+
+    $ZFM_MENU_KEY	- Invoke menu (default: backtick)
+    $ZFM_PAGE_KEY	- Paging of output (default SPACE)
+    ^	- toggle match from start of filename
+    $ZFM_GOTO_DIR_KEY	- Enter directory name to jump to
+    $ZFM_RESET_PATTERN_KEY	- Clear existing search pattern    **
+    $ZFM_SELECTION_MODE_KEY	- Toggle selection mode
+    $ZFM_GOTO_PARENT_KEY	- Goto parent of existing dir (cd ..)
+    $ZFM_POPD_KEY	- popd (go back to previously visited dirs)
+    :	- Command key
+        	* S - Save current dir in list
+        	* P - Pop dirs from list
+    $ZFM_SORT_KEY	- change sort order (pref. use menu) **
+    $ZFM_FILTER_KEY	- change filter criteria (pref. use menu) **
+    $ZFM_SIBLING_DIR_KEY	- view/select sibling directories **
+    $ZFM_CD_OLD_NEW_KEY	- cd OLD NEW functionality (visit second cousins) **
+
+    Most keys are likely to change after getting feedback, the ** ones definitely will
+
+EndHelp
+    pause
+}
 
 # utility }
 # main {
 #   alias this to some signle letter after sourceing this file in .zshrc
 myzfm() {
 ##  global section
-ZFM_VERSION="0.0.1c"
-echo "zfm $ZFM_VERSION 2012/12/25"
+ZFM_APP_NAME="zfm"
+ZFM_VERSION="0.0.1e"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/26"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -394,15 +426,19 @@ ZFM_DIR_STACK=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
 
-#  defaults
+#  defaults KEYS
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
 ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-' '}  # trying out enter if files have spaces and i need to type a space
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
 ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
 ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'/'}  # reset the pattern, use something else
-ZFM_POPD_KEY=${ZFM_POPD_KEY:-"<"}  # goto parent of this dir 
-ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # goto parent of this dir 
+ZFM_POPD_KEY=${ZFM_POPD_KEY:-"<"}  # goto previously visited dir
+ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # toggle selection mode
+ZFM_SORT_KEY=${ZFM_SORT_KEY:-"%"}  # change sort options
+ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change sort options
+ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
+ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*'
@@ -422,8 +458,6 @@ param=$(print -rl -- *(M))
             case $ans in 
                 "$ZFM_GOTO_PARENT_KEY")
                     cd ..
-                    #param=$(print -rl -- *${MFM_LISTORDER})
-                    #param=$(eval "print -rl -- *${MFM_LISTORDER}")
                     filterstr=${filterstr:-M}
                     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                     ;;
@@ -476,14 +510,16 @@ param=$(print -rl -- *(M))
                         pbold "selection mode is on"
                     fi
                     ;; 
-                "%")
+                $ZFM_SORT_KEY)
                     sortoptions
                     ;;
-                "#")
+                $ZFM_FILTER_KEY)
                     filteroptions
                     # FILTER filter section (think of a better key)
                     ;;
-
+                "?") 
+                    print_help_keys
+                    ;;
                 *)
                     perror "unhandled key $ans"
                     ;;
@@ -531,7 +567,10 @@ param=$(print -rl -- *(M))
         fi
         #case $selection in 
     done
-    echo "bye"
+    echo "bye. "
+    # do this only if is different from invoking dir
+    echo "sending $PWD to pbcopy"
+    pwd | pbcopy
 } # myzfm
 # }
 # comment out next line if sourcing .. sorry could not find a cleaner way
