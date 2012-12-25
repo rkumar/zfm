@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-25 21:00
+# Last update: 2012-12-26 00:11
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
@@ -391,7 +391,8 @@ handle_selection() {
 
 }
 settingsmenu(){
-    select_menu "Options" "i) Full Indexing toggle" "h) hidden files toggle" "p) Paging key" "4) Dupe check"
+    select_menu "Options" "i) Full Indexing toggle" "h) hidden files toggle" "p) Paging key" "4) Dupe check" \
+        "a) Auto select action"
     case $reply in
         "i")
             if [[ -z "$M_FULL_INDEXING" ]]; then
@@ -402,7 +403,7 @@ settingsmenu(){
             export M_FULL_INDEXING
             ;;
         "h")
-            echo "may not work and may need to be set from filters"
+            echo "may work after changing directory, and should be set from Filters"
             if [[ -z "$M_SHOW_HIDDEN" ]]; then
                 M_SHOW_HIDDEN=1
                 setopt GLOB_DOTS
@@ -441,6 +442,17 @@ settingsmenu(){
             # freq files
 
             ;;
+        "a")
+            AUTO_TEXT_ACTION=$EDITOR
+            AUTO_IMAGE_ACTION=open
+            AUTO_ZIP_ACTION="tar ztvf"
+            echo "Choose automatic action when selecting a text-file"
+            vared AUTO_TEXT_ACTION
+            echo "Choose automatic action when selecting an image file"
+            vared AUTO_IMAGE_ACTION
+            echo "Choose automatic action when selecting an zip file"
+            vared AUTO_ZIP_ACTION
+            export AUTO_ZIP_ACTION AUTO_IMAGE_ACTION AUTO_TEXT_ACTION
     esac
 
 }
