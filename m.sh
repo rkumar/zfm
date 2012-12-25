@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-25 20:52
+#  Last update: 2012-12-26 00:57
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -50,7 +50,10 @@ list_printer() {
     local tot=$#myopts
     local sta=1
     #local patt="."
-    local patt=""
+    #local patt=""
+    # 2012-12-26 - 00:49 trygin this out so after a selection i don't lose what's filtered
+    # but changing dirs must clear this, so it's dicey
+    patt=${patt:-""}
     while (true)
     do
         (( fin = sta + $PAGESZ )) # 60
@@ -242,6 +245,7 @@ list_printer() {
                 menu_loop "Siblings" "$(print ${PWD:h}/*(/) )"
                 echo "selected $menu_text"
                 $ZFM_CD_COMMAND $menu_text
+                    patt="" # 2012-12-26 - 00:54 
                 filterstr=${filterstr:-M}
                 param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 break
@@ -265,6 +269,7 @@ list_printer() {
                 menu_loop "Select target" "$(eval print  $newpath)"
                 [[ -n "$menu_text" ]] && { 
                     $ZFM_CD_COMMAND $menu_text
+                    patt="" # 2012-12-26 - 00:54 
                     filterstr=${filterstr:-M}
                     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 }
@@ -379,6 +384,7 @@ pop_pwd() {
 }
 #  executed when dir changed
 post_cd() {
+                    patt="" # 2012-12-26 - 00:54 
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
 }
@@ -415,7 +421,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1e"
+ZFM_VERSION="0.0.1g"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/26"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -425,6 +431,7 @@ typeset -U ZFM_DIR_STACK
 ZFM_DIR_STACK=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
+ZFM_START_DIR="$PWD"
 
 #  defaults KEYS
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
@@ -441,7 +448,7 @@ ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
-pattern='*'
+pattern='*' # this is separate from patt which is a temp filter based on hotkeys
 filterstr="M"
 MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
@@ -458,6 +465,7 @@ param=$(print -rl -- *(M))
             case $ans in 
                 "$ZFM_GOTO_PARENT_KEY")
                     cd ..
+                    patt="" # 2012-12-26 - 00:54 
                     filterstr=${filterstr:-M}
                     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                     ;;
@@ -469,6 +477,7 @@ param=$(print -rl -- *(M))
                     # FIXME backspace etc issues in vared here, hist not working
                     vared -h -p "Enter path: " ppath
                     selection=$ppath
+                    patt="" # 2012-12-26 - 00:54 
                     ;;
                 "~")
                     selection=$HOME
@@ -532,6 +541,7 @@ param=$(print -rl -- *(M))
         if [[ -d "$selection" ]]; then
             [[ -n $M_VERBOSE ]] && echo "got a directory $selection"
             $ZFM_CD_COMMAND $selection
+                    patt="" # 2012-12-26 - 00:54 
             #param=$(print -rl -- *)
             #param=$(eval "print -rl -- *${MFM_LISTORDER}")
             filterstr=${filterstr:-M}
@@ -556,7 +566,8 @@ param=$(print -rl -- *(M))
                 fi
             else
                 fileopt $selection
-                pause
+                #pause 2012-12-26 - 00:01 pauses after vim which is irritating
+                # but pause could be required after cat or similar command
             fi
         else
             [[ -n "$selection" ]] && {
@@ -567,10 +578,12 @@ param=$(print -rl -- *(M))
         fi
         #case $selection in 
     done
-    echo "bye. "
+    echo "bye"
     # do this only if is different from invoking dir
-    echo "sending $PWD to pbcopy"
-    pwd | pbcopy
+    [[ "$PWD" == "$ZFM_START_DIR" ]] || {
+        echo "sending $PWD to pbcopy"
+        echo "$PWD" | pbcopy
+    }
 } # myzfm
 # }
 # comment out next line if sourcing .. sorry could not find a cleaner way
