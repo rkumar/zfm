@@ -1,8 +1,11 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-25 01:05
+# Last update: 2012-12-25 21:00
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
+# Create a scripts that drills down a list use nl1 also. provide a list
+#
+# don't use system calls for ls, just the array itself
 # ----------------------------------
 # for menu_loop we need to source
 source $ZFM_DIR/menu.zsh
@@ -199,7 +202,7 @@ selectmulti() {
             "q")
                 break
                 ;;
-            "e"|"z")
+            "e"|"z"|"v")
                 break
                 ;;
             "A") 
@@ -362,9 +365,10 @@ handle_selection() {
 
     case $reply in
         "q")
-            break
+            return
+            #break
             ;;
-        "e")
+        "e"|"v")
             eval "$EDITOR $selected_files"
             ;;
         "z")
@@ -377,7 +381,7 @@ handle_selection() {
             commandpost=${commandpost:-""}
             commandpre=${commandpre:-""}
             vared -p "Enter command (e.g. mv) :" commandpre
-            [[ -z "$commandpre" ]] && break
+            [[ -z "$commandpre" ]] && return
             vared -p "Enter command to append to filenames (e.g. target) :" commandpost
             echo "$commandpre $selected_files $commandpost"
             eval "$commandpre $selected_files $commandpost"
