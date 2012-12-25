@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-23 22:24
+#  Last update: 2012-12-26 01:11
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -160,16 +160,36 @@ fileopt() {
     echo "got $type for $name"
     case $type in
         "text")
-            textfileopt $name
+            #[[ -n "$AUTO_TEXT_ACTION" ]] && "$AUTO_TEXT_ACTION" $name || textfileopt $name
+            if [[ -n "$AUTO_TEXT_ACTION" ]]; then
+                "$AUTO_TEXT_ACTION" $name 
+            else 
+                textfileopt $name
+            fi
             ;;
         "image")
-            otherfileopt $name
+            if [[ -n "$AUTO_IMAGE_ACTION" ]]; then
+               "$AUTO_IMAGE_ACTION" $name 
+               else
+                   otherfileopt $name
+               fi
+            #otherfileopt $name
             ;;
         "zip")
-            zipfileopt $name
+            if [[ -n "$AUTO_ZIP_ACTION" ]]; then
+               "$AUTO_ZIP_ACTION" $name 
+               else
+                   zipfileopt $name
+               fi
+            #zipfileopt $name
             ;;
         *)
-            otherfileopt $name
+            if [[ -n "$AUTO_OTHER_ACTION" ]]; then
+               "$AUTO_OTHER_ACTION" $name 
+               else
+                   otherfileopt $name
+               fi
+            #otherfileopt $name
             ;;
     esac
 }
@@ -284,26 +304,27 @@ multifileopt() {
 }
 textfileopt() {
     local files="$@"
-    #files=$(print -r $files | sed 's/\.\. //g;s/\~ //g;s/ all$//g')
     # NOTE XXX splitting on space means space in files will cause misbehavior
     [[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
-    #print -rl -- $files
-    #menu_dyn "Select file/s:" "$flist all"
-    #[[ -z "$menu_text" ]] && break
-    #[[ "$menu_text" = "all" ]] && $menu_text="$flist"
-    #local files=$menu_text
     # NOTE what about multiple files
     print_title "File summary for $files:"
     file $files
     ls -lh $files
-    menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open" "v!lcmrzthwo"
+    menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
     [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            [[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
+            #[[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
             command=${command:-""}
             vared -p "Enter command: " command
+            eval "$command $files"
+            ;;
+        "auto")
+            # added this 2012-12-26 - 01:11 
+            command=${command:-""}
+            vared -p "Enter command to automatically execute for selected text files: " command
+            export AUTO_TEXT_ACTION="$command"
             eval "$command $files"
             ;;
         "")
@@ -380,7 +401,7 @@ otherfileopt() {
     print_title "File summary for $files:"
     file $files
     ls -lh $files
-    menu_loop "Zip operations:" "cmd open rmtrash od stat" "!ords"
+    menu_loop "Other operations:" "cmd open rmtrash od stat vim" "!ordsv"
     [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
@@ -400,6 +421,9 @@ otherfileopt() {
             echo -n "Enter target: "
             read target
             [[ -n $target ]] && { echo $menu_text $files $target }
+            ;;
+        "vim")
+            eval "$EDITOR $files"
             ;;
         *)
             # fails on stat command if spaces in file, therefore quoting
