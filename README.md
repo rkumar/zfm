@@ -20,12 +20,12 @@ I would rather you first try this out without sourceing the file. This way your 
 
 You may either place all these files in your $HOME/bin folder (there are internal links to each other). Or place them somewhere in path and set a ZFM_DIR variable to that path.
 
-In your shell, type "m.sh"
+In your shell, type "zfm.zsh"
 
 
-If you like it, alias m or some other unused character to ~/bin/m.sh in your shell and later in your .zshrc.
+If you like it, alias m or some other unused character to ~/bin/zfm.zsh in your shell and later in your .zshrc.
 
-    alias m='~/bin/m.sh'
+    alias m='~/bin/zfm.zsh'
 
 Now type "m":
 
@@ -96,10 +96,20 @@ Provided an option for doing what "*cd OLD NEW*" does. It will offer parts of th
 
 Currently, I am using zsh v5.0.x (homebrew OSX Mountain Lion) inside iTerm and tmux.
 
+##Supplying frequent/recent files and directories##
+
+You can interface with your frequent files and directories utilities using `zfmfiles` and `zfmdirs`.
+Currently, I use rupa's Z utility, so `zfmdirs` pulls out directory names from the $HOME/.z database.
+Similarly, `zfmfiles` lists files from my $HOME/.viminfo file. You can replace the code in these
+files to interface with autojump or whatever other utility you use.
 
 ##Changes##
 
 A summary of version-wise changes to come here. 
+
+###0.0.1i###
+
+    * interface with `z` utility and `viminfo` through zfmdirs and zfmfiles.
 
 ###0.0.1g###
 
@@ -133,10 +143,10 @@ Disadvantage:
 file at present)
 
 
-If you want to source the m.sh file then you must remove the last line which calls myzfm.
+If you want to source the zfm.zsh file then you must remove the last line which calls myzfm.
 Now you can put this in your .zshrc:
 
-    source ~/bin/m.sh
+    source ~/bin/zfm.zsh
     alias m=myzfm
 
 *************************************************

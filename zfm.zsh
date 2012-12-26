@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-26 12:41
+#  Last update: 2012-12-26 14:14
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -29,7 +29,7 @@
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
 export ZFM_DIR
-source ${ZFM_DIR}/menu.zsh
+source ${ZFM_DIR}/zfm_menu.zsh
 setopt MARK_DIRS
 M_VERBOSE=1
 export M_FULL_INDEXING=
@@ -94,7 +94,7 @@ list_printer() {
         local sortorder=""
         [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
         print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING${COLOR_DEFAULT}"
-        print -rC$cols $(print -rl -- $viewport | nl1.sh -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
+        print -rC$cols $(print -rl -- $viewport | zfm_nl.sh -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
         #echo -n "> $patt"
@@ -423,7 +423,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1i"
+ZFM_VERSION="0.0.1j"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/26"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -494,7 +494,7 @@ param=$(print -rl -- *(M))
                     ;;
                 "$ZFM_MENU_KEY")
                     local olddir=$PWD
-                    source $ZFM_DIR/m_viewoptions.zsh
+                    source $ZFM_DIR/zfm_viewoptions.zsh
                     view_menu
                     [[ $olddir == $PWD ]] || {
                         filterstr=${filterstr:-M}

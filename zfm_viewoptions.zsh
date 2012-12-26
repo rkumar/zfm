@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-26 12:37
+# Last update: 2012-12-26 14:23
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
@@ -8,7 +8,7 @@
 # don't use system calls for ls, just the array itself
 # ----------------------------------
 # for menu_loop we need to source
-source $ZFM_DIR/menu.zsh
+source $ZFM_DIR/zfm_menu.zsh
 # for vared stty -- but messes with vim !
 #stty erase 
 setopt EXTENDED_GLOB
@@ -59,6 +59,7 @@ view_menu() {
 # (I know the line number coming in is not a good idea)
 selectrow() {
     local files=$@
+    [[ $#files -eq 0 ]] && return
     ff=("${(@f)$(print -rl -- $files)}")
     local hv=$#ff
     if [[ $hv -gt 24 ]]; then
@@ -559,6 +560,7 @@ m_dirstack() {
 m_child_dirs() {
     local ff
     ff=$(print -rl -- *(/) | wc -l)
+    [[ $ff -eq 0 ]] && { perror "No child dirs." ; return }
     if [[ $ff -gt 24 ]]; then
         # only send dir name, not details.
         files=$(eval "print -rl -- ${M_REC_STRING}*(/)" | nl)
@@ -566,9 +568,9 @@ m_child_dirs() {
         files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
     fi
     selectrow $files
-    [[ -n $M_VERBOSE ]] && echo "file: $selected_file"
     [[ -d $selected_file ]] && {
-    $ZFM_CD_COMMAND $selected_file
+        [[ -n $M_VERBOSE ]] && echo "file: $selected_file"
+        $ZFM_CD_COMMAND $selected_file
     }
 }
 m_recentfiles() {
