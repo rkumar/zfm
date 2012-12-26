@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+
+# this is a default for vim users, you can replace this file with your own file
+# list
+if [[ -f ~/.viminfo ]]; then
+    echo "Reading from .viminfo" 2>&1
+    grep '^>' ~/.viminfo | cut -d ' ' -f 2 | sed "s#~#$HOME#g"
+fi
