@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-26 17:11
+#  Last update: 2012-12-26 17:36
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -351,6 +351,11 @@ subcommand() {
         ;;
         "?"|"h"|"help")
             print "Commands are save (S), pop (P), help (h)"
+            print ""
+            print "'S' 'save' - save this dir in stack for later returning"
+            print "'P' 'pop'  - revert to saved dir"
+            print "'q' 'quit' - quit application"
+            print "You may enter any other command too such as 'git status'"
             echo
         ;;
         *)
