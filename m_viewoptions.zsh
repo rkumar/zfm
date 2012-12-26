@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-26 00:11
+# Last update: 2012-12-26 11:56
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
@@ -544,8 +544,12 @@ sortoptions() {
 # give directories from dirs command
 m_dirstack() {
     # this only works when this file is sourced
-    pbold "These are directories on internal stack (dirs command)"
-    files=$(eval "listdir.pl $(dirs)" | nl)
+    if [[ -x "${ZFM_DIR}/zfmdirs" ]]; then
+        files=$(listdir.pl $(${ZFM_DIR}/zfmdirs) | nl)
+    else
+        pbold "These are directories on internal stack (dirs command)"
+        files=$(eval "listdir.pl $(dirs)" | nl)
+    fi
     selectrow $files
     [[ -d $selected_file ]] && {
         $ZFM_CD_COMMAND $selected_file
