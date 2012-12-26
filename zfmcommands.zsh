@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2012-12-26 17:08
+#  Last update: 2012-12-26 17:40
 # ----------------------------------------------------------------------------- #
 
 export ZFM_MY_COMMANDS="ack ag tigstatus gitstatus"
@@ -34,6 +34,8 @@ ZFM_ag() {
 }
 ZFM_tigstatus() {
     # check for whether you have tig installed
+    # If you have problems committing try setting GIT_EDITOR
+    # e.g. export GIT_EDITOR=/usr/local/bin/vim
     echo "C for commit mode, S for status mode"
     tig status
 }
