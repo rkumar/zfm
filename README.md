@@ -107,6 +107,15 @@ files to interface with autojump or whatever other utility you use.
 
 A summary of version-wise changes to come here. 
 
+###0.0.1k###
+
+    * Added zfmcommands.zsh so user can add own menu and commands which will
+    be picked up in when one presses $MENU_KEY (default backtick) + "c".
+
+###0.0.1j###
+
+    * Changed some file names to zfm prefix
+
 ###0.0.1i###
 
     * interface with `z` utility and `viminfo` through zfmdirs and zfmfiles.
