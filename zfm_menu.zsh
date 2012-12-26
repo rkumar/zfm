@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-26 14:53
+#  Last update: 2012-12-27 00:50
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -86,10 +86,12 @@ menu_loop () {
 
     mnem="$3"
 # we read only one char, so if the options go beyond 9 then we are royally screwed, take off -1
+    local myopts
 while (true) 
 do
     local options="$2"
-    local myopts
+    # next line prints value
+    #local myopts
     read -A myopts <<< "$2"
     print_menu "$@"
     echo
@@ -101,10 +103,13 @@ do
     #[[ -z $menu_char ]] && menu_char="$default"
     if [[ -z $menu_char ]] ;
     then
-        echo "whazzup ?" 1>&2
+        # enter pressed
+        echo "press q or ',' to exit without selection " 1>&2
         #print_menu 
     else
-        [[ "$menu_char" =~ [q,\!] ]] && { break }
+        # FIXME, ! is a shortcut for command, now that we are checking later
+        # we can release it. The comma is used as it is the back key
+        [[ "$menu_char" =~ [q,] ]] && { return }
         echo ""
         #perror "key is 3 $menu_char"
         # A ! cause next line to silently exit, so if ! is a hotkey it must be evaluated in caller
@@ -266,13 +271,11 @@ multifileopt() {
             }
             ;;
         "mv") 
-            target=${target:-/Users/}
-            #echo -n "Enter target: "
-            #read target
+            target=${target:-$HOME/}
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
                 echo $menu_text $files $target 
-                eval "$menu_text $files $target"
+                eval "$menu_text $files $target" && psuccess "Please reenter directory to refresh"
             }
             ;;
         "zip") 
@@ -333,9 +336,7 @@ textfileopt() {
             }
             ;;
         "mv") 
-            echo -n "Enter target: "
-            read target
-            target=${target:-""}
+            target=${target:-$HOME/}
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
             echo $menu_text $files $target 
@@ -384,9 +385,13 @@ zipfileopt() {
             }
             ;;
         "mv") 
-            echo -n "Enter target: "
-            read target
-            [[ -n $target ]] && { echo $menu_text $files $target }
+            target=${target:-$HOME/}
+            vared -p "Enter target: " target
+            [[ -n $target ]] && { 
+                echo $menu_text $files $target 
+                eval "$menu_text $files $target"
+                psuccess "Please reenter directory to refresh"
+            }
             ;;
         *)
             eval "$menu_text $files"
@@ -418,9 +423,12 @@ otherfileopt() {
             }
             ;;
         "mv") 
-            echo -n "Enter target: "
-            read target
-            [[ -n $target ]] && { echo $menu_text $files $target }
+            target=${target:-$HOME/}
+            vared -p "Enter target: " target
+            [[ -n $target ]] && { 
+                echo $menu_text $files $target 
+                eval "$menu_text $files $target"
+            }
             ;;
         "vim")
             eval "$EDITOR $files"
