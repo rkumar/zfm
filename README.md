@@ -51,6 +51,8 @@ At present I have a menu triggered by pressing the backtick (lower tilde). This 
 
 One example is "ft". After triggering the menu with MENU_KEY, "f" jumps to "File listing" and "t" shows a listing of files modified today.
 
+If you are editing many files, rather than press "v" each time for your EDITOR (in the File Operations menu), select "a" for auto-open and enter your editor name. Now whenever a text file is selected your editor will open it. For other kinds of files, go to Menu => Options and provide the application for major file types.
+
 ###Edge Cases:###
 
 While navigating a directory which has many files with numbers, you may be unable to access certain numbered files. There is a check for numbered files that clash with the numbered hotkey (M_SWITCH_OFF_DUPE_CHECK) that can be set. I have not used this by default just to reduce processing.
