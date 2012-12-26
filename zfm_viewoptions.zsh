@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-26 18:12
+# Last update: 2012-12-27 00:57
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
@@ -19,7 +19,7 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 # Rows have columns delimited by tabs
 # files=$(listdir.pl --file-type *(.m0) | nl)
 view_menu() {
-    select_menu "Menu" "o) Options and Settings" "f) File Listings" "r) Recursive Listings" "k) Dirstack" "d) Dirs (child)" "b) Bookmarks" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands"
+    select_menu "Menu"  "f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings"
     case $reply in
         "o")
             settingsmenu
@@ -33,10 +33,10 @@ view_menu() {
         "d")
             m_child_dirs
             ;;
-        "k")
+        "z"|"k")
             m_dirstack
             ;;
-        "b")
+        "v"|"l")
             m_recentfiles
             ;;
         "F")
@@ -57,14 +57,94 @@ view_menu() {
             ;;
     esac
 }
+# this implements a drill-down which employs grep. Why I am not using the drill.zsh
+# which is identical to zfm, i don't know. I've just modified the old selectrows
+# to drill down. You can't backspace or stuff like that. You could call this fuzzy
+# in that the pattern is not contiguous, if you press abc it matches "a.*b.*c"
+#
+# FIXME nl should be replaced with something that only prints lines for first 9 rows.
+fuzzyselectrow() {
+    local files=$@
+    [[ $#files -eq 0 ]] && return
+    allfiles=$files # to revert to full listing
+    ff=("${(@f)$(print -rl -- $files)}")
+    local hv=$#ff
+    local gpatt=""
+    while (true)
+    do
+        echo "   No.\t  Name"
+    if [[ $hv -gt 24 ]]; then
+        # split into 2 columns, hopefully only name was sent in and not details
+        #print -rC2 -- $files 
+        #print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
+        print -rC2 -- $(print -rl -- $files | nl | tr "[ \t]" "" ) | tr "" " "
+    else
+        #echo "   No.\t  Size \t  Modified Date  \t  Name"
+        print -rl -- $files | nl
+    fi
+    local len=$#hv  # accept only those many characters from user
+    echo -n "Select a row [1-$hv] (blank to cancel): "
+    len=1
+    read -k $len reply
+    echo
+
+    # if using read -k then we need to make enter into a blank
+    reply=$(echo "$reply" | tr -d '[\n\r\t ]')
+
+    [[ -z "$reply" ]] && break
+    #  check for numeric as some values like "o" can cause abort
+    if [[ "$reply" == <-> ]]; then
+        line="$ff[$reply]"
+        # only a physical tab was working, \t etc was not working
+        # split row with tabs into an array
+        selected_row=("${(s/	/)line}")
+        #selected_file=$selected_row[4]
+        # just in case only file name passed as in dirnames
+        selected_file=$selected_row[-1]
+        break # 2012-12-26 - 19:05 
+    else
+        perror "Sorry. [$reply] not numeric"
+        if [[ -z "$gpatt" ]]; then
+            gpatt="$reply"
+        else
+            if [[ "$ZFM_FUZZY_MATCH_DIR" == "1" ]]; then
+                # contiguous search
+                gpatt="${gpatt}${reply}"
+            else
+                gpatt="${gpatt}.*${reply}"
+            fi
+        fi
+        pdebug "gpattern is $gpatt"
+        #files=(${(M)ff:#*$reply*})
+        files=( $(print -rl -- $ff | grep "$gpatt") )
+        #echo "FFF $#files"
+        if [[ $#files -eq 0 ]] ; then
+            perror "No further files... reverting to full listing"
+            gpatt=""
+            files=$allfiles
+           ff=("${(@f)$(print -rl -- $files)}")
+       elif [[ $#files -eq 1 ]] ; then
+           # if there's only one file than accept it, no confirmation
+           selected_row=("${(s/	/)files}")
+           selected_file=$selected_row[-1]
+           break # 2012-12-26 - 20:29 
+       else
+           ff=("${(@f)$(print -rl -- $files)}")
+       fi
+    fi
+    done
+}
 
 # select a single row, based on line number which has been supplied with data
 # (I know the line number coming in is not a good idea)
 selectrow() {
     local files=$@
     [[ $#files -eq 0 ]] && return
+    allfiles=$files # to revert to full listing
     ff=("${(@f)$(print -rl -- $files)}")
     local hv=$#ff
+    while (true)
+    do
     if [[ $hv -gt 24 ]]; then
         # split into 2 columns, hopefully only name was sent in and not details
         echo "   No.\t  Name"
@@ -82,7 +162,7 @@ selectrow() {
     # if using read -k then we need to make enter into a blank
     reply=$(echo "$reply" | tr -d '[\n\r\t ]')
 
-    [[ -z "$reply" ]] && return
+    [[ -z "$reply" ]] && break
     #  check for numeric as some values like "o" can cause abort
     if [[ "$reply" == <-> ]]; then
         line="$ff[$reply]"
@@ -92,9 +172,15 @@ selectrow() {
         #selected_file=$selected_row[4]
         # just in case only file name passed as in dirnames
         selected_file=$selected_row[-1]
+        break # 2012-12-26 - 19:05 
     else
         perror "Sorry. [$reply] not numeric"
+        # this is an interesting twist except that reply is reset each time
+        # if i reset ff to files then i lose the original so one can't go back, let's try :)
+        files=(${(M)ff:#*$reply*})
+        ff=("${(@f)$(print -rl -- $files)}")
     fi
+    done
 }
 # this implemnents select multiple with deletion of selected item
 # into another buffer, looks nice as the list shrinks, but doesn't
@@ -199,7 +285,7 @@ selectmulti() {
             fi
 
         done
-        echo -n "select rows (ENTER when done, all-A, invert-I, e - edit, z - zip): "
+        echo -n "select rows by number (ENTER when done, all-A, invert-I, e - edit, z - zip): "
         read -r reply
         [[ -z $reply ]] && { echo "breaking on blank" ; break }
         case $reply in
@@ -438,6 +524,8 @@ settingsmenu(){
         "k")
             echo "Change the character used for various functions (Enter leaves them as they are"
 
+            echo "TODO someday not immed"
+            # what is this anyway ? changing hotkeys ?
             # menu
             # back (up dir)
             # sort options
@@ -447,6 +535,9 @@ settingsmenu(){
 
             ;;
         "a")
+            # specify action with various filetypes
+            # Misses out on OTHER category, not sure what to do
+            # but some text files land in there, `file` says "data".
             AUTO_TEXT_ACTION=$EDITOR
             AUTO_IMAGE_ACTION=open
             AUTO_ZIP_ACTION="tar ztvf"
@@ -548,13 +639,15 @@ sortoptions() {
 # give directories from dirs command
 m_dirstack() {
     if [[ -x "${ZFM_DIR}/zfmdirs" ]]; then
-        files=$(listdir.pl $(${ZFM_DIR}/zfmdirs) | nl)
+        #files=$(listdir.pl $(${ZFM_DIR}/zfmdirs) | nl)
+        files=$(print -rl -- $(${ZFM_DIR}/zfmdirs))
     else
-        # this only works when this file is sourced
+        # this only works when this file is sourced, otherwise relies on current session
+        # not what is in your zshrc
         pbold "These are directories on internal stack (dirs command)"
-        files=$(eval "listdir.pl $(dirs)" | nl)
+        files=$(eval "listdir.pl $(dirs)" )
     fi
-    selectrow $files
+    fuzzyselectrow $files
     [[ -d $selected_file ]] && {
         $ZFM_CD_COMMAND $selected_file
     }
@@ -564,13 +657,14 @@ m_child_dirs() {
     local ff
     ff=$(print -rl -- *(/) | wc -l)
     [[ $ff -eq 0 ]] && { perror "No child dirs." ; return }
-    if [[ $ff -gt 24 ]]; then
+    if [[ $ff -gt 0 ]]; then
         # only send dir name, not details.
-        files=$(eval "print -rl -- ${M_REC_STRING}*(/)" | nl)
-    else
-        files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
+        #files=$(eval "print -rl -- ${M_REC_STRING}*(/)" | nl)
+        files=$(eval "print -rl -- ${M_REC_STRING}*(/)" )
+    #else
+        #files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
     fi
-    selectrow $files
+    fuzzyselectrow $files
     [[ -d $selected_file ]] && {
         [[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
         $ZFM_CD_COMMAND $selected_file
@@ -625,6 +719,7 @@ mycommands() {
         if [[ $stat -eq 0 ]]; then
             eval "$menu_text"
         else
+            # doesn't come here
             perror "could not find $menu_text"
             command=${command:-""}
             vared -p "Enter command: " command
