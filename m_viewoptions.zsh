@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-26 11:56
+# Last update: 2012-12-26 12:37
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
@@ -543,10 +543,10 @@ sortoptions() {
 }
 # give directories from dirs command
 m_dirstack() {
-    # this only works when this file is sourced
     if [[ -x "${ZFM_DIR}/zfmdirs" ]]; then
         files=$(listdir.pl $(${ZFM_DIR}/zfmdirs) | nl)
     else
+        # this only works when this file is sourced
         pbold "These are directories on internal stack (dirs command)"
         files=$(eval "listdir.pl $(dirs)" | nl)
     fi
@@ -575,10 +575,8 @@ m_recentfiles() {
     # recently edited files
     typeset -U files
     files=""
-    if [[ -f ~/.viminfo ]]; then
-        echo "Reading from .viminfo"
-        #files=$(eval "listdir.pl  ${M_REC_STRING}*.${extn}(.)" | nl)
-        files=$(listdir.pl $(grep '^>' ~/.viminfo | cut -d ' ' -f 2 | sed "s#~#$HOME#g") | nl)
+    if [[ -x "${ZFM_DIR}/zfmfiles" ]]; then
+        files=$(listdir.pl $(${ZFM_DIR}/zfmfiles) | nl)
     else
         perror "No ~/.viminfo file found"
         files=$(listdir.pl *(.m0) ~/.vimrc ~/.zshrc ~/.bashrc ~/.screenrc ~/.tmux.conf)
