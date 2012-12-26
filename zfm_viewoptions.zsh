@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-26 17:09
+# Last update: 2012-12-26 18:12
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
@@ -611,13 +611,24 @@ select_menu() {
 mycommands() {
     source $ZFM_DIR/zfmcommands.zsh
     menu_loop "My Commands" "$ZFM_MY_COMMANDS" "$ZFM_MY_MNEM"
-    type ZFM_$menu_text
+    type ZFM_$menu_text >/dev/null
     stat=$?
     if [[ $stat -eq 0 ]]; then
         ZFM_$menu_text
     elif [[ -x "$menu_text" ]]; then
-        $menu_text
+        # not sure it will come here
+        eval "$menu_text"
     else
-        perror "could not find $menu_text"
+        # check for executable by that name in path
+        type $menu_text >/dev/null
+        stat=$?
+        if [[ $stat -eq 0 ]]; then
+            eval "$menu_text"
+        else
+            perror "could not find $menu_text"
+            command=${command:-""}
+            vared -p "Enter command: " command
+            eval "$command"
+        fi
     fi
 }
