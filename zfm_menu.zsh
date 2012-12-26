@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-26 01:11
+#  Last update: 2012-12-26 14:53
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -24,7 +24,7 @@ perror(){
     echo "${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
 }
 pdebug(){
-    [[ -n "$M_VERBOSE" ]] && echo "${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    [[ -n "$ZFM_VERBOSE" ]] && echo "${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
 }
 psuccess(){
     echo "${COLOR_GREEN}$@${COLOR_DEFAULT}" 1>&2
@@ -248,11 +248,11 @@ multifileopt() {
     # eval otherwise files with spaces will cause an error
     eval "ls -lh $files"
     menu_loop "File operations:" "zip cmd grep mv rmtrash gitadd gitcom" "z!gmra"
-    [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            [[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
+            [[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
             command=${command:-""}
             postcommand=${postcommand:-""}
             vared -p "Enter command (first part) : " command
@@ -297,7 +297,7 @@ multifileopt() {
             ;;
         *)
 
-            #[[ -n $M_VERBOSE ]] && perror "213: $menu_text $files"
+            #[[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text $files"
             eval "$menu_text $files"
             ;;
     esac
@@ -311,11 +311,11 @@ textfileopt() {
     file $files
     ls -lh $files
     menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
-    [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            #[[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
+            #[[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
             command=${command:-""}
             vared -p "Enter command: " command
             eval "$command $files"
@@ -352,7 +352,7 @@ textfileopt() {
             ;;
         *)
 
-            [[ -n $M_VERBOSE ]] && perror "213: $menu_text $files"
+            [[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text $files"
             eval "$menu_text $files"
             ;;
     esac
@@ -366,14 +366,14 @@ zipfileopt() {
     ls -lh $files
     tar -ztvf $files | head -n 20
     menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "!vlmrd"
-    [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "view") 
             tar ztvf $files
             ;;
         "cmd")
-            [[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
+            [[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
             command=${command:-""}
             vared -p "Enter command: " command
             eval "$command $files"
@@ -402,11 +402,11 @@ otherfileopt() {
     file $files
     ls -lh $files
     menu_loop "Other operations:" "cmd open rmtrash od stat vim" "!ordsv"
-    [[ -n $M_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            [[ -n $M_VERBOSE ]] && perror "PATH is ${PATH}"
+            [[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
             command=${command:-""}
             vared -p "Enter command: " command
             echo "executing: $command $files"

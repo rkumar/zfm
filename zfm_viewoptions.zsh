@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-26 14:23
+# Last update: 2012-12-26 17:09
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
@@ -19,7 +19,7 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 # Rows have columns delimited by tabs
 # files=$(listdir.pl --file-type *(.m0) | nl)
 view_menu() {
-    select_menu "Menu" "o) Options and Settings" "f) File Listings" "r) Recursive Listings" "k) Dirstack" "d) Dirs (child)" "b) Bookmarks" "x) Exclude Pattern" "F) Filter options" "s) Sort Options"
+    select_menu "Menu" "o) Options and Settings" "f) File Listings" "r) Recursive Listings" "k) Dirstack" "d) Dirs (child)" "b) Bookmarks" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands"
     case $reply in
         "o")
             settingsmenu
@@ -48,6 +48,9 @@ view_menu() {
             ;;
         "s")
             sortoptions
+            ;;
+        "c")
+            mycommands
             ;;
         *)
             perror "Wrong / unhandle option $reply"
@@ -315,7 +318,7 @@ viewoptions() {
             read extn
             files=$(eval "listdir.pl  ${M_REC_STRING}*.${extn}(.)" | nl)
             selectmulti $files
-            #[[ -n $M_VERBOSE ]] && echo "file: $selected_file"
+            #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "substring" )
             print "Filenames containing pattern:"
@@ -325,7 +328,7 @@ viewoptions() {
             listdir.pl ${M_REC_STRING}*${patt}*(.)
             echo
             selectmulti $files
-            #[[ -n $M_VERBOSE ]] && echo "file: $selected_file"
+            #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "ack" )
             print "List / select Files containing string"
@@ -336,7 +339,7 @@ viewoptions() {
             # maybe due to newlines
             files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern) | nl)
             selectmulti $files
-            #[[ -n $M_VERBOSE ]] && echo "file: $selected_file"
+            #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "dirs")
             # list dirs under current dir
@@ -348,7 +351,7 @@ viewoptions() {
             #echo "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str"
             files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str" | nl)
             selectmulti $files
-            [[ -n $M_VERBOSE ]] && echo "file: $selected_file"
+            [[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
         }
     [[ -n "$selected_files" ]] && {
         handle_selection "$reply" "$selected_files"
@@ -569,7 +572,7 @@ m_child_dirs() {
     fi
     selectrow $files
     [[ -d $selected_file ]] && {
-        [[ -n $M_VERBOSE ]] && echo "file: $selected_file"
+        [[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
         $ZFM_CD_COMMAND $selected_file
     }
 }
@@ -604,4 +607,17 @@ select_menu() {
     echo -n "Select :"
     read -k reply
     echo
+}
+mycommands() {
+    source $ZFM_DIR/zfmcommands.zsh
+    menu_loop "My Commands" "$ZFM_MY_COMMANDS" "$ZFM_MY_MNEM"
+    type ZFM_$menu_text
+    stat=$?
+    if [[ $stat -eq 0 ]]; then
+        ZFM_$menu_text
+    elif [[ -x "$menu_text" ]]; then
+        $menu_text
+    else
+        perror "could not find $menu_text"
+    fi
 }

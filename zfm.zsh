@@ -2,12 +2,12 @@
 # header {
 # vim: set foldmarker={,} foldlevel=0 foldmethod=marker spell:
 # ----------------------------------------------------------------------------- #
-#         File: m.sh
-#  Description: file/dir navigator based on hotkeys
+#         File: zfm.zsh
+#  Description: file/dir browser/navigator using hotkeys
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-26 14:14
+#  Last update: 2012-12-26 17:11
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -15,7 +15,6 @@
 # ----------------------------------------------------------------------------- #
 #   Copyright (C) 2012-2013 rahul kumar
 
-#  TODO show dirs in another color _HOWTO since i hand over to print
 #  TODO multiple selection
 #    TODO select all
 #    TODO invert selection
@@ -23,15 +22,13 @@
 #    TODO select deselect ranges
 # TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
 # TODO what if user wants to send in some args suc as folder to start in, or resume where one left off.
-# TODO make a file which provides dir entries : user can just echo file names for fetch from .z or wdl 
-# or whatever. For files, remove the viminfo part to another file, so it can be overrident too.
-# Need to hit the dir with keys not search for number
+# selectrow Need to hit the dir with keys not search for number
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
 export ZFM_DIR
 source ${ZFM_DIR}/zfm_menu.zsh
 setopt MARK_DIRS
-M_VERBOSE=1
+ZFM_VERBOSE=1
 export M_FULL_INDEXING=
 PAGESZ=59     # used for incrementing while paging
 #[[ -n "$M_FULL_INDEXING" ]] && PAGESZ=61
@@ -132,8 +129,8 @@ list_printer() {
                 #   - when filtering. (in this case the correct is from viewport/vpa
                 #   - there is a third case of paging after filtering GAAH
                 (( ix = sta + $ans - 1))
-                #[[ -n $M_VERBOSE ]] && echo "actual ix $ix"
-                #[[ -n $M_VERBOSE ]] && echo "OLD selected $myopts[$ix] "
+                #[[ -n $ZFM_VERBOSE ]] && echo "actual ix $ix"
+                #[[ -n $ZFM_VERBOSE ]] && echo "OLD selected $myopts[$ix] "
                 #perror " vpa $ans : $vpa[$ans]  "
                 #perror " vpa $ix : $vpa[$ix]  "
                 #
@@ -141,7 +138,7 @@ list_printer() {
                 # could happen alot of you keep numbered files)
                 selection=""
                 #vpa=( $(print -rl -- $viewport) )
-                [[ -n $M_VERBOSE ]] && perror "files shown $#vpa "
+                [[ -n $ZFM_VERBOSE ]] && perror "files shown $#vpa "
                 if [[ $ttcount -gt 9 ]]; then
                     if [[ $patt = "" ]]; then
                         npatt="${ans}*"
@@ -155,13 +152,13 @@ list_printer() {
                         ct=0
                     fi
                     [[ -n $lines ]] || ct=0
-                    [[ -n $M_VERBOSE ]] && perror "comes here $ct , $lines"
+                    [[ -n $ZFM_VERBOSE ]] && perror "comes here $ct , $lines"
                     if [[ $ct -eq 1 ]]; then
                         [[ -n "$lines" ]] && { selection=$lines; break }
                     elif [[ $ct -eq 0 ]]; then
                         selection=$vpa[$ans]
                         #selection=$myopts[$ix] # fails on filtering
-                        [[ -n $M_VERBOSE ]] && echo " selected $selection"
+                        [[ -n $ZFM_VERBOSE ]] && echo " selected $selection"
                     else
                         patt=$npatt
                     fi
@@ -182,7 +179,7 @@ list_printer() {
                 # we break these keys so caller can handle them, other wise they
                 # get unhandled PLACE SWALLOWED keys here to handle
                 # go down to MARK1 section to put in handling code
-                [[ -n $M_VERBOSE ]] && perror "breaking here with $ans"
+                [[ -n $ZFM_VERBOSE ]] && perror "breaking here with $ans"
                 break
                 ;;
             "^")
@@ -218,14 +215,14 @@ list_printer() {
                     }
                         patt="${ans}"
                     else
-                        [[ -n $M_VERBOSE ]] && perror "comes here 1"
+                        [[ -n $ZFM_VERBOSE ]] && perror "comes here 1"
 
                         patt="$patt$ans"
                     fi
                     #[[ $ans = '.' && $patt = '' ]] && patt="^\."
                     pinfo "Pattern is $patt "
-                    [[ -n $M_VERBOSE ]] && echo "Pattern IS :$patt:"
-                    [[ -n $M_VERBOSE ]] && perror "sending $patt to chcek"
+                    [[ -n $ZFM_VERBOSE ]] && echo "Pattern IS :$patt:"
+                    [[ -n $ZFM_VERBOSE ]] && perror "sending $patt to chcek"
                     # if there's only one file for that char then just jump to it
                     lines=$(check_patt $patt)
                     ct=$(print -rl -- $lines | wc -l)
@@ -310,7 +307,7 @@ list_printer() {
                         patt=""
                         ;;
                 esac
-                [[ -n $M_VERBOSE ]] && echo "Pattern is :$patt:"
+                [[ -n $ZFM_VERBOSE ]] && echo "Pattern is :$patt:"
         esac
         [[ $sta -ge $tot ]] && break
         # break takes control back to MARK1 section below
@@ -423,7 +420,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1j"
+ZFM_VERSION="0.0.1k"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/26"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -541,7 +538,7 @@ param=$(print -rl -- *(M))
 
         }
         if [[ -d "$selection" ]]; then
-            [[ -n $M_VERBOSE ]] && echo "got a directory $selection"
+            [[ -n $ZFM_VERBOSE ]] && echo "got a directory $selection"
             $ZFM_CD_COMMAND $selection
                     patt="" # 2012-12-26 - 00:54 
             #param=$(print -rl -- *)
