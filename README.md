@@ -107,6 +107,12 @@ files to interface with autojump or whatever other utility you use.
 
 A summary of version-wise changes to come here. 
 
+###0.0.1l###
+
+    * Quick selection of directories to jump to through menu (backtick - k). This 
+    picks up database from "z"'s database. Filters dirs as you type and goes into 
+    first unique match.
+
 ###0.0.1k###
 
     * Added zfmcommands.zsh so user can add own menu and commands which will
