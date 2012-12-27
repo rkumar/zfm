@@ -107,6 +107,10 @@ files to interface with autojump or whatever other utility you use.
 
 A summary of version-wise changes to come here. 
 
+###0.0.1n###
+
+    * Selected items are bold faced
+
 ###0.0.1m###
 
     * Quick selection of recent files using sort of fuzzy matching. Earlier one had to 
