@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-27 15:20
+# Last update: 2012-12-27 22:41
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
@@ -504,7 +504,7 @@ handle_selection() {
 }
 settingsmenu(){
     select_menu "Options" "i) Full Indexing toggle" "h) hidden files toggle" "p) Paging key" "4) Dupe check" \
-        "a) Auto select action"
+        "a) Auto select action" "A) Toggle Auto Action"
     case $reply in
         "i")
             if [[ -z "$M_FULL_INDEXING" ]]; then
@@ -560,18 +560,51 @@ settingsmenu(){
             # specify action with various filetypes
             # Misses out on OTHER category, not sure what to do
             # but some text files land in there, `file` says "data".
-            AUTO_TEXT_ACTION=$EDITOR
-            AUTO_IMAGE_ACTION=open
-            AUTO_ZIP_ACTION="tar ztvf"
+            echo
+            echo "Type Ctrl-u to clear line"
+            echo "Blank line disables auto action"
+            echo
+            ZFM_AUTO_TEXT_ACTION=${ZFM_AUTO_TEXT_ACTION:-$EDITOR}
+            ZFM_AUTO_IMAGE_ACTION=open
+            ZFM_AUTO_ZIP_ACTION="tar ztvf"
             echo "Choose automatic action when selecting a text-file"
-            vared AUTO_TEXT_ACTION
+            vared ZFM_AUTO_TEXT_ACTION
             echo "Choose automatic action when selecting an image file"
-            vared AUTO_IMAGE_ACTION
-            echo "Choose automatic action when selecting an zip file"
-            vared AUTO_ZIP_ACTION
-            export AUTO_ZIP_ACTION AUTO_IMAGE_ACTION AUTO_TEXT_ACTION
+            vared ZFM_AUTO_IMAGE_ACTION
+            echo "Choose automatic action when selecting a zip file"
+            vared ZFM_AUTO_ZIP_ACTION
+            export ZFM_AUTO_ZIP_ACTION ZFM_AUTO_IMAGE_ACTION ZFM_AUTO_TEXT_ACTION
+            ;;
+        "A")
+            toggle_auto_view
+            ;;
     esac
 
+}
+#  toggle between automatuc viewing on selection, the other mode
+#  being that the fileopt menu is opened
+toggle_auto_view(){
+    if [[ "$ZFM_AUTOVIEW_TOGGLE_KEY" == "1" ]]; then
+        unset_auto_view
+    else
+        set_auto_view
+    fi
+}
+set_auto_view(){
+    ZFM_AUTOVIEW_TOGGLE_KEY="1"
+    ZFM_AUTO_IMAGE_ACTION=${ZFM_AUTO_IMAGE_ACTION_BAK:-"open"}
+    ZFM_AUTO_TEXT_ACTION=${ZFM_AUTO_TEXT_ACTION_BAK:-$EDITOR}
+    ZFM_AUTO_ZIP_ACTION=${ZFM_AUTO_ZIP_ACTION_BAK:-"tar ztvf"}
+    export ZFM_AUTO_ZIP_ACTION ZFM_AUTO_IMAGE_ACTION ZFM_AUTO_TEXT_ACTION
+}
+unset_auto_view(){
+    ZFM_AUTOVIEW_TOGGLE_KEY=
+    ZFM_AUTO_TEXT_ACTION_BAK=$ZFM_AUTO_TEXT_ACTION
+    ZFM_AUTO_ZIP_ACTION_BAK=$ZFM_AUTO_ZIP_ACTION
+    ZFM_AUTO_IMAGE_ACTION_BAK=$ZFM_AUTO_IMAGE_ACTION
+    ZFM_AUTO_IMAGE_ACTION=
+    ZFM_AUTO_TEXT_ACTION=
+    ZFM_AUTO_ZIP_ACTION=
 }
 filteroptions() {
     menu_loop "Filter Options " "Today Files Dirs Recent Old Large Pattern Small Hidden Clear" "tfdrolphc"
@@ -715,8 +748,11 @@ m_recentfiles() {
             #can get triggered like mv or rm and then either it happens, or asks for 
             #a target and then we have to start again
             ZFM_FUZZY_SELECT_CONFIRM=1
+            tmpfuzz=$ZFM_FUZZY_MATCH_DIR
+            ZFM_FUZZY_MATCH_DIR="1"
             fuzzyselectrow $files
             ZFM_FUZZY_SELECT_CONFIRM=
+            ZFM_FUZZY_MATCH_DIR=$tmpfuzz
             [[ -n "$selected_file" ]] && {
                 fileopt "$selected_file"
             }
