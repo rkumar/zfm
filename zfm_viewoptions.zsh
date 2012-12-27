@@ -1,11 +1,12 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-27 00:57
+# Last update: 2012-12-27 15:20
 # Part of zfm, contains menu portion
 # FIXME Issue this uses its own selection mechanism whereas user would 
 # have got used to key based drill down. This is purely number based
 # Create a scripts that drills down a list use nl1 also. provide a list
 #
-# don't use system calls for ls, just the array itself
+# TODO search files with drill down (recursive)
+# TODO drill down mdfind list (or locate)
 # ----------------------------------
 # for menu_loop we need to source
 source $ZFM_DIR/zfm_menu.zsh
@@ -36,7 +37,12 @@ view_menu() {
         "z"|"k")
             m_dirstack
             ;;
-        "v"|"l")
+        "v")
+            ZFM_RECENT_MULTI=1
+            m_recentfiles
+            ;;
+        "l")
+            ZFM_RECENT_MULTI=
             m_recentfiles
             ;;
         "F")
@@ -62,7 +68,7 @@ view_menu() {
 # to drill down. You can't backspace or stuff like that. You could call this fuzzy
 # in that the pattern is not contiguous, if you press abc it matches "a.*b.*c"
 #
-# FIXME nl should be replaced with something that only prints lines for first 9 rows.
+# TODO handle backspace
 fuzzyselectrow() {
     local files=$@
     [[ $#files -eq 0 ]] && return
@@ -77,10 +83,10 @@ fuzzyselectrow() {
         # split into 2 columns, hopefully only name was sent in and not details
         #print -rC2 -- $files 
         #print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
-        print -rC2 -- $(print -rl -- $files | nl | tr "[ \t]" "" ) | tr "" " "
+        print -rC2 -- $(print -rl -- $files | numbernine | tr "[ \t]" "" ) | tr "" " "
     else
         #echo "   No.\t  Size \t  Modified Date  \t  Name"
-        print -rl -- $files | nl
+        print -rl -- $files | numbernine
     fi
     local len=$#hv  # accept only those many characters from user
     echo -n "Select a row [1-$hv] (blank to cancel): "
@@ -104,7 +110,14 @@ fuzzyselectrow() {
         break # 2012-12-26 - 19:05 
     else
         perror "Sorry. [$reply] not numeric"
-        if [[ -z "$gpatt" ]]; then
+        if [[ "$reply" == "" || "$reply" == "" ]]; then
+            if [[ -n "$gpatt" ]]; then
+                gpatt=${gpatt[1,-2]}
+                [[ $gpatt[-2,-1] == ".*" ]] && gpatt=${gpatt[1,-3]}
+                files=$allfiles
+                ff=("${(@f)$(print -rl -- $files)}")
+            fi
+        elif [[ -z "$gpatt" ]]; then
             gpatt="$reply"
         else
             if [[ "$ZFM_FUZZY_MATCH_DIR" == "1" ]]; then
@@ -127,7 +140,13 @@ fuzzyselectrow() {
            # if there's only one file than accept it, no confirmation
            selected_row=("${(s/	/)files}")
            selected_file=$selected_row[-1]
-           break # 2012-12-26 - 20:29 
+           # for files we need to have a confirm or else it can
+           # go into an action such as rm which is dangerous
+           if [[ -n "$ZFM_FUZZY_SELECT_CONFIRM" ]]; then
+               print -n "Confirm you want $selected_file [y/n]: "
+               read yn
+               [[ $yn =~ [Yy] ]] && break
+           fi
        else
            ff=("${(@f)$(print -rl -- $files)}")
        fi
@@ -258,6 +277,7 @@ esac
 # Pressing <enter> completes selection
 selectmulti() {
     local files
+    local tabd=$'\t'
     files=$@
     # selected rows go into a buffer named deleted
     # as they are no longer displayed
@@ -270,7 +290,8 @@ selectmulti() {
     echo
     while (true) 
     do
-        echo "   No.\t  Size \t  Modified Date  \t  Name"
+        local c=1
+        echo "No.\t  Size \t  Modified Date  \t  Name"
         #print -rl -- $files
         ff=("${(@f)$(print -rl -- $files)}")
         for fi in $ff
@@ -279,10 +300,11 @@ selectmulti() {
             #echo "      [ $fi ] : delix, deleted: $delix => $#deleted "
             }
             if [[ $delix -gt $#deleted ]]; then
-                echo "$fi"
+                echo "$c${tabd}$fi"
             else
-                echo "${COLOR_BOLD}${fi}${COLOR_DEFAULT}"
+                echo "$c${tabd}${COLOR_BOLD}${fi}${COLOR_DEFAULT}"
             fi
+            let c++
 
         done
         echo -n "select rows by number (ENTER when done, all-A, invert-I, e - edit, z - zip): "
@@ -332,7 +354,7 @@ selectmulti() {
         #split
         selected_row=("${(s/	/)line}")
         selected_file=$selected_row[4]
-        echo $selected_file
+        echo "selected: $selected_file"
         if [[ $deleted[(i)$line] -le $#deleted ]]; then
             deleted[$deleted[(i)$line]]=()
         else
@@ -354,7 +376,7 @@ esac
     do
         #echo "line $line"
         selected_row=("${(s/	/)line}")
-        selected_file=$selected_row[4]
+        selected_file=$selected_row[-1]
         selected_files=(
         $selected_files
         $selected_file:q
@@ -402,14 +424,14 @@ viewoptions() {
         "extn" )
             print -n "Enter extension e.g log tmp :"
             read extn
-            files=$(eval "listdir.pl  ${M_REC_STRING}*.${extn}(.)" | nl)
+            files=$(eval "listdir.pl  ${M_REC_STRING}*.${extn}(.)" )
             selectmulti $files
             #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "substring" )
             print "Filenames containing pattern:"
             read patt
-            files=$(eval "listdir.pl ${M_REC_STRING}*${patt}*(.)" | nl)
+            files=$(eval "listdir.pl ${M_REC_STRING}*${patt}*(.)")
             print ${M_REC_STRING}*${patt}*(.)
             listdir.pl ${M_REC_STRING}*${patt}*(.)
             echo
@@ -423,7 +445,7 @@ viewoptions() {
             #files=$(eval "listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern)" | nl)
             # somehow with eval only first row was coming through
             # maybe due to newlines
-            files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern) | nl)
+            files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern))
             selectmulti $files
             #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
@@ -435,7 +457,7 @@ viewoptions() {
     esac
     [[ -n "$str" ]] && {
             #echo "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str"
-            files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str" | nl)
+            files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str")
             selectmulti $files
             [[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
         }
@@ -675,16 +697,30 @@ m_recentfiles() {
     typeset -U files
     files=""
     if [[ -x "${ZFM_DIR}/zfmfiles" ]]; then
-        files=$(listdir.pl $(${ZFM_DIR}/zfmfiles) | nl)
+        #files=$(listdir.pl $(${ZFM_DIR}/zfmfiles) | nl)
+        files=$(print -rl -- $(${ZFM_DIR}/zfmfiles))
     else
         perror "No ~/.viminfo file found"
         files=$(listdir.pl *(.m0) ~/.vimrc ~/.zshrc ~/.bashrc ~/.screenrc ~/.tmux.conf)
     fi
     [[ -n "$files" ]] && {
-        selectmulti $files
-        [[ -n "$selected_files" ]] && {
-            handle_selection "$reply" "$selected_files"
-        }
+        if [[ -n "$ZFM_RECENT_MULTI" ]]; then
+            selectmulti $files
+            [[ -n "$selected_files" ]] && {
+                handle_selection "$reply" "$selected_files"
+            }
+        else
+            # NOTE  XXX
+            #this is a bit dangerous because files autoselect and the next command
+            #can get triggered like mv or rm and then either it happens, or asks for 
+            #a target and then we have to start again
+            ZFM_FUZZY_SELECT_CONFIRM=1
+            fuzzyselectrow $files
+            ZFM_FUZZY_SELECT_CONFIRM=
+            [[ -n "$selected_file" ]] && {
+                fileopt "$selected_file"
+            }
+        fi
     }
 }
 # select_menu "A menu" "r) recursive menu" "l) listing files" "o) Options and setttings"
@@ -726,4 +762,21 @@ mycommands() {
             eval "$command"
         fi
     fi
+}
+
+# numbers the first nine rows only since these are hotkeys
+# the rest must be filtered by some character.
+numbernine() {
+let c=1
+    local tabd=$'\t'
+
+while IFS= read -r line; do
+    sub=$c
+    if [[ $c -gt 9 ]]; then
+        print -r -- "  ${tabd}$line"
+    else
+        print -r -- "$sub)${tabd}$line"
+    fi
+    let c++
+done
 }
