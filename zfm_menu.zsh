@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-27 00:50
+#  Last update: 2012-12-27 15:26
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -308,11 +308,12 @@ multifileopt() {
 textfileopt() {
     local files="$@"
     # NOTE XXX splitting on space means space in files will cause misbehavior
-    [[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
+    #[[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
     # NOTE what about multiple files
     print_title "File summary for $files:"
     file $files
     ls -lh $files
+    [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
     [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
@@ -365,6 +366,7 @@ zipfileopt() {
     print_title "File summary for $files:"
     file $files
     ls -lh $files
+    [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     tar -ztvf $files | head -n 20
     menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "!vlmrd"
     [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
@@ -406,6 +408,7 @@ otherfileopt() {
     print_title "File summary for $files:"
     file $files
     ls -lh $files
+    [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     menu_loop "Other operations:" "cmd open rmtrash od stat vim" "!ordsv"
     [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
