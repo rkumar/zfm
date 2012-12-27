@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-27 00:19
+#  Last update: 2012-12-27 15:30
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -23,6 +23,7 @@
 # TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
 # TODO what if user wants to send in some args suc as folder to start in, or resume where one left off.
 # TODO If user does not use z/j/autojmp etc then we should have option to build dir database and save it
+# TODO even in normal file filtering, it can jump into file options and execute some option. XXX
 # Same for file edit list
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
@@ -426,7 +427,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1l"
+ZFM_VERSION="0.0.1m"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/27"
 #  Array to place selected files
 typeset -U selectedfiles
