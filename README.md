@@ -107,6 +107,11 @@ files to interface with autojump or whatever other utility you use.
 
 A summary of version-wise changes to come here. 
 
+###0.0.1m###
+
+    * Quick selection of recent files using sort of fuzzy matching. Earlier one had to 
+    select based on row number.  MENU_KEY + l (select one), MENU_KEY + v (select multiple based on line numbers).
+
 ###0.0.1l###
 
     * Quick selection of directories to jump to through menu (backtick - k). This 
