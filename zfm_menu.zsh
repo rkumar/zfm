@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-27 22:38
+#  Last update: 2012-12-28 01:39
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -129,8 +129,6 @@ do
             index=$mnem[(i)$menu_char]; 
             var=${myopts[$index]} 
             menu_index=$index
-            # TODO what if caller wants numeric char, should it not go in menu_char
-            # always
         fi
         #perror "key 4 is $menu_char"
         #[[ -z $var1 ]] && { index=$mnem[(i)$menu_char]; var2=${myopts[$index]} }
@@ -315,7 +313,8 @@ multifileopt() {
             #read target
             vared -p "Enter zip file name: " arch
             #[[ -z $target ]] && target="$arch"
-            eval "tar zcvf $arch $files"
+            # if you don't check the first file will get overwritten with the tar file
+            [[ -n "$arch" ]] && eval "tar zcvf $arch $files"
             ;;
         "grep")
             greppatt=${greppatt:-""}
@@ -390,7 +389,8 @@ textfileopt() {
     esac
 }
 zipfileopt() {
-    # TODO check for als aunpack and add to menu
+    # TODO allow user to add a string in ENV for other executables which we can add here
+    # such as als or atools aunpack
     local files="$@"
     [[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
     print -rl -- $files
