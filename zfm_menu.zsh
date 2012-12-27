@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-27 15:26
+#  Last update: 2012-12-27 22:38
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -21,17 +21,17 @@ export COLOR_BOLD="\\033[1m"
 export COLOR_BOLDOFF="\\033[22m"
 #  Print error to stderr so it doesn't mingle with output of method
 perror(){
-    echo "${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    echo "ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
 }
 pdebug(){
-    [[ -n "$ZFM_VERBOSE" ]] && echo "${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    [[ -n "$ZFM_VERBOSE" ]] && echo "DEBUG: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
 }
 psuccess(){
     echo "${COLOR_GREEN}$@${COLOR_DEFAULT}" 1>&2
 }
 
 pinfo(){
-    echo "$@" 1>&2
+    echo "INFO: $@" 1>&2
 }
 #  Print something bold to stderr
 pbold() {
@@ -50,6 +50,10 @@ pause() {
 print_title() {
     local title="$@"
     echo "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
+}
+
+array2lines() {
+    ZFM_NEWLINE_ARRAY=("${(@f)$(print -rl -- $@)}")
 }
 #typeset -A myhash
 #myhash=( v v r ranger m mc n ncdu l list s sl)
@@ -79,6 +83,8 @@ print_menu() {
 #  Display menu, hotkeys, convert selected char to actual selection
 #  Updates  menu_text
 #  Try to keep options to 9, and add a mnemonic for options that go beyond
+#  TODO currently splits on string, thus cannot use parameters to command
+#  TODO use a comma or something else to delimit so we can pass params
 menu_loop () {
     menu_text=""  # this contains the text of menu such as command
     menu_char="" # contains actual character pressed could be numeric or hotkey (earlier ans)
@@ -92,6 +98,7 @@ do
     local options="$2"
     # next line prints value
     #local myopts
+    # TODO use IFS=, or something unusual so params cn be passed
     read -A myopts <<< "$2"
     print_menu "$@"
     echo
@@ -162,39 +169,57 @@ done
 fileopt() {
     local name="$1"
     local type="$(filetype $name)"
-    echo "got $type for $name"
+    pdebug "$0 got $type for $name"
     case $type in
         "text")
-            #[[ -n "$AUTO_TEXT_ACTION" ]] && "$AUTO_TEXT_ACTION" $name || textfileopt $name
-            if [[ -n "$AUTO_TEXT_ACTION" ]]; then
-                "$AUTO_TEXT_ACTION" $name 
+            #[[ -n "$ZFM_AUTO_TEXT_ACTION" ]] && "$ZFM_AUTO_TEXT_ACTION" $name || textfileopt $name
+            if [[ -n "$ZFM_AUTO_TEXT_ACTION" ]]; then
+                "$ZFM_AUTO_TEXT_ACTION" $name 
             else 
                 textfileopt $name
             fi
             ;;
         "image")
-            if [[ -n "$AUTO_IMAGE_ACTION" ]]; then
-               "$AUTO_IMAGE_ACTION" $name 
+            if [[ -n "$ZFM_AUTO_IMAGE_ACTION" ]]; then
+               "$ZFM_AUTO_IMAGE_ACTION" $name 
                else
                    otherfileopt $name
                fi
             #otherfileopt $name
             ;;
         "zip")
-            if [[ -n "$AUTO_ZIP_ACTION" ]]; then
-               "$AUTO_ZIP_ACTION" $name 
+            if [[ -n "$ZFM_AUTO_ZIP_ACTION" ]]; then
+               eval "$ZFM_AUTO_ZIP_ACTION $name"
                else
                    zipfileopt $name
                fi
             #zipfileopt $name
             ;;
         *)
-            if [[ -n "$AUTO_OTHER_ACTION" ]]; then
-               "$AUTO_OTHER_ACTION" $name 
+            if [[ -n "$ZFM_AUTO_OTHER_ACTION" ]]; then
+               "$ZFM_AUTO_OTHER_ACTION" $name 
                else
                    otherfileopt $name
                fi
             #otherfileopt $name
+            ;;
+    esac
+}
+# bypass auto if user wants to exec action on file even though
+# auto is on
+fileopt_noauto() {
+    local name="$1"
+    local type="$(filetype $name)"
+    pdebug "$0 got $type for $name"
+    case $type in
+        "text")
+            textfileopt $name
+            ;;
+        "zip")
+            zipfileopt $name
+            ;;
+        *)
+            otherfileopt $name
             ;;
     esac
 }
@@ -203,7 +228,7 @@ filetype(){
     local name="$1"
     local type=""
     extn=$name:e
-    perror "extn: $extn"
+    pdebug "extn: $extn"
     case $extn in
         "txt"|"c"|"rb"|"pl"|"py"|"sh"|"zsh"|"md"|"css"|"html"|"java"|"conf")
             type="text"
@@ -211,13 +236,17 @@ filetype(){
         "jpg"|"gif"|"png")
             type="image"
             ;;
+        "pdf"|"ps"|"doc")
+            # XXX what if user has pdf2html or antiword etc installed
+            type="other"
+            ;;
         "tgz"|"zip"|"bz2"|"Z"|"z")
             type="zip"
             ;;
     esac
     [[ -n "$type" ]] && { echo "$type" && return }
     if [[ "$name" =~ "^..*rc$" ]]; then
-        perror "inside check for rc file" 
+        pdebug "inside check for rc file" 
         type="text"
         echo "$type"
         return
@@ -248,16 +277,17 @@ filetype(){
 #   This procedure has operations for multiple files
 multifileopt() {
     local files
-    files="$@"
+    files=($@) # NOTE since array incoming we need to bracket else converts to string
+    #array2lines $files
     print_title "File summary for $#files files:"
     # eval otherwise files with spaces will cause an error
     eval "ls -lh $files"
     menu_loop "File operations:" "zip cmd grep mv rmtrash gitadd gitcom" "z!gmra"
-    [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            [[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
+            [[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
             command=${command:-""}
             postcommand=${postcommand:-""}
             vared -p "Enter command (first part) : " command
@@ -315,7 +345,7 @@ textfileopt() {
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
-    [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
@@ -326,9 +356,9 @@ textfileopt() {
             ;;
         "auto")
             # added this 2012-12-26 - 01:11 
-            command=${command:-""}
+            command=${command:-"$EDITOR"}
             vared -p "Enter command to automatically execute for selected text files: " command
-            export AUTO_TEXT_ACTION="$command"
+            export ZFM_AUTO_TEXT_ACTION="$command"
             eval "$command $files"
             ;;
         "")
@@ -360,6 +390,7 @@ textfileopt() {
     esac
 }
 zipfileopt() {
+    # TODO check for als aunpack and add to menu
     local files="$@"
     [[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
     print -rl -- $files
@@ -369,14 +400,14 @@ zipfileopt() {
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     tar -ztvf $files | head -n 20
     menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "!vlmrd"
-    [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "view") 
             tar ztvf $files
             ;;
         "cmd")
-            [[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
+            [[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
             command=${command:-""}
             vared -p "Enter command: " command
             eval "$command $files"
@@ -401,6 +432,8 @@ zipfileopt() {
     esac
 }
 # takes one file (despite variable name) for non text files
+# TODO check for pdf2html antiword and put in menu
+# or allow to be added as ENV var by user
 otherfileopt() {
     local files="$@"
     #[[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
@@ -410,11 +443,11 @@ otherfileopt() {
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     menu_loop "Other operations:" "cmd open rmtrash od stat vim" "!ordsv"
-    [[ -n $ZFM_VERBOSE ]] && perror "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            [[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
+            [[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
             command=${command:-""}
             vared -p "Enter command: " command
             echo "executing: $command $files"
