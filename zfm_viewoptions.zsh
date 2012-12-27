@@ -1,11 +1,7 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-27 22:41
+# Last update: 2012-12-28 00:31
 # Part of zfm, contains menu portion
-# FIXME Issue this uses its own selection mechanism whereas user would 
-# have got used to key based drill down. This is purely number based
-# Create a scripts that drills down a list use nl1 also. provide a list
 #
-# TODO search files with drill down (recursive)
 # TODO drill down mdfind list (or locate)
 # ----------------------------------
 # for menu_loop we need to source
@@ -68,7 +64,6 @@ view_menu() {
 # to drill down. You can't backspace or stuff like that. You could call this fuzzy
 # in that the pattern is not contiguous, if you press abc it matches "a.*b.*c"
 #
-# TODO handle backspace
 fuzzyselectrow() {
     local files=$@
     [[ $#files -eq 0 ]] && return
@@ -109,7 +104,9 @@ fuzzyselectrow() {
         selected_file=$selected_row[-1]
         break # 2012-12-26 - 19:05 
     else
-        perror "Sorry. [$reply] not numeric"
+        #perror "Sorry. [$reply] not numeric"
+        # Use chars to drill down
+        #  Handling backspace
         if [[ "$reply" == "" || "$reply" == "" ]]; then
             if [[ -n "$gpatt" ]]; then
                 gpatt=${gpatt[1,-2]}
