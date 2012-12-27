@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-27 15:30
+#  Last update: 2012-12-27 22:48
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -28,10 +28,13 @@
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
 export ZFM_DIR
+export EDITOR=$VISUAL
 source ${ZFM_DIR}/zfm_menu.zsh
+source $ZFM_DIR/zfm_viewoptions.zsh
 setopt MARK_DIRS
 ZFM_VERBOSE=1
 export M_FULL_INDEXING=
+set_auto_view
 PAGESZ=59     # used for incrementing while paging
 #[[ -n "$M_FULL_INDEXING" ]] && PAGESZ=61
 (( PAGESZ1 = PAGESZ + 1 ))
@@ -45,7 +48,7 @@ list_printer() {
     local width=30
     local title=$1
     shift
-    local viewport vpa fin
+    #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
     local cols=3
     local tot=$#myopts
@@ -103,8 +106,8 @@ list_printer() {
         read -k -r ans
         echo
         clear # trying this out
-        [[ $ans = $'\t' ]] && perror "Got a TAB XXX"
-        [[ $ans = "" ]] && perror "Got a ESC XXX"
+        [[ $ans = $'\t' ]] && pdebug "Got a TAB XXX"
+        [[ $ans = "" ]] && pdebug "Got a ESC XXX"
         case $ans in
             "")
                 # BLANK blank
@@ -140,7 +143,7 @@ list_printer() {
                 # could happen alot of you keep numbered files)
                 selection=""
                 #vpa=( $(print -rl -- $viewport) )
-                [[ -n $ZFM_VERBOSE ]] && perror "files shown $#vpa "
+                [[ -n $ZFM_VERBOSE ]] && pdebug "files shown $#vpa "
                 if [[ $ttcount -gt 9 ]]; then
                     if [[ $patt = "" ]]; then
                         npatt="${ans}*"
@@ -154,7 +157,7 @@ list_printer() {
                         ct=0
                     fi
                     [[ -n $lines ]] || ct=0
-                    [[ -n $ZFM_VERBOSE ]] && perror "comes here $ct , $lines"
+                    [[ -n $ZFM_VERBOSE ]] && pdebug "comes here $ct , $lines"
                     if [[ $ct -eq 1 ]]; then
                         [[ -n "$lines" ]] && { selection=$lines; break }
                     elif [[ $ct -eq 0 ]]; then
@@ -181,7 +184,7 @@ list_printer() {
                 # we break these keys so caller can handle them, other wise they
                 # get unhandled PLACE SWALLOWED keys here to handle
                 # go down to MARK1 section to put in handling code
-                [[ -n $ZFM_VERBOSE ]] && perror "breaking here with $ans"
+                [[ -n $ZFM_VERBOSE ]] && pdebug "breaking here with $ans , sel: $selection"
                 break
                 ;;
             "^")
@@ -217,14 +220,14 @@ list_printer() {
                     }
                         patt="${ans}"
                     else
-                        [[ -n $ZFM_VERBOSE ]] && perror "comes here 1"
+                        [[ -n $ZFM_VERBOSE ]] && pdebug "comes here 1"
 
                         patt="$patt$ans"
                     fi
                     #[[ $ans = '.' && $patt = '' ]] && patt="^\."
                     pinfo "Pattern is $patt "
                     [[ -n $ZFM_VERBOSE ]] && echo "Pattern IS :$patt:"
-                    [[ -n $ZFM_VERBOSE ]] && perror "sending $patt to chcek"
+                    [[ -n $ZFM_VERBOSE ]] && pdebug "sending $patt to chcek"
                     # if there's only one file for that char then just jump to it
                     lines=$(check_patt $patt)
                     ct=$(print -rl -- $lines | wc -l)
@@ -304,7 +307,7 @@ list_printer() {
                     *)
                         [[ "$ans" == "[" ]] && echo "got ["
                         [[ "$ans" == "{" ]] && echo "got {"
-                        perror "Key $ans unhandled and swallowed"
+                        pdebug "Key $ans unhandled and swallowed"
                         #  put key in SWALLOW section to pass to caller
                         patt=""
                         ;;
@@ -351,11 +354,37 @@ subcommand() {
         "P"|"pop")
             pop_pwd
         ;;
+        "f"|"file")
+            if [[ -n $selectedfiles ]]; then
+                pdebug "selected files: $#selectedfiles"
+
+                if [[ $#selectedfiles -gt 1 ]]; then
+                    multifileopt $selectedfiles
+                else
+                    fileopt_noauto $selectedfiles[1]
+                fi
+            else
+                pinfo "No selected files. About $#vpa files on screen"
+                if [[ $#vpa -eq 1 ]]; then
+                    selection=${selection:-$vpa[1]}
+                else
+                    #pinfo "Please try selecting one or more files"
+                fi
+                if [[ -n "$selection" ]]; then
+                    fileopt_noauto $selection
+                else
+                    perror "Please select a file first. Use $ZFM_SELECTION_MODE_KEY key to toggle selection mode"
+                fi
+            fi
+        ;;
         "?"|"h"|"help")
             print "Commands are save (S), pop (P), help (h)"
             print ""
             print "'S' 'save' - save this dir in stack for later returning"
             print "'P' 'pop'  - revert to saved dir"
+            print "'f' 'file' - file operations on selected file"
+            print "     helpful if you have auto-actions on but want to execute"
+            print "     another action on selected file"
             print "'q' 'quit' - quit application"
             print "You may enter any other command too such as 'git status'"
             echo
@@ -427,7 +456,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1m"
+ZFM_VERSION="0.0.1n"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/27"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -489,16 +518,15 @@ param=$(print -rl -- *(M))
                     selection=$HOME
                     ;;
                 ":")
-                    selection=
                     # COMMAND SECTION on directory level
                     # This could be made into something much more
                     #
                     subcommand
+                    M_SELECTION_MODE=
                     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && break
                     ;;
                 "$ZFM_MENU_KEY")
                     local olddir=$PWD
-                    source $ZFM_DIR/zfm_viewoptions.zsh
                     view_menu
                     [[ $olddir == $PWD ]] || {
                         filterstr=${filterstr:-M}
@@ -517,12 +545,13 @@ param=$(print -rl -- *(M))
                     if [[ -n "$M_SELECTION_MODE" ]]; then
                         M_SELECTION_MODE=
                         pinfo "array has $selectedfiles"
-                        [[ $#selectedfiles -ge 1 ]] && multifileopt $selectedfiles
+                        [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
+                        [[ $#selectedfiles -eq 1 ]] && fileopt_noauto $selectedfiles
                         selectedfiles=()
                         pbold "selection mode is off"
                     else
                         M_SELECTION_MODE=1
-                        pbold "selection mode is on"
+                        pbold "selection mode is on. After selecting files, use same key to toggle off and operate on files"
                     fi
                     ;; 
                 $ZFM_SORT_KEY)
@@ -558,7 +587,7 @@ param=$(print -rl -- *(M))
             #vim $selection
             if [[ -n "$M_SELECTION_MODE" ]]; then
                 if [[ -n  ${selectedfiles[(r)$selection]} ]]; then
-                    perror "File $selection already selected, removing ..."
+                    pinfo "File $selection already selected, removing ..."
                     i=$selectedfiles[(i)$selection]
                     selectedfiles[i]=()
                     pinfo "File $selection unselected"
