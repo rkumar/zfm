@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-27 22:48
+#  Last update: 2012-12-28 01:22
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -23,7 +23,6 @@
 # TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
 # TODO what if user wants to send in some args suc as folder to start in, or resume where one left off.
 # TODO If user does not use z/j/autojmp etc then we should have option to build dir database and save it
-# TODO even in normal file filtering, it can jump into file options and execute some option. XXX
 # Same for file edit list
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
@@ -96,7 +95,8 @@ list_printer() {
         local sortorder=""
         [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
         print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING${COLOR_DEFAULT}"
-        print -rC$cols $(print -rl -- $viewport | zfm_nl.sh -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
+        #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
+        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " " ""  ) | tr -s "" |  tr "" " " 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
         #echo -n "> $patt"
@@ -238,7 +238,7 @@ list_printer() {
                 fi # M_FULL
                 ;;
             $ZFM_SIBLING_DIR_KEY)
-                # XXX FIXME TODO this and next should move to caller
+                # XXX FIXME TODO sibling and next should move to caller
                 # This should only have search and drill down functionality
                 # so it can be reused by other parts such as viewoptions
                 # to drill down, should be minimal and keep local stuff
@@ -461,6 +461,7 @@ echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/27"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
+#export selectedfiles  # for nl.sh
 #  directory stack for jumping back
 typeset -U ZFM_DIR_STACK
 ZFM_DIR_STACK=()
@@ -620,6 +621,56 @@ param=$(print -rl -- *(M))
         echo "$PWD" | pbcopy
     }
 } # myzfm
+numberlines() {
+let c=1
+local patt='.'
+##local defpatt='.'
+local defpatt=""
+local selct=$#selectedfiles
+[[ $1 = "-p" ]] && { shift; patt="$1"; shift }
+# since string searching in zsh isn;t on regular expressions and ^ is not respected
+# i am taking width of match after removing ^ and using next char as next shortcut
+# # no longer required as i don't use grep, but i wish i still were since it allows better
+# matching
+patt=${patt:s/^//}
+local w=$#patt
+#let w++
+nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+while IFS= read -r line; do
+    if [[ -n "$M_FULL_INDEXING" ]]; then
+        sub=$nlidx[$c]
+    else
+        sub=$c
+        [[ $c -gt 9 ]] && {
+            #sub=$line[$w,$w] ;  
+            # in the beggining since the patter is . we show first char
+            # otherwise this will match the dot
+            if [[ $patt = "$defpatt" ]]; then
+                sub=$line[1,1]
+            else
+                # after removing the ^ we find match and get the character after the pattern
+                # NOTE: that if the match is at end of filename there is no next character i can show.
+                ix=$line[(i)$patt]
+                (( ix += w ))
+                sub=$line[$ix,$ix] ;  
+            fi
+        }
+    fi
+    # only if there are selections we check against the array and color
+    # otherwise no check, remember that the cut that comes later can cut the 
+    # escape chars
+    if [[ $selct -gt 0 ]]; then
+        if [[ $selectedfiles[(i)$line] -gt $selct ]]; then
+            print -r -- "$sub) $line"
+        else
+            print -- "$sub) ${COLOR_BOLD}$line${COLOR_DEFAULT}"
+        fi
+    else
+        print -r -- "$sub) $line"
+    fi
+    let c++
+done
+} # numberlines
 # }
 # comment out next line if sourcing .. sorry could not find a cleaner way
 myzfm
