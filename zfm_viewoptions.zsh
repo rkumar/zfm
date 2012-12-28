@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-28 15:45
+# Last update: 2012-12-28 17:31
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate)
@@ -803,11 +803,16 @@ select_menu() {
 }
 mycommands() {
     source $ZFM_DIR/zfmcommands.zsh
-    menu_loop "My Commands" "$ZFM_MY_COMMANDS" "$ZFM_MY_MNEM"
+    menu_loop "My Commands" "$ZFM_MY_COMMANDS cmd" "$ZFM_MY_MNEM"
     type ZFM_$menu_text >/dev/null
     stat=$?
     if [[ $stat -eq 0 ]]; then
         ZFM_$menu_text
+    elif [[ "$menu_text" = "cmd" ]]; then
+        command=${command:-""}
+        vared -p "Enter command: " command
+        [[ -n "$command" ]] && eval "$command"
+
     elif [[ -x "$menu_text" ]]; then
         # not sure it will come here
         eval "$menu_text"
