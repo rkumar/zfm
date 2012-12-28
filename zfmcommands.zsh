@@ -5,10 +5,11 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2012-12-26 17:40
+#  Last update: 2012-12-28 21:06
 # ----------------------------------------------------------------------------- #
 
-export ZFM_MY_COMMANDS="ack ag tigstatus gitstatus"
+ZFM_MY_DELIM=,
+export ZFM_MY_COMMANDS="ack,ag,tig stats,git stats"
 # hotkeys for commands, put space if no hotkey
 export ZFM_MY_MNEM="agts"
 
@@ -32,14 +33,14 @@ ZFM_ag() {
     ag "$searchpattern"
     pause
 }
-ZFM_tigstatus() {
+ZFM_tigstats() {
     # check for whether you have tig installed
     # If you have problems committing try setting GIT_EDITOR
     # e.g. export GIT_EDITOR=/usr/local/bin/vim
     echo "C for commit mode, S for status mode"
     tig status
 }
-ZFM_gitstatus() {
+ZFM_gitstats() {
     # check for whether you have tig installed
     git status -sb | $PAGER
 }
