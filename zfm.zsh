@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-28 01:22
+#  Last update: 2012-12-28 17:21
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -15,6 +15,7 @@
 # ----------------------------------------------------------------------------- #
 #   Copyright (C) 2012-2013 rahul kumar
 
+#  TODO means to refresh dir listing after changing an option, rather than going up and back
 #  TODO multiple selection
 #    TODO select all
 #    TODO invert selection
@@ -57,6 +58,7 @@ list_printer() {
     # 2012-12-26 - 00:49 trygin this out so after a selection i don't lose what's filtered
     # but changing dirs must clear this, so it's dicey
     patt=${patt:-""}
+    local mark
     while (true)
     do
         (( fin = sta + $PAGESZ )) # 60
@@ -71,8 +73,10 @@ list_printer() {
         # the '#' then the match works throughout filename
         if [[ -z $M_MATCH_ANYWHERE ]]; then
             viewport=(${(M)myopts:#$patt*})
+            mark="^"
         else
             viewport=(${(M)myopts:#*$patt*})
+            mark="*"
         fi
         # this line replaces the sed filter
         viewport=(${viewport[$sta, $fin]})
@@ -100,7 +104,7 @@ list_printer() {
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
         #echo -n "> $patt"
-        echo -n "$patt > "
+        echo -n "${mark}$patt > "
         bindkey -s "OD" ","
         bindkey -s "OA" "~"
         read -k -r ans
@@ -237,6 +241,20 @@ list_printer() {
                     fi
                 fi # M_FULL
                 ;;
+            $ZFM_TOGGLE_MENU_KEY)
+                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch"
+                case "$menu_text" in
+                    "FullIndexing")
+                        full_indexing_toggle
+                        ;;
+                    "HiddenFiles")
+                        show_hidden_toggle
+                        ;;
+                    "FuzzyMatch")
+                        fuzzy_match_toggle
+                        ;;
+                esac
+                        ;;
             $ZFM_SIBLING_DIR_KEY)
                 # XXX FIXME TODO sibling and next should move to caller
                 # This should only have search and drill down functionality
@@ -334,13 +352,15 @@ toggle_match_from_start() {
 # check if there is only one file for this pattern, then straight go for it
 # with some rare cases the next char is a number, so then don't jump.
 check_patt() {
-    #if [[ -n "$M_SWITCH_OFF_DUPL_CHECK" ]]; then
-        #echo ""
-    #else
-        local p=${1:s/^//}
+    local p=${1:s/^//}  # obsolete, refers to earlier grep version
+    if [[ -z $M_MATCH_ANYWHERE ]]; then
+        # match from start - default
         lines=$(print -rl -- ${p}*)
-        echo $lines
-    #fi
+    else
+        lines=$(print -rl -- *${p}*)
+    fi
+    # need to account for match from start
+    echo $lines
 }
 subcommand() {
     dcommand=${dcommand:-""}
@@ -456,7 +476,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1n"
+ZFM_VERSION="0.0.1o"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/27"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -479,7 +499,8 @@ ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'/'}  # reset the pattern, use so
 ZFM_POPD_KEY=${ZFM_POPD_KEY:-"<"}  # goto previously visited dir
 ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # toggle selection mode
 ZFM_SORT_KEY=${ZFM_SORT_KEY:-"%"}  # change sort options
-ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change sort options
+ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change filter options
+ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
 ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
 M_SWITCH_OFF_DUPL_CHECK=
