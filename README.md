@@ -107,7 +107,7 @@ files to interface with autojump or whatever other utility you use.
 
 A summary of version-wise changes to come here. 
 
-###0.0.1n###
+###0.0.1o###
 
     * Selected items are bold faced
 
