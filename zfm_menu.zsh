@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-28 01:39
+#  Last update: 2012-12-28 13:51
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -152,7 +152,7 @@ do
         elif [[ -z "$var" ]] ; then
             perror "Wrong option $menu_char, q - quit, <ENTER> - menu" 
         elif [[ -n "$var" ]] ; then
-            perror "returning $var"
+            pdebug "returning $var"
             menu_text=$var
             break
             #echo -n " Press a key ... "
@@ -319,7 +319,9 @@ multifileopt() {
         "grep")
             greppatt=${greppatt:-""}
             vared -p "Enter pattern : " greppatt
-            eval "grep $greppatt $files"
+            # piping to pager not working in next line, maybe thinks we are not interactive
+            eval "grep $greppatt $files " 
+            pause
             ;;
         "gitadd")
             eval "git add $files"

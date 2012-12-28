@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-28 00:31
+# Last update: 2012-12-28 15:45
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate)
@@ -84,7 +84,7 @@ fuzzyselectrow() {
         print -rl -- $files | numbernine
     fi
     local len=$#hv  # accept only those many characters from user
-    echo -n "Select a row [1-$hv] (blank to cancel): "
+    echo -n "Select a row [1-$hv] ^ toggles (blank to cancel): "
     len=1
     read -k $len reply
     echo
@@ -113,6 +113,18 @@ fuzzyselectrow() {
                 [[ $gpatt[-2,-1] == ".*" ]] && gpatt=${gpatt[1,-3]}
                 files=$allfiles
                 ff=("${(@f)$(print -rl -- $files)}")
+            fi
+        elif [[ "$reply" == "^" ]]; then
+            fuzzy_match_toggle
+            # remove .*s
+            if [[ -n "$ZFM_FUZZY_MATCH_DIR" ]]; then
+                gpatt=${gpatt:gs/*//}
+                gpatt=${gpatt:gs/\.//}
+            else
+                local xx=""
+                # insert .* between each char
+                for ((i = 1; i <= $#gpatt; i++)); do xx="${xx}$gpatt[i].*"; done
+                gpatt=$xx
             fi
         elif [[ -z "$gpatt" ]]; then
             gpatt="$reply"
@@ -499,28 +511,46 @@ handle_selection() {
     esac
 
 }
+#
+#  toggle between full-indexing and drill down mode.
+#  I think full-indexing will be useful in selection mode
+#
+full_indexing_toggle() {
+    if [[ -z "$M_FULL_INDEXING" ]]; then
+        M_FULL_INDEXING=1
+    else
+        M_FULL_INDEXING=
+    fi
+    export M_FULL_INDEXING
+}
+show_hidden_toggle() {
+    if [[ -z "$M_SHOW_HIDDEN" ]]; then
+        M_SHOW_HIDDEN=1
+        setopt GLOB_DOTS
+    else
+        M_SHOW_HIDDEN=
+        unsetopt GLOB_DOTS
+    fi
+    export M_SHOW_HIDDEN
+}
+fuzzy_match_toggle() {
+    if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
+        ZFM_FUZZY_MATCH_DIR=1
+    else
+        ZFM_FUZZY_MATCH_DIR=
+    fi
+    export ZFM_FUZZY_MATCH_DIR
+}
 settingsmenu(){
     select_menu "Options" "i) Full Indexing toggle" "h) hidden files toggle" "p) Paging key" "4) Dupe check" \
         "a) Auto select action" "A) Toggle Auto Action"
     case $reply in
         "i")
-            if [[ -z "$M_FULL_INDEXING" ]]; then
-                M_FULL_INDEXING=1
-            else
-                M_FULL_INDEXING=
-            fi
-            export M_FULL_INDEXING
+            full_indexing_toggle
             ;;
         "h")
             echo "may work after changing directory, and should be set from Filters"
-            if [[ -z "$M_SHOW_HIDDEN" ]]; then
-                M_SHOW_HIDDEN=1
-                setopt GLOB_DOTS
-            else
-                M_SHOW_HIDDEN=
-                unsetopt GLOB_DOTS
-            fi
-            export M_SHOW_HIDDEN
+            show_hidden_toggle
             ;;
         "p")
             echo "Page key is (default <ENTER>: [$M_PAGE_KEY]"
