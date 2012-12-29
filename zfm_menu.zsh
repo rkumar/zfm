@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-28 20:54
+#  Last update: 2012-12-29 00:47
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -167,6 +167,9 @@ done
 fileopt() {
     local name="$1"
     local type="$(filetype $name)"
+    extn=$name:e
+    # we can store def app in a hash so not queried each time
+    default_app=$(alias -s | grep $extn | cut -f2 -d= )
     pdebug "$0 got $type for $name"
     case $type in
         "text")
@@ -174,14 +177,14 @@ fileopt() {
             if [[ -n "$ZFM_AUTO_TEXT_ACTION" ]]; then
                 "$ZFM_AUTO_TEXT_ACTION" $name 
             else 
-                textfileopt $name
+                textfileopt $name $default_app
             fi
             ;;
         "image")
             if [[ -n "$ZFM_AUTO_IMAGE_ACTION" ]]; then
                "$ZFM_AUTO_IMAGE_ACTION" $name 
                else
-                   otherfileopt $name
+                   otherfileopt $name $default_app
                fi
             #otherfileopt $name
             ;;
@@ -189,7 +192,7 @@ fileopt() {
             if [[ -n "$ZFM_AUTO_ZIP_ACTION" ]]; then
                eval "$ZFM_AUTO_ZIP_ACTION $name"
                else
-                   zipfileopt $name
+                   zipfileopt $name $default_app
                fi
             #zipfileopt $name
             ;;
@@ -197,7 +200,7 @@ fileopt() {
             if [[ -n "$ZFM_AUTO_OTHER_ACTION" ]]; then
                "$ZFM_AUTO_OTHER_ACTION" $name 
                else
-                   otherfileopt $name
+                   otherfileopt $name $default_app
                fi
             #otherfileopt $name
             ;;
@@ -208,16 +211,19 @@ fileopt() {
 fileopt_noauto() {
     local name="$1"
     local type="$(filetype $name)"
+    extn=$name:e
+    # we can store def app in a hash so not queried each time
+    default_app=$(alias -s | grep $extn | cut -f2 -d= )
     pdebug "$0 got $type for $name"
     case $type in
         "text")
-            textfileopt $name
+            textfileopt $name $default_app
             ;;
         "zip")
-            zipfileopt $name
+            zipfileopt $name $default_app
             ;;
         *)
-            otherfileopt $name
+            otherfileopt $name $default_app
             ;;
     esac
 }
@@ -280,7 +286,7 @@ multifileopt() {
     print_title "File summary for $#files files:"
     # eval otherwise files with spaces will cause an error
     eval "ls -lh $files"
-    IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,rmtrash,git add,git com" "z!gmra"
+    IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,rmtrash,git add,git com" "zcg!#a"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
@@ -345,7 +351,8 @@ textfileopt() {
     file $files
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
-    menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
+    #menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
+    menu_loop "File operations:" "vim cmd less mv rmtrash archive tail head open auto $default_app" "vcl!#zthoa"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
@@ -401,7 +408,7 @@ zipfileopt() {
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     tar -ztvf $files | head -n 20
-    menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "!vlmrd"
+    menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "cvl!#d"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
@@ -444,7 +451,7 @@ otherfileopt() {
     file $files
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
-    menu_loop "Other operations:" "cmd open rmtrash od stat vim" "!ordsv"
+    menu_loop "Other operations:" "cmd open mv rmtrash od stat vim $default_app" "co!#dsv"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
