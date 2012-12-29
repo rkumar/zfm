@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-28 22:14
+# Last update: 2012-12-29 14:44
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate)
@@ -84,14 +84,21 @@ fuzzyselectrow() {
         print -rl -- $files | numbernine
     fi
     local len=$#hv  # accept only those many characters from user
-    echo -n "Select a row [1-$hv] ^ toggles (blank to cancel): "
+    local _hv=$#ff #this has been updated
+    echo -n "Select a row [1-$_hv] ^ toggles (Esc to cancel, Enter to accept): "
     len=1
     read -k $len reply
     echo
 
     # if using read -k then we need to make enter into a blank
-    reply=$(echo "$reply" | tr -d '[\n\r\t ]')
+    # TODO enter selects #1
+    #reply=$(echo "$reply" | tr -d '[\n\r\t ]')
+    #reply=$(echo "$reply" | tr '[\n\r ]' "1") # enter causes 1st row to get selected
+    [[ $reply = $'\n'  ]] && reply=1
 
+
+    [[ $reply = "" ]] && { pdebug "Got esc" ; selected_file=; break }
+    pdebug "got $reply"
     [[ -z "$reply" ]] && break
     #  check for numeric as some values like "o" can cause abort
     if [[ "$reply" == <-> ]]; then
@@ -141,21 +148,32 @@ fuzzyselectrow() {
         files=( $(print -rl -- $ff | grep "$gpatt") )
         #echo "FFF $#files"
         if [[ $#files -eq 0 ]] ; then
-            perror "No further files... reverting to full listing"
-            gpatt=""
-            files=$allfiles
-           ff=("${(@f)$(print -rl -- $files)}")
+            # FIXME we should go back to earlier pattern maybe user added one char
+            # by mistake and should try another
+            perror "No files for $gpatt. Use backspace or try another pattern"
+            #gpatt=""
+            #files=$allfiles
+            #ff=("${(@f)$(print -rl -- $files)}")
        elif [[ $#files -eq 1 ]] ; then
-           # if there's only one file than accept it, no confirmation
-           selected_row=("${(s/	/)files}")
-           selected_file=$selected_row[-1]
+           # if there's only one file than accept it, no confirmation and break
+           if [[ -n $ZFM_NO_CONFIRM ]]; then
+               selected_row=("${(s/	/)files}")
+               selected_file=$selected_row[-1]
+               break
+           fi
            # for files we need to have a confirm or else it can
            # go into an action such as rm which is dangerous
-           if [[ -n "$ZFM_FUZZY_SELECT_CONFIRM" ]]; then
-               print -n "Confirm you want $selected_file [y/n]: "
-               read yn
-               [[ $yn =~ [Yy] ]] && break
-           fi
+           #if [[ -n "$ZFM_FUZZY_SELECT_CONFIRM" ]]; then
+               #print -n "Confirm you want $selected_file [y/n]: "
+               #read yn
+               #[[ $yn =~ [Yy] ]] && break
+           #else
+               # if only one left just jump there
+               # but now we want to insist on ENTER
+               #break
+               # 2012-12-29 - 14:35 
+               ff=("${(@f)$(print -rl -- $files)}")
+           #fi
        else
            ff=("${(@f)$(print -rl -- $files)}")
        fi
@@ -842,16 +860,16 @@ mycommands() {
 # numbers the first nine rows only since these are hotkeys
 # the rest must be filtered by some character.
 numbernine() {
-let c=1
+    let c=1
     local tabd=$'\t'
 
-while IFS= read -r line; do
-    sub=$c
-    if [[ $c -gt 9 ]]; then
-        print -r -- "  ${tabd}$line"
-    else
-        print -r -- "$sub)${tabd}$line"
-    fi
-    let c++
-done
+    while IFS= read -r line; do
+        sub=$c
+        if [[ $c -gt 9 ]]; then
+            print -r -- "  ${tabd}$line"
+        else
+            print -r -- "$sub)${tabd}$line"
+        fi
+        let c++
+    done
 }
