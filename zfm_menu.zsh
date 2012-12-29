@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-29 00:47
+#  Last update: 2012-12-29 18:59
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -169,7 +169,8 @@ fileopt() {
     local type="$(filetype $name)"
     extn=$name:e
     # we can store def app in a hash so not queried each time
-    default_app=$(alias -s | grep $extn | cut -f2 -d= )
+    #default_app=$(alias -s | grep $extn | cut -f2 -d= )
+    [[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
     pdebug "$0 got $type for $name"
     case $type in
         "text")
@@ -213,7 +214,7 @@ fileopt_noauto() {
     local type="$(filetype $name)"
     extn=$name:e
     # we can store def app in a hash so not queried each time
-    default_app=$(alias -s | grep $extn | cut -f2 -d= )
+    [[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
     pdebug "$0 got $type for $name"
     case $type in
         "text")
