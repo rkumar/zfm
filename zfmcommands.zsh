@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2012-12-29 00:03
+#  Last update: 2012-12-29 19:59
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -18,9 +18,9 @@ ZFM_MY_DELIM=,
 # usually directory level. They are currently parsed using "read -A" and use IFS.
 #
 #
-ZFM_MY_COMMANDS="ack,ag,tig stats,git stats"
+ZFM_MY_COMMANDS="ack,ag,tig stats,git stats,ffind,mdfind,locate"
 # hotkeys for commands, put space if no hotkey
-ZFM_MY_MNEM="agts"
+ZFM_MY_MNEM="agtsf"
 
 #  Now place functions for above commands, otherwise it is expected they
 #  are in path, if ZFM_xxx is first looked for, otherwise xxx in $PATH
@@ -36,7 +36,7 @@ ZFM_ack() {
 
 
 ZFM_ag() {
-    # check for whether you have ag installed
+    # check for whether you have ag installed (the_silver_searcher)
     searchpattern=${searchpattern:-""}
     vared -p "Pattern to ag for:" searchpattern
     ag "$searchpattern"
@@ -55,4 +55,21 @@ ZFM_tigstats() {
 ZFM_gitstats() {
     # check for whether you have git installed
     git status -sb | $PAGER
+}
+ZFM_ffind() {
+    # find files with string in filename, uses perl expressions and requires GNU grep (coreutils)
+    searchpattern=${searchpattern:-""}
+    vared -p "Filename to search for (enter 3 characters): " searchpattern
+    # recurse and match filename only
+    files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
+    if [[ $#files -gt 0 ]]; then
+        files=$( echo $files | xargs ls -t )
+        fuzzyselectrow $files
+
+        [[ -n "$selected_file" ]] && {
+            fileopt "$selected_file"
+        }
+    else
+        perror "No files matching $searchpattern"
+    fi
 }
