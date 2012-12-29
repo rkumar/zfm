@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-28 18:26
+#  Last update: 2012-12-29 15:02
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -433,13 +433,14 @@ pop_pwd() {
     $newd:q
     $ZFM_DIR_STACK
     )
+    # XXX maybe should cd to new top dir, not removed one.
     cd $newd
     pwd
     post_cd
 }
 #  executed when dir changed
 post_cd() {
-                    patt="" # 2012-12-26 - 00:54 
+    patt="" # 2012-12-26 - 00:54 
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
 }
@@ -476,8 +477,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1p"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/28"
+ZFM_VERSION="0.0.1r"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/29"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
