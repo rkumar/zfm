@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-29 18:52
+# Last update: 2012-12-30 01:18
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate)
@@ -182,127 +182,11 @@ fuzzyselectrow() {
     done
 }
 
-# select a single row, based on line number which has been supplied with data
-# (I know the line number coming in is not a good idea)
-selectrow() {
-    local files=$@
-    [[ $#files -eq 0 ]] && return
-    allfiles=$files # to revert to full listing
-    ff=("${(@f)$(print -rl -- $files)}")
-    local hv=$#ff
-    while (true)
-    do
-    if [[ $hv -gt 24 ]]; then
-        # split into 2 columns, hopefully only name was sent in and not details
-        echo "   No.\t  Name"
-        #print -rC2 -- $files 
-        print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
-    else
-        echo "   No.\t  Size \t  Modified Date  \t  Name"
-        print -rl -- $files 
-    fi
-    local len=$#hv  # accept only those many characters from user
-    echo -n "Select a row [1-$hv] (blank to cancel): "
-    read -k $len reply
-    echo
-
-    # if using read -k then we need to make enter into a blank
-    reply=$(echo "$reply" | tr -d '[\n\r\t ]')
-
-    [[ -z "$reply" ]] && break
-    #  check for numeric as some values like "o" can cause abort
-    if [[ "$reply" == <-> ]]; then
-        line="$ff[$reply]"
-        # only a physical tab was working, \t etc was not working
-        # split row with tabs into an array
-        selected_row=("${(s/	/)line}")
-        #selected_file=$selected_row[4]
-        # just in case only file name passed as in dirnames
-        selected_file=$selected_row[-1]
-        break # 2012-12-26 - 19:05 
-    else
-        perror "Sorry. [$reply] not numeric"
-        # this is an interesting twist except that reply is reset each time
-        # if i reset ff to files then i lose the original so one can't go back, let's try :)
-        files=(${(M)ff:#*$reply*})
-        ff=("${(@f)$(print -rl -- $files)}")
-    fi
-    done
-}
-# this implemnents select multiple with deletion of selected item
-# into another buffer, looks nice as the list shrinks, but doesn't
-# allow for unselection of item
-selectrows() {
-    local files
-    files=$@
-    # selected rows go into a buffer named deleted
-    # as they are no longer displayed
-    deleted=()
-    while (true) 
-    do
-        echo "   No.\t  Size \t  Modified Date  \t  Name"
-        print -rl -- $files | nl
-        echo -n "select row (all-A, invert-I, e - edit, z - zip): "
-        read -r reply
-        [[ -z $reply ]] && { echo "breaking on blank" ; break }
-        case $reply in
-            "z"|"e"|"v")
-                # zips selected files, pref don't select zips
-                break
-                ;;
-            "A") 
-                echo "selected all"
-                ff=("${(@f)$(print -rl -- $files)}")
-                deleted=(
-                $deleted
-                $ff
-                )
-                break
-                ;;
-            'I')
-                # invert selection
-                ttmp=("${(@f)$(print -rl -- $files)}")
-                files=( $deleted )
-                #ff=("${(@f)$(print -rl -- $files)}")
-                deleted=($ttmp)
-                #files=()
-                ;; 
-            [1-9][0-9]*)
-
-        ff=("${(@f)$(print -rl -- $files)}")
-        line=${ff[$reply]}
-        # only a physical tab was working, \t etc was not working
-        #split
-        selected_row=("${(s/	/)line}")
-        selected_file=$selected_row[4]
-        echo $selected_file
-        deleted=(
-        $deleted
-        $line
-        )
-        ff[$reply]=()
-        files=$( print -rl -- $ff)
-esac
-    done
-    echo "selected were:"
-    selected=()
-    for line in $deleted
-    do
-        #echo "line $line"
-        selected_row=("${(s/	/)line}")
-        selected_file=$selected_row[4]
-        selected=(
-        $selected
-        $selected_file:q
-        )
-        echo "   >>>> file: $selected_file "
-    done
-    #echo "::: selected array"
-    #echo $selected
-}
+# 
 # Allow multiple selection of row, highlight selected row
 # This allows deselection also
 # Pressing <enter> completes selection
+# 
 selectmulti() {
     local files
     local tabd=$'\t'
@@ -315,30 +199,49 @@ selectmulti() {
     echo "Enter row numbers to select, press ENTER when finished selection"
     echo "  Press I to invert selection, A to select all"
     echo "  e opens EDITOR on selected files, z zips selected files"
+    echo " Press 'S' for short 2-col list, 's' to revert to 1-col"
     echo
+    local M_SHORT="1"
     while (true) 
     do
         local c=1
         echo "No.\t  Size \t  Modified Date  \t  Name"
         #print -rl -- $files
         ff=("${(@f)$(print -rl -- $files)}")
-        for fi in $ff
+        print -rC$M_SHORT -- $( \
+        for fil in $ff
         do
-            [[ $#deleted -gt 0 ]] && { delix=$deleted[(i)$fi]
-            #echo "      [ $fi ] : delix, deleted: $delix => $#deleted "
+            # stores the entire row and matches entire row, so take care when shortening that only
+            # filename is matched
+
+            [[ $#deleted -gt 0 ]] && { delix=$deleted[(i)$fil]
+
+                #echo "      [ $fi ] : delix, deleted: $delix => $#deleted "
             }
+                if [[ $M_SHORT == "2" ]]; then
+                    row=("${(s/	/)fil}")
+                    rfile=$row[-1]
+                    fil=$rfile
+                fi
             if [[ $delix -gt $#deleted ]]; then
-                echo "$c${tabd}$fi"
+                echo "$c${tabd}$fil"
             else
-                echo "$c${tabd}${COLOR_BOLD}${fi}${COLOR_DEFAULT}"
+                echo "$c${tabd}${COLOR_BOLD}${fil}${COLOR_DEFAULT}"
             fi
             let c++
 
-        done
+        done \
+        | tr " \t" "" )  | tr "" " \t"
         echo -n "select rows by number (ENTER when done, all-A, invert-I, e - edit, z - zip): "
         read -r reply
-        [[ -z $reply ]] && { echo "breaking on blank" ; break }
+        [[ -z $reply ]] && { pdebug "breaking on blank" ; break }
         case $reply in
+            "S")
+                M_SHORT="2"
+                ;;
+            "s")
+                M_SHORT="1"
+                ;;
             "q")
                 break
                 ;;
@@ -346,7 +249,7 @@ selectmulti() {
                 break
                 ;;
             "A") 
-                echo "selected all"
+                pdebug "selected all"
                 ff=("${(@f)$(print -rl -- $files)}")
                 deleted=(
                 $deleted
@@ -360,16 +263,16 @@ selectmulti() {
                 ttmp=($deleted)
                 deleted=()
                 ff=("${(@f)$(print -rl -- $files)}")
-                for fi in $ff
+                for fil in $ff
                 do
                     [[ $#ttmp -gt 0 ]] && 
-                    { delix=$ttmp[(i)$fi]
+                    { delix=$ttmp[(i)$fil]
                     #echo "      [ $fi ] : delix, deleted: $delix => $#deleted "
                 }
                 if [[ $delix -gt $#ttmp ]]; then
                     deleted=(
                     $deleted
-                    $fi
+                    $fil
                     )
                 fi
             done
@@ -381,7 +284,7 @@ selectmulti() {
         # only a physical tab was working, \t etc was not working
         #split
         selected_row=("${(s/	/)line}")
-        selected_file=$selected_row[4]
+        selected_file=$selected_row[-1]
         echo "selected: $selected_file"
         if [[ $deleted[(i)$line] -le $#deleted ]]; then
             deleted[$deleted[(i)$line]]=()
@@ -412,7 +315,9 @@ esac
         echo " file: $selected_file "
     done
 }
+#
 # recursive listing
+#
 recviewoptions() {
     M_REC_STRING="**/"
     M_ACK_REC_FLAG="-r"
@@ -473,8 +378,14 @@ viewoptions() {
             #files=$(eval "listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern)" | nl)
             # somehow with eval only first row was coming through
             # maybe due to newlines
-            files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern))
-            selectmulti $files
+            pinfo "Using ack -l $M_ACK_REC_FLAG (-n non recursive, -r recursive)"
+            files=$(ack -l $M_ACK_REC_FLAG $cpattern)
+            if [[ $#files -gt 0 ]]; then
+                files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern))
+                selectmulti $files
+            else
+                pinfo "No files found containing $cpattern (using ack -l $M_ACK_REC_FLAG)"
+            fi
             #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "dirs")
