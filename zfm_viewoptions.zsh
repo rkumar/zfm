@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-29 14:44
+# Last update: 2012-12-29 18:52
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate)
@@ -69,23 +69,24 @@ fuzzyselectrow() {
     [[ $#files -eq 0 ]] && return
     allfiles=$files # to revert to full listing
     ff=("${(@f)$(print -rl -- $files)}")
-    local hv=$#ff
     local gpatt=""
     while (true)
     do
+    local hv=$#ff
         echo "   No.\t  Name"
     if [[ $hv -gt 24 ]]; then
         # split into 2 columns, hopefully only name was sent in and not details
         #print -rC2 -- $files 
         #print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
-        print -rC2 -- $(print -rl -- $files | numbernine | tr "[ \t]" "" ) | tr "" " "
+        print -rC2 -- $(print -rl -- $files | numbernine | sed "s#$HOME#~#g" |  tr "[ \t]" "" ) | tr "" " "
     else
         #echo "   No.\t  Size \t  Modified Date  \t  Name"
         print -rl -- $files | numbernine
     fi
-    local len=$#hv  # accept only those many characters from user
+    #local len=$#hv  # accept only those many characters from user
     local _hv=$#ff #this has been updated
-    echo -n "Select a row [1-$_hv] ^ toggles (Esc to cancel, Enter to accept): "
+    [[ $_hv -gt 9 ]] && _hv=9
+    echo -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, <ESC> cancel, <ENTER>  accept: "
     len=1
     read -k $len reply
     echo
@@ -788,15 +789,10 @@ m_recentfiles() {
                 handle_selection "$reply" "$selected_files"
             }
         else
-            # NOTE  XXX
-            #this is a bit dangerous because files autoselect and the next command
-            #can get triggered like mv or rm and then either it happens, or asks for 
-            #a target and then we have to start again
-            ZFM_FUZZY_SELECT_CONFIRM=1
             tmpfuzz=$ZFM_FUZZY_MATCH_DIR
+            # we want a contiguous match, not fuzzy
             ZFM_FUZZY_MATCH_DIR="1"
             fuzzyselectrow $files
-            ZFM_FUZZY_SELECT_CONFIRM=
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
             [[ -n "$selected_file" ]] && {
                 fileopt "$selected_file"
