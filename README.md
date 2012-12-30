@@ -107,6 +107,17 @@ files to interface with autojump or whatever other utility you use.
 
 A summary of version-wise changes. 
 
+###0.0.1t###
+    
+    * display size and mtime if 15 rows only
+    * filter for showing links (MENU F(ilter) LINKS)
+
+###0.0.1r###
+
+    * (In fuzzy search ) Enter selects during dir and file searches (BACKTICK k and BACKTICK l).
+    This is like using Control-P or Control-P. Automatic selection as you
+    type keys was dangerous.
+
 ###0.0.1o###
 
     * Selected items are bold faced
