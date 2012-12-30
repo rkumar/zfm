@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-30 01:21
+#  Last update: 2012-12-30 19:49
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -34,7 +34,11 @@ source $ZFM_DIR/zfm_viewoptions.zsh
 setopt MARK_DIRS
 ZFM_VERBOSE=1
 export M_FULL_INDEXING=
+export TAB=$'\t'
 set_auto_view
+# for printing details 2012-12-30 - 16:57 
+zmodload zsh/stat
+zmodload -F zsh/stat b:zstat
 PAGESZ=59     # used for incrementing while paging
 #[[ -n "$M_FULL_INDEXING" ]] && PAGESZ=61
 (( PAGESZ1 = PAGESZ + 1 ))
@@ -83,9 +87,11 @@ list_printer() {
         vpa=("${(@f)$(print -rl -- $viewport)}")
         #vpa=("${(f)=viewport}")
         local ttcount=$#vpa
+        ZFM_LS_L=
         if [[ $ttcount -lt 15 ]]; then
             cols=1
             width=80
+            ZFM_LS_L=1
         elif [[ $ttcount -lt 40 ]]; then
             cols=2
             width=40
@@ -100,7 +106,8 @@ list_printer() {
         [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
         print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING${COLOR_DEFAULT}"
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
-        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " " ""  ) | tr -s "" |  tr "" " " 
+        #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " " ""  ) | tr -s "" |  tr "" " " 
+        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" ""  ) | tr -s "" |  tr "" " \t" 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
         #echo -n "> $patt"
@@ -267,7 +274,7 @@ list_printer() {
                 menu_loop "Siblings" "$(print ${PWD:h}/*(/) )"
                 echo "selected $menu_text"
                 $ZFM_CD_COMMAND $menu_text
-                    patt="" # 2012-12-26 - 00:54 
+                patt="" # 2012-12-26 - 00:54 
                 filterstr=${filterstr:-M}
                 param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 break
@@ -302,6 +309,11 @@ list_printer() {
                 ;;
             "$ZFM_POPD_KEY")
                 break
+                ;; 
+            "$ZFM_ACCEPT_FIRST_KEY")
+                # but if no files shown then what happens ?
+                selection=$vpa[1]
+                [[ -n "$selection" ]] && break
                 ;; 
 
 
@@ -477,7 +489,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1s"
+ZFM_VERSION="0.0.1t"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/30"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -493,6 +505,7 @@ ZFM_START_DIR="$PWD"
 #  defaults KEYS
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
 ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-' '}  # trying out enter if files have spaces and i need to type a space
+ZFM_ACCEPT_FIRST_KEY=${ZFM_ACCEPT_FIRST_KEY:-$'\n'}  # pressing ENTER selects first
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
 ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
@@ -552,6 +565,8 @@ param=$(print -rl -- *(M))
                     local olddir=$PWD
                     view_menu
                     [[ $olddir == $PWD ]] || {
+                        # dir has changed
+                        patt=""
                         filterstr=${filterstr:-M}
                         param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                     }
@@ -629,8 +644,10 @@ param=$(print -rl -- *(M))
             fi
         else
             [[ -n "$selection" ]] && {
+            # sometimes comes here on a link (esp broken) and fileopt will check for -f and reject
                 pbold "Don't know how to handle $selection"
                 file $selection
+                fileopt $selection
                 pause
             }
         fi
@@ -644,28 +661,28 @@ param=$(print -rl -- *(M))
     }
 } # myzfm
 numberlines() {
-let c=1
-local patt='.'
-##local defpatt='.'
-local defpatt=""
-local selct=$#selectedfiles
-[[ $1 = "-p" ]] && { shift; patt="$1"; shift }
-# since string searching in zsh isn;t on regular expressions and ^ is not respected
-# i am taking width of match after removing ^ and using next char as next shortcut
-# # no longer required as i don't use grep, but i wish i still were since it allows better
-# matching
-patt=${patt:s/^//}
-local w=$#patt
-#let w++
-nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-while IFS= read -r line; do
-    if [[ -n "$M_FULL_INDEXING" ]]; then
-        sub=$nlidx[$c]
-    else
-        sub=$c
-        [[ $c -gt 9 ]] && {
+    let c=1
+    local patt='.'
+    ##local defpatt='.'
+    local defpatt=""
+    local selct=$#selectedfiles
+    [[ $1 = "-p" ]] && { shift; patt="$1"; shift }
+    # since string searching in zsh isn;t on regular expressions and ^ is not respected
+    # i am taking width of match after removing ^ and using next char as next shortcut
+    # # no longer required as i don't use grep, but i wish i still were since it allows better
+    # matching
+    patt=${patt:s/^//}
+    local w=$#patt
+    #let w++
+    nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    while IFS= read -r line; do
+        if [[ -n "$M_FULL_INDEXING" ]]; then
+            sub=$nlidx[$c]
+        else
+            sub=$c
+            [[ $c -gt 9 ]] && {
             #sub=$line[$w,$w] ;  
-            # in the beggining since the patter is . we show first char
+            # in the beginning since the patter is . we show first char
             # otherwise this will match the dot
             if [[ $patt = "$defpatt" ]]; then
                 sub=$line[1,1]
@@ -678,17 +695,31 @@ while IFS= read -r line; do
             fi
         }
     fi
+
+    if [[ -n "$ZFM_LS_L" ]]; then
+        if [[ -n "$line" ]]; then
+            mtime=$(zstat -L -F "%Y/%m/%d %H:%M" +mtime $line)
+            zstat -L -H hash $line
+            sz=$hash[size]
+            link=$hash[link]
+            [[ -n $link ]] && link=" -> $link"
+            _detail="${TAB}$sz${TAB}$mtime${TAB}"
+        fi
+    else
+        link=
+        _detail=
+    fi
     # only if there are selections we check against the array and color
     # otherwise no check, remember that the cut that comes later can cut the 
     # escape chars
     if [[ $selct -gt 0 ]]; then
         if [[ $selectedfiles[(i)$line] -gt $selct ]]; then
-            print -r -- "$sub) $line"
+            print -r -- "$sub) $_detail $line"
         else
             print -- "$sub) ${COLOR_BOLD}$line${COLOR_DEFAULT}"
         fi
     else
-        print -r -- "$sub) $line"
+        print -r -- "$sub) $_detail $line $link"
     fi
     let c++
 done
