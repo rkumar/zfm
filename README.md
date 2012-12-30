@@ -30,7 +30,7 @@ If you like it, alias m or some other unused character to ~/bin/zfm.zsh in your 
 Now type "m":
 
 You should see a listing of your directory with 9 files hot-keyed with numbers and the rest with the first letter.
-Press a hotkey. If it is a directory, you will automatically change into it. If its a file, you will get a menu of file options.
+Press a hotkey. If it is a directory, you will automatically change into it. If its a file, you will get a menu of file options. (As of writing, now we automatically open the file using EDITOR). (MENU -> Options can be used to switch off default open behavior to get a menu).
 
 Let's say you want to navigate to the "tmp" directory. 
 Type "t". You will see "t" on the left of your prompt, and the list is filtered to "t*". 
@@ -41,7 +41,7 @@ You may also press "backspace" to erase the pattern one by one. Please note that
 
 Press the ZFM_GOTO_KEY (currently "+" (plus sign)). You are prompted for a path. Type /usr/local/lib, pressing the tab after lo and li. Press ENTER to jump to that directory.
 
-Press the colon (":") and type an arbitrary shell command. You can type "q" or "quit" to quit.
+Press the colon (":") and type an arbitrary shell command. You can type "q" or "quit" to quit, help or ? should show you some canned actions.
 
 Currently "q" is never mapped to a file, it quits. This is a feature cum bug. I need to find another quit key and release the "q" so the "qt" guys don't sue me :)
 
@@ -52,6 +52,15 @@ At present I have a menu triggered by pressing the backtick (lower tilde). This 
 One example is "ft". After triggering the menu with MENU_KEY, "f" jumps to "File listing" and "t" shows a listing of files modified today.
 
 If you are editing many files, rather than press "v" each time for your EDITOR (in the File Operations menu), select "a" for auto-open and enter your editor name. Now whenever a text file is selected your editor will open it. For other kinds of files, go to Menu => Options and provide the application for major file types.
+
+Users of the autojump utility "z" (brew install z or see github rupa/z), can use MENU-k (backtick k) to see directories from their $HOME/.z database, type in a number to select, or press a couple of keys to drill down to the dir and press ENTER.
+
+Users of vim can use MENU-l or MENU-v, files from your $HOME/.viminfo will be displayed and can be selected. "l" allows single file selection, "v" allows multiple file selection. These 2 features allow you to very quickly jump to dirs or files with a couple of keystrokes. Users of other utilities such as autojump can configure reading dirs from their database in zfmdirs.
+
+If you wish to change the sort order of your listing, try MENU-s. To filter your listings to only files/dirs/links, recent files etc, try MENU-F.
+
+There are some interfaces to ack ag for viewing files containing some text. MENU-f and MENu-r give you the option to ack for this dir or recursively. File names can then be selected for viewing.
+
 
 ###Edge Cases:###
 
@@ -82,6 +91,17 @@ The second way is from the file manager itself. There is a toggle key for SELECT
 
 The first method from the menu, shows selected files highlighted so it's nicer. At this time, the main file manager does not use any coloring or highlighting (it may do so later, not a priority).
 
+### Finding a file based on filename###
+
+This is similar to the `find` command but uses zsh, to find a file given a string. Matches are displayed and can be filtered based on more keys, and files may be selected and edited. Currently, the location of this is MENU-c ("commands") -> "ffind".
+
+###Searching based on file content###
+
+I've interfaced with `ag` and `ack` to provide a list of files from which files may be selected.
+MENU-f 9 (ack) searches current dir, MENU-r 9 (ack) searches recursively.
+
+MENU-c (commands) ack and ag currently only show the output of ack and ag, they do not allow file selection.
+
 ###Miscellaneous###
 
 There are other keys also mapped to some actions. Will document as i go. and these keys are not fixed yet.
@@ -90,7 +110,7 @@ e.g. navigate to a *sibling* directory. Press "[" (square bracket open) to see s
 
 The menu offers directories from the "*dirs*" command. I think this only works if you source the file, otherwise the new shell does not execute .zshrc and do contains a blank "dirs". This helps to jump to oft viewed directories.  
 
-The menu *Bookmark* option (I used that since "f" and "F" are both taken) shows files from your .viminfo file, so you can jump to recent files. If you use some other editor, we need to plug that in or use some environment variable for favorite files.  
+The menu option "filejump" shows files from your .viminfo file, so you can jump to recent files. If you use some other editor, the file zfmfiles can be configured to output recent files from some other source or database.
 
 Provided an option for doing what "*cd OLD NEW*" does. It will offer parts of the current path, select one, and see the alternatives and select the other. Hopes to be faster than typing this on the command line. These things are required for jumping between large project structures.  Need to figure out what key to map it to, currently "]" (square bracket clase).  
 
