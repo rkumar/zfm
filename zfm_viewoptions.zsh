@@ -1,8 +1,8 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-30 01:18
+# Last update: 2012-12-30 18:52
 # Part of zfm, contains menu portion
 #
-# TODO drill down mdfind list (or locate)
+# TODO drill down mdfind list (or locate) - can be very large so avoiding for now
 # ----------------------------------
 # for menu_loop we need to source
 source $ZFM_DIR/zfm_menu.zsh
@@ -92,9 +92,10 @@ fuzzyselectrow() {
     echo
 
     # if using read -k then we need to make enter into a blank
-    # TODO enter selects #1
     #reply=$(echo "$reply" | tr -d '[\n\r\t ]')
     #reply=$(echo "$reply" | tr '[\n\r ]' "1") # enter causes 1st row to get selected
+    #
+    #  pressing ENTER selects first item by default
     [[ $reply = $'\n'  ]] && reply=1
 
 
@@ -208,6 +209,10 @@ selectmulti() {
         echo "No.\t  Size \t  Modified Date  \t  Name"
         #print -rl -- $files
         ff=("${(@f)$(print -rl -- $files)}")
+
+        # print in 1 or 2 columns, if list is long, then print only filename
+        # and break into 2 columns.
+        #
         print -rC$M_SHORT -- $( \
         for fil in $ff
         do
@@ -215,8 +220,6 @@ selectmulti() {
             # filename is matched
 
             [[ $#deleted -gt 0 ]] && { delix=$deleted[(i)$fil]
-
-                #echo "      [ $fi ] : delix, deleted: $delix => $#deleted "
             }
                 if [[ $M_SHORT == "2" ]]; then
                     row=("${(s/	/)fil}")
@@ -232,6 +235,7 @@ selectmulti() {
 
         done \
         | tr " \t" "" )  | tr "" " \t"
+
         echo -n "select rows by number (ENTER when done, all-A, invert-I, e - edit, z - zip): "
         read -r reply
         [[ -z $reply ]] && { pdebug "breaking on blank" ; break }
@@ -279,29 +283,29 @@ selectmulti() {
             ;; 
             *)
 
-        ff=("${(@f)$(print -rl -- $files)}")
-        line=${ff[$reply]}
-        # only a physical tab was working, \t etc was not working
-        #split
-        selected_row=("${(s/	/)line}")
-        selected_file=$selected_row[-1]
-        echo "selected: $selected_file"
-        if [[ $deleted[(i)$line] -le $#deleted ]]; then
-            deleted[$deleted[(i)$line]]=()
-        else
-            deleted=(
-            $deleted
-            $line
-            )
-        fi
-        files=$( print -rl -- $ff)
-        ;;
+                ff=("${(@f)$(print -rl -- $files)}")
+                line=${ff[$reply]}
+                # only a physical tab was working, \t etc was not working
+                #split
+                selected_row=("${(s/	/)line}")
+                selected_file=$selected_row[-1]
+                pdebug "selected: $selected_file"
+                if [[ $deleted[(i)$line] -le $#deleted ]]; then
+                    deleted[$deleted[(i)$line]]=()
+                else
+                    deleted=(
+                    $deleted
+                    $line
+                    )
+                fi
+                files=$( print -rl -- $ff)
+                ;;
     #*)
         #echo "default got $reply"
         #;;
 esac
     done
-    echo "selected were:"
+    pdebug "selected were:"
     selected_files=()
     for line in $deleted
     do
@@ -312,7 +316,7 @@ esac
         $selected_files
         $selected_file:q
         )
-        echo " file: $selected_file "
+        pdebug " file: $selected_file "
     done
 }
 #
@@ -412,7 +416,7 @@ handle_selection() {
     local reply=$1
     shift
     selected_files=$@
-    perror "handle_selection with $reply"
+    pdebug "handle_selection with $reply"
 
     case $reply in
         "q")
@@ -434,7 +438,7 @@ handle_selection() {
             vared -p "Enter command (e.g. mv) :" commandpre
             [[ -z "$commandpre" ]] && return
             vared -p "Enter command to append to filenames (e.g. target) :" commandpost
-            echo "$commandpre $selected_files $commandpost"
+            pdebug "$commandpre $selected_files $commandpost"
             eval "$commandpre $selected_files $commandpost"
         }
         ;;
@@ -479,7 +483,7 @@ settingsmenu(){
             full_indexing_toggle
             ;;
         "h")
-            echo "may work after changing directory, and should be set from Filters"
+            pinfo "may work after changing directory, and should be set from Filters"
             show_hidden_toggle
             ;;
         "p")
@@ -564,7 +568,7 @@ unset_auto_view(){
     ZFM_AUTO_ZIP_ACTION=
 }
 filteroptions() {
-    menu_loop "Filter Options " "Today Files Dirs Recent Old Large Pattern Small Hidden Clear" "tfdrolphc"
+    menu_loop "Filter Options " "Today Files Dirs Recent Old Large Pattern Small Hidden Links Clear" "tfdrolpshLc"
     # XXX usage of o or O clashes with sort order and gives error, FIXME
     case $menu_text in
         "Files")
@@ -599,6 +603,9 @@ filteroptions() {
             ;;
         "Hidden")
             filterstr="D${filterstr}"
+            ;;
+        "Links")
+            filterstr="@"
             ;;
         "Clear")
             filterstr="M"
