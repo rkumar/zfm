@@ -111,6 +111,7 @@ A summary of version-wise changes.
     
     * display size and mtime if 15 rows only
     * filter for showing links (MENU F(ilter) LINKS)
+    * pressing Enter in listing selects first item
 
 ###0.0.1r###
 
