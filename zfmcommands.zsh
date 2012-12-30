@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2012-12-29 19:59
+#  Last update: 2012-12-30 22:33
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -72,4 +72,26 @@ ZFM_ffind() {
     else
         perror "No files matching $searchpattern"
     fi
+}
+ZFM_locate() {
+    perror "Not yet implemented, the results are usually too massive to be of use here"
+    searchpattern=${searchpattern:-""}
+    vared -p "Filename to 'locate' for (enter >= 3 characters): " searchpattern
+    [[ -z $searchpattern ]] && break
+    files=$( locate "$searchpattern" | grep -P $searchpattern'[^/]*$' )
+    if [[ $#files -gt 0 ]]; then
+        # actually if we user -tr then numbering should be reverse too XXX FIXME
+        # next will explode dirs
+        #files=$( echo $files | xargs ls -tr )
+        ZFM_AUTO_COLUMNS="0" fuzzyselectrow $files
+
+        [[ -n "$selected_file" ]] && {
+            fileopt "$selected_file"
+        }
+    else
+        perror "No files matching $searchpattern"
+    fi
+}
+ZFM_mdfind() {
+    perror "Not yet implemented, the results are usually too massive to be of use here"
 }
