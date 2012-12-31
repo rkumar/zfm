@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-31 13:39
+# Last update: 2012-12-31 19:41
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -67,16 +67,24 @@ view_menu() {
 fuzzyselectrow() {
     local files=$@
     [[ $#files -eq 0 ]] && return
-    #allfiles=$files # to revert to full listing
-    ff=("${(@f)$(print -rl -- $files)}")
-    local gpatt=""
+
+    local rows=24 # try to columnate if more than 24 items, should be decided based on tput lines
+                  # or user pref TODO
+    # should we try printing in 2 columns if items more than $rows
     ZFM_AUTO_COLUMNS=${ZFM_AUTO_COLUMNS:-"1"}
+    ZFM_TRUNCATE=${ZFM_TRUNCATE:-"-1"}
+
+    ff=("${(@f)$(print -rl -- $files)}")
+    local gpatt="" # grep pattern which user types
+
     while (true)
     do
-    local hv=$#ff
         echo "   No.\t  Name"
         viewport=$(print -rl -- $files  | grep "$gpatt")
-    if [[ $ZFM_AUTO_COLUMNS == "1" && $hv -gt 24 ]]; then
+        vpa=("${(@f)$(print -rl -- $viewport)}")
+        local _hv=$#vpa # size of result after grep
+
+        if [[ $ZFM_AUTO_COLUMNS == "1" && $_hv -gt $rows ]]; then
         # this is fine, but on locate or mdfind where entire paths comes this can be awful
         # split into 2 columns, hopefully only name was sent in and not details
         #print -rC2 -- $files 
@@ -86,20 +94,12 @@ fuzzyselectrow() {
         #echo "   No.\t  Size \t  Modified Date  \t  Name"
         print -rl -- $viewport | numbernine 
     fi
-    vpa=("${(@f)$(print -rl -- $viewport)}")
-    #local len=$#hv  # accept only those many characters from user
-    # Darn, if i grep in the print then i don't know how many printed !!! XXX
-    # So selecting a row, means offset is into main array not grepped array !!
-    local _hv=$#vpa #this has been updated
     [[ $_hv -gt 9 ]] && _hv=9
-    echo -n "Select a row [1-$_hv]($#vpa) [a-z] filter, ^ toggle, <ESC> cancel, <CR> accept /$gpatt/: "
+    echo -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
     len=1
     read -k $len reply
     echo
 
-    # if using read -k then we need to make enter into a blank
-    #reply=$(echo "$reply" | tr -d '[\n\r\t ]')
-    #reply=$(echo "$reply" | tr '[\n\r ]' "1") # enter causes 1st row to get selected
     #
     #  pressing ENTER selects first item by default
     [[ $reply = $'\n'  ]] && reply=1
@@ -126,8 +126,6 @@ fuzzyselectrow() {
             if [[ -n "$gpatt" ]]; then
                 gpatt=${gpatt[1,-2]}
                 [[ $gpatt[-2,-1] == ".*" ]] && gpatt=${gpatt[1,-3]}
-                #files=$allfiles
-                #ff=("${(@f)$(print -rl -- $files)}")
             fi
         elif [[ "$reply" == "=" ]]; then
             if [[ $ZFM_AUTO_COLUMNS == "1" ]]; then
@@ -136,7 +134,7 @@ fuzzyselectrow() {
                 ZFM_AUTO_COLUMNS="1"
             fi
         elif [[ "$reply" == $ZFM_MENU_KEY ]]; then
-            # files with spaces are getting split !!! XXX FIXME
+            # files with spaces are getting split !!! 
             menu_loop "Options" "remove truncate rem_extn extn" ""
             case $menu_text in
                 "remove")
@@ -145,11 +143,11 @@ fuzzyselectrow() {
                     vared -p "Enter pattern to reject: " rejpattern
                     #files=( $(print -rl -- $ff ) )
                     files=("${(@f)$(print -rl -- $ff | egrep -v "$rejpattern")}")
-                    #files=( $(print -rl -- $ff | grep -P -v "$rejpattern") )
                     ;;
                 "truncate")
-                    echo "truncates beginning of files to shorten name, toggles TODO"
-                    ZFM_TRUNCATE="1"
+                    echo "truncates beginning of files to shorten name, toggles "
+                    (( ZFM_TRUNCATE = ZFM_TRUNCATE * -1 ))
+                    #pdebug "truncate value is: $ZFM_TRUNCATE "
                     ;;
                 "rem_extn")
                     echo "removes files for given extensions (space delim)"
@@ -190,17 +188,8 @@ fuzzyselectrow() {
             fi
         fi
         pdebug "gpattern is $gpatt"
-        #files=(${(M)ff:#*$reply*})
-        # now grep will happen in print so array not changed
-        #[[ -n $gpatt ]] && files=("${(@f)$(print -rl -- $ff | grep "$gpatt")}")
-        #echo "FFF $#files"
         if [[ $#files -eq 0 ]] ; then
-            # FIXME we should go back to earlier pattern maybe user added one char
-            # by mistake and should try another
             perror "No files for $gpatt. Use backspace or try another pattern"
-            #gpatt=""
-            #files=$allfiles
-            #ff=("${(@f)$(print -rl -- $files)}")
        elif [[ $#files -eq 1 ]] ; then
            # if there's only one file than accept it, no confirmation and break
            if [[ -n $ZFM_NO_CONFIRM ]]; then
@@ -208,21 +197,7 @@ fuzzyselectrow() {
                selected_file=$selected_row[-1]
                break
            fi
-           # for files we need to have a confirm or else it can
-           # go into an action such as rm which is dangerous
-           #if [[ -n "$ZFM_FUZZY_SELECT_CONFIRM" ]]; then
-               #print -n "Confirm you want $selected_file [y/n]: "
-               #read yn
-               #[[ $yn =~ [Yy] ]] && break
-           #else
-               # if only one left just jump there
-               # but now we want to insist on ENTER
-               #break
-               # 2012-12-29 - 14:35 
-               #ff=("${(@f)$(print -rl -- $files)}") 2012-12-31 - 01:47 
-           #fi
        else
-           #ff=("${(@f)$(print -rl -- $files)}") 2012-12-31 - 01:47 
        fi
     fi
     done
@@ -785,6 +760,7 @@ mycommands() {
     local zcmd z
 
     # check for internall defined function, removing spaces
+    pdebug "menu_text is $menu_text"
     z=${menu_text:gs/ //}
     zcmd=ZFM_$z
     #echo "testing $zcmd"
@@ -825,6 +801,9 @@ numbernine() {
 
     while IFS= read -r line; do
         sub=$c
+        if [[ "$ZFM_TRUNCATE" -eq 1 ]]; then
+            line=${line[-40,-1]}
+        fi
         if [[ $c -gt 9 ]]; then
             print -r -- "  ${tabd}$line"
         else
