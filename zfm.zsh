@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-30 19:49
+#  Last update: 2012-12-31 13:13
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -542,12 +542,12 @@ param=$(print -rl -- *(M))
                     ;;
                 "$ZFM_GOTO_DIR_KEY")
                     push_pwd
-                    ppath="/"
-                    ppath="$HOME/"
+                    #ppath="/"
+                    ppath=${ppath:-"$HOME/"}
                     #stty erase 
                     # FIXME backspace etc issues in vared here, hist not working
                     vared -h -p "Enter path: " ppath
-                    selection=$ppath
+                    selection=${(Q)ppath}  # in case space got quoted, -d etc will all give errors
                     patt="" # 2012-12-26 - 00:54 
                     ;;
                 "~")
