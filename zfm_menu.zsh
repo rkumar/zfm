@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-29 18:59
+#  Last update: 2012-12-31 19:51
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -92,7 +92,7 @@ menu_loop () {
 
     mnem="$3"
 # we read only one char, so if the options go beyond 9 then we are royally screwed, take off -1
-    local myopts
+    local myopts var
 while (true) 
 do
     local options="$2"
@@ -118,17 +118,19 @@ do
         # we can release it. The comma is used as it is the back key
         [[ "$menu_char" =~ [q,] ]] && { return }
         echo ""
-        #perror "key is 3 $menu_char"
-        # A ! cause next line to silently exit, so if ! is a hotkey it must be evaluated in caller
-        # Now even o is causing an exit 2012-12-22 - 00:14 
-        local var
         if [[ "$menu_char" == [0-9] ]]; then
             var="${myopts[$menu_char]}" # 2>/dev/null
             menu_index=$menu_char
         else
             index=$mnem[(i)$menu_char]; 
-            var=${myopts[$index]} 
-            menu_index=$index
+            if [[ $index -gt $#mnem ]]; then
+                var=
+                menu_index=
+            else
+                var=${myopts[$index]} 
+                menu_index=$index
+            fi
+            #pdebug "menu_loop index in mnem is $index , $menu_char, $var : $mnem"
         fi
         #perror "key 4 is $menu_char"
         #[[ -z $var1 ]] && { index=$mnem[(i)$menu_char]; var2=${myopts[$index]} }
@@ -143,16 +145,15 @@ do
             local i=0
             # ${string// /}
             while (( i++ < $#mnem )) { [[ -n ${mnem[$i]// /} ]] && echo "    ${mnem[$i]}      =>  ${options[(w)$i]}  ";  }
-            echo "    Enter  => menu"
             echo "    [q]    => quit"
             echo ""
             echo -n " Press a key ... "
             read -q hitenter
             echo
         elif [[ -z "$var" ]] ; then
-            perror "Wrong option $menu_char, q - quit, <ENTER> - menu" 
+            perror "Wrong option $menu_char, q - quit, ? - options"
         elif [[ -n "$var" ]] ; then
-            pdebug "returning $var"
+            pdebug "$1 returning $var"
             menu_text=$var
             break
             #echo -n " Press a key ... "
