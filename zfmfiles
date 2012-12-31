@@ -4,5 +4,6 @@
 # list
 if [[ -f ~/.viminfo ]]; then
     echo "Reading from .viminfo" 1>&2
-    grep '^>' ~/.viminfo | cut -d ' ' -f 2 | sed "s#~#$HOME#g"
+    # some files have spaces so columns 2 and beyond are required
+    grep '^>' ~/.viminfo | cut -d ' ' -f 2- | sed "s#~#$HOME#g"
 fi
