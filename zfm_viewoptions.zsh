@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-31 01:52
+# Last update: 2012-12-31 13:39
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -67,7 +67,7 @@ view_menu() {
 fuzzyselectrow() {
     local files=$@
     [[ $#files -eq 0 ]] && return
-    allfiles=$files # to revert to full listing
+    #allfiles=$files # to revert to full listing
     ff=("${(@f)$(print -rl -- $files)}")
     local gpatt=""
     ZFM_AUTO_COLUMNS=${ZFM_AUTO_COLUMNS:-"1"}
@@ -75,21 +75,24 @@ fuzzyselectrow() {
     do
     local hv=$#ff
         echo "   No.\t  Name"
+        viewport=$(print -rl -- $files  | grep "$gpatt")
     if [[ $ZFM_AUTO_COLUMNS == "1" && $hv -gt 24 ]]; then
         # this is fine, but on locate or mdfind where entire paths comes this can be awful
         # split into 2 columns, hopefully only name was sent in and not details
         #print -rC2 -- $files 
         #print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
-        print -rC2 -- $(print -rl -- $files | grep "$gpatt" | numbernine | sed "s#$HOME#~#g" |  tr "[ \t]" "" ) | tr "" " "
+        print -rC2 -- $(print -rl -- $viewport | numbernine | sed "s#$HOME#~#g" |  tr "[ \t]" "" ) | tr "" " "
     else
         #echo "   No.\t  Size \t  Modified Date  \t  Name"
-        print -rl -- $files | grep "$gpatt" | numbernine 
+        print -rl -- $viewport | numbernine 
     fi
+    vpa=("${(@f)$(print -rl -- $viewport)}")
     #local len=$#hv  # accept only those many characters from user
     # Darn, if i grep in the print then i don't know how many printed !!! XXX
-    local _hv=$#ff #this has been updated
+    # So selecting a row, means offset is into main array not grepped array !!
+    local _hv=$#vpa #this has been updated
     [[ $_hv -gt 9 ]] && _hv=9
-    echo -n "Select a row [1-$_hv]($#ff) [a-z] filter, ^ toggle, <ESC> cancel, <CR> accept /$gpatt/: "
+    echo -n "Select a row [1-$_hv]($#vpa) [a-z] filter, ^ toggle, <ESC> cancel, <CR> accept /$gpatt/: "
     len=1
     read -k $len reply
     echo
@@ -107,7 +110,7 @@ fuzzyselectrow() {
     [[ -z "$reply" ]] && break
     #  check for numeric as some values like "o" can cause abort
     if [[ "$reply" == <-> ]]; then
-        line="$ff[$reply]"
+        line="$vpa[$reply]"
         # only a physical tab was working, \t etc was not working
         # split row with tabs into an array
         selected_row=("${(s/	/)line}")
@@ -138,29 +141,29 @@ fuzzyselectrow() {
             case $menu_text in
                 "remove")
                     echo "removes all files matching given pattern"
-                    rejpattern=${rejpattern:-""}
+                    rejpattern=${rejpattern:-"tmp Trash Backups"}
                     vared -p "Enter pattern to reject: " rejpattern
                     #files=( $(print -rl -- $ff ) )
-                    files=("${(@f)$(print -rl -- $ff | grep -v "$rejpattern")}")
+                    files=("${(@f)$(print -rl -- $ff | egrep -v "$rejpattern")}")
                     #files=( $(print -rl -- $ff | grep -P -v "$rejpattern") )
                     ;;
                 "truncate")
-                    echo "truncates beginning of files to shorten name, toggles"
+                    echo "truncates beginning of files to shorten name, toggles TODO"
                     ZFM_TRUNCATE="1"
                     ;;
                 "rem_extn")
                     echo "removes files for given extensions (space delim)"
-                    xrejpattern=${xrejpattern:-""}
+                    xrejpattern=${xrejpattern:-"~ bak swp o pyo class lib"}
                     vared -p "Enter extensions to reject: " xrejpattern
                     xrejpattern=${xrejpattern:gs/ /|/}
-                    files=("${(@f)$(print -rl -- $ff | egrep -v "\.($xrejpattern)")}")
+                    files=("${(@f)$(print -rl -- $ff | egrep -v "\.($xrejpattern)$")}")
                     ;;
                 "extn")
                     echo "only keep files for given extensions (space delim) remove others"
                     accpattern=${accpattern:-""}
                     vared -p "Enter pattern to accept: " accpattern
                     accpattern=${accpattern:gs/ /|/}
-                    files=("${(@f)$(print -rl -- $ff | egrep "\.($accpattern)")}")
+                    files=("${(@f)$(print -rl -- $ff | egrep "\.($accpattern)$")}")
                     ;;
             esac
             ff=( $files ) # XXX what if nothign changed above ?
@@ -736,8 +739,9 @@ m_recentfiles() {
     typeset -U files
     files=""
     if [[ -x "${ZFM_DIR}/zfmfiles" ]]; then
-        #files=$(listdir.pl $(${ZFM_DIR}/zfmfiles) | nl)
-        files=$(print -rl -- $(${ZFM_DIR}/zfmfiles))
+        # next line resulted in spaces getting broken into multiple files
+        #files=$(print -rl -- $(${ZFM_DIR}/zfmfiles))
+        files=$(${ZFM_DIR}/zfmfiles)
     else
         perror "No ~/.viminfo file found"
         files=$(listdir.pl *(.m0) ~/.vimrc ~/.zshrc ~/.bashrc ~/.screenrc ~/.tmux.conf)
