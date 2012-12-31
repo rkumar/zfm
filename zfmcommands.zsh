@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2012-12-30 22:33
+#  Last update: 2012-12-31 10:38
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -74,7 +74,6 @@ ZFM_ffind() {
     fi
 }
 ZFM_locate() {
-    perror "Not yet implemented, the results are usually too massive to be of use here"
     searchpattern=${searchpattern:-""}
     vared -p "Filename to 'locate' for (enter >= 3 characters): " searchpattern
     [[ -z $searchpattern ]] && break
