@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-31 13:13
+#  Last update: 2012-12-31 20:04
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -202,7 +202,7 @@ list_printer() {
                 # if you press this anywhere while typing it will toggle ^
                 toggle_match_from_start
                 ;;
-            "q")
+            "q"|"")
                 break
                 ;;
             [a-zA-Z_0\.\ ])
@@ -236,13 +236,12 @@ list_printer() {
                         patt="$patt$ans"
                     fi
                     #[[ $ans = '.' && $patt = '' ]] && patt="^\."
-                    pinfo "Pattern is $patt "
-                    [[ -n $ZFM_VERBOSE ]] && echo "Pattern IS :$patt:"
-                    [[ -n $ZFM_VERBOSE ]] && pdebug "sending $patt to chcek"
+                    #pdebug "Pattern is $patt "
+                    #[[ -n $ZFM_VERBOSE ]] && echo "Pattern is :$patt:"
+                    #[[ -n $ZFM_VERBOSE ]] && pdebug "sending $patt to chcek"
                     # if there's only one file for that char then just jump to it
                     lines=$(check_patt $patt)
                     ct=$(print -rl -- $lines | wc -l)
-                    #perror "comes here $ct , $lines"
                     if [[ $ct -eq 1 ]]; then
                         [[ -n "$lines" ]] && { selection=$lines; break }
                     fi
@@ -283,7 +282,7 @@ list_printer() {
                 # XXX FIXME TODO this and next should move to caller
                 # siblings (find a better place to put this, and what if there
                 # are too many options)
-                pbold "This implements the: cd OLD NEW "
+                pbold "This implements the: cd OLD NEW metaphor"
                 echo "Part to change :"
                 parts=(${(s:/:)PWD})
                 menu_loop "Parts" "$(print $parts )"
@@ -311,6 +310,7 @@ list_printer() {
                 break
                 ;; 
             "$ZFM_ACCEPT_FIRST_KEY")
+                # Accept the first option shown, default is ENTER key
                 # but if no files shown then what happens ?
                 selection=$vpa[1]
                 [[ -n "$selection" ]] && break
@@ -489,8 +489,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1t"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/30"
+ZFM_VERSION="0.0.1u"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/31"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -532,7 +532,7 @@ param=$(print -rl -- *(M))
         [[ -n $selection ]] && echo "returned with $selection"
         # value selected is in selection, key pressed in ans
         [[ -z "$selection" ]] && {
-            [[ "$ans" = "q" ]] && break
+            [[ "$ans" = "q" || "$ans" = "" ]] && break
             case $ans in 
                 "$ZFM_GOTO_PARENT_KEY")
                     cd ..
