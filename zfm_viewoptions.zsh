@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-01 17:37
+# Last update: 2013-01-01 19:26
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -289,6 +289,7 @@ selectmulti() {
 
             [[ $#deleted -gt 0 ]] && { delix=$deleted[(i)$fil]
             }
+                # M_SHORT signifies how many columns, we try 2
                 if [[ $M_SHORT == "2" ]]; then
                     row=("${(s/	/)fil}")
                     rfile=$row[-1]
@@ -854,17 +855,34 @@ mycommands() {
 numbernine() {
     let c=1
     local tabd=$'\t'
+    local selct=$#deleted
+    local csel cres
 
     while IFS= read -r line; do
-        sub=$c
+        sub="$c)"
+        if [[ $c -gt 9 ]]; then
+            sub="  "
+            #print -r -- "  ${tabd}$line"
+        else
+            #print -r -- "$sub)${tabd}$line"
+        fi
+        if [[ $selct -gt 0 ]]; then
+            if [[ $deleted[(i)$line] -gt $selct ]]; then
+                #print -r -- "$sub) $line"
+                csel=
+                cres=
+            else
+                csel=${COLOR_BOLD}
+                cres=${COLOR_DEFAULT}
+                #print -- "$sub) ${COLOR_BOLD}$line${COLOR_DEFAULT}"
+            fi
+        else
+            #print -r -- "$sub) $line"
+        fi
         if [[ "$ZFM_TRUNCATE" -eq 1 ]]; then
             line=${line[-40,-1]}
         fi
-        if [[ $c -gt 9 ]]; then
-            print -r -- "  ${tabd}$line"
-        else
-            print -r -- "$sub)${tabd}$line"
-        fi
+        print -- "$sub ${csel}$line${cres}"
         let c++
     done
 }
