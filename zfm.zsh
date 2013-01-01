@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-01 19:33
+#  Last update: 2013-01-02 01:15
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -191,7 +191,7 @@ list_printer() {
             fi # M_FULL
                 [[ -n "$selection" ]] && break
                 ;;
-            ","|"+"|"~"|":"|"\`"|"@"|"%"|"#"|"?")
+            ","|"+"|"~"|":"|"\`"|"/"|"@"|"%"|"#"|"?")
                 # we break these keys so caller can handle them, other wise they
                 # get unhandled PLACE SWALLOWED keys here to handle
                 # go down to MARK1 section to put in handling code
@@ -338,7 +338,8 @@ list_printer() {
                     *)
                         [[ "$ans" == "[" ]] && echo "got ["
                         [[ "$ans" == "{" ]] && echo "got {"
-                        pdebug "Key $ans unhandled and swallowed"
+                        pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
+                        pinfo "? for key help"
                         #  put key in SWALLOW section to pass to caller
                         patt=""
                         ;;
@@ -466,13 +467,14 @@ print_help_keys() {
     $ZFM_PAGE_KEY	- Paging of output (default SPACE)
     ^	- toggle match from start of filename
     $ZFM_GOTO_DIR_KEY	- Enter directory name to jump to
-    $ZFM_RESET_PATTERN_KEY	- Clear existing search pattern    **
+    $ZFM_FFIND_KEY	- Find a file for a pattern
     $ZFM_SELECTION_MODE_KEY	- Toggle selection mode
     $ZFM_GOTO_PARENT_KEY	- Goto parent of existing dir (cd ..)
     $ZFM_POPD_KEY	- popd (go back to previously visited dirs)
     :	- Command key
         	* S - Save current dir in list
         	* P - Pop dirs from list
+    $ZFM_RESET_PATTERN_KEY	- Clear existing search pattern    **
     $ZFM_SORT_KEY	- change sort order (pref. use menu) **
     $ZFM_FILTER_KEY	- change filter criteria (pref. use menu) **
     $ZFM_SIBLING_DIR_KEY	- view/select sibling directories **
@@ -490,8 +492,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1w"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01.01"
+ZFM_VERSION="0.0.1x"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/02"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -510,7 +512,7 @@ ZFM_ACCEPT_FIRST_KEY=${ZFM_ACCEPT_FIRST_KEY:-$'\n'}  # pressing ENTER selects fi
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
 ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
-ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'/'}  # reset the pattern, use something else
+ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'\'}  # reset the pattern, use something else
 ZFM_POPD_KEY=${ZFM_POPD_KEY:-"<"}  # goto previously visited dir
 ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # toggle selection mode
 ZFM_SORT_KEY=${ZFM_SORT_KEY:-"%"}  # change sort options
@@ -518,6 +520,7 @@ ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change filter options
 ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
 ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
+ZFM_FFIND_KEY=${ZFM_FFIND_KEY:-'/'}  # reset the pattern, use something else
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*' # this is separate from patt which is a temp filter based on hotkeys
@@ -600,11 +603,32 @@ param=$(print -rl -- *(M))
                     filteroptions
                     # FILTER filter section (think of a better key)
                     ;;
+                $ZFM_FFIND_KEY)
+                        # find files with string in filename, uses perl expressions and requires GNU grep (coreutils)
+                        searchpattern=${searchpattern:-""}
+                        vared -p "Filename to search for (enter 3 characters): " searchpattern
+                        # recurse and match filename only
+                        files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
+                        if [[ $#files -gt 0 ]]; then
+                            files=$( echo $files | xargs ls -t )
+                            ZFM_FUZZY_MATCH_DIR="1" fuzzyselectrow $files
+                            if [[ $#selected_files -eq 1 ]]; then
+                                fileopt "$selected_file"
+                            elif [[ $#selected_files -gt 1 ]]; then
+                                multifileopt $selected_files
+                            elif [[ -n "$selected_file" ]]; then
+                                fileopt "$selected_file"
+                            fi
+
+                    else
+                        perror "No files matching $searchpattern"
+                    fi
+                    ;;
                 "?") 
                     print_help_keys
                     ;;
                 *)
-                    perror "unhandled key $ans"
+                    perror "unhandled key $ans, type ? for key help"
                     ;;
             }
 
