@@ -127,6 +127,12 @@ files to interface with autojump or whatever other utility you use.
 
 A summary of version-wise changes. 
 
+###0.0.1v###
+
+    * fuzzyselectrow allows multiple selection too, on pressing ENTER
+      Trying to standardize the select to one only - currently the select single 
+      and multiple is a bit confusing. 
+
 ###0.0.1t###
     
     * display size and mtime if 15 rows only
