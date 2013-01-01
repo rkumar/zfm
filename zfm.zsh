@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2012-12-31 20:04
+#  Last update: 2013-01-01 17:39
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -221,9 +221,10 @@ list_printer() {
                         [[ $ans = '.' ]] && { 
                         # i will be doing this each time dot is pressed
                         # ad changing setting for calling shell too ! XXX
-                        echo "I should only set and do this if nothing is showing of its off"
-                        pbold "Setting glob_dots ..."
-                        setopt GLOB_DOTS
+                        pdebug "I should only set and do this if nothing is showing or glob dots is off"
+                        #pbold "Setting glob_dots ..."
+                        #setopt GLOB_DOTS
+                        show_hidden_toggle
                         #setopt globdots
                         param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                         myopts=("${(@f)$(print -rl -- $param)}")
@@ -489,8 +490,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1u"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2012/12/31"
+ZFM_VERSION="0.0.1v"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01.01"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
