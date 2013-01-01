@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2012-12-31 19:41
+# Last update: 2013-01-01 17:37
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -68,6 +68,8 @@ fuzzyselectrow() {
     local files=$@
     [[ $#files -eq 0 ]] && return
 
+    typeset -U deleted
+    deleted=()
     local rows=24 # try to columnate if more than 24 items, should be decided based on tput lines
                   # or user pref TODO
     # should we try printing in 2 columns if items more than $rows
@@ -95,14 +97,37 @@ fuzzyselectrow() {
         print -rl -- $viewport | numbernine 
     fi
     [[ $_hv -gt 9 ]] && _hv=9
-    echo -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
+    #echo -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
+    # PROMPT prompt
+    echo -n "Select a row [1-$_hv] [a-z] filter, ${ZFM_MENU_KEY} menu, ? Help, ESC/CR ($#deleted/$#vpa)/$gpatt/: "
     len=1
     read -k $len reply
     echo
 
     #
     #  pressing ENTER selects first item by default
-    [[ $reply = $'\n'  ]] && reply=1
+    [[ $reply = $'\n'  ]] && {
+        # typically in cases of directories pressing enter selects #1
+        if [[ -n "$ZFM_SINGLE_SELECT" ]]; then
+            reply=1 # in case of auto selection we need to exit with all select XXX
+        else
+            # put all selection in selected_files and break
+            # why are we keeping two arrays here, just keep selected CLEANUP 
+            selected_files=()
+            for line in $deleted
+            do
+                #echo "line $line"
+                selected_row=("${(s/	/)line}")
+                selected_file=$selected_row[-1]
+                selected_files=(
+                $selected_files
+                $selected_file:q
+                )
+            done
+            pdebug "$#selected_files selected"
+            break
+        fi
+    }
 
 
     [[ $reply = "" ]] && { pdebug "Got esc" ; selected_file=; break }
@@ -114,10 +139,32 @@ fuzzyselectrow() {
         # only a physical tab was working, \t etc was not working
         # split row with tabs into an array
         selected_row=("${(s/	/)line}")
-        #selected_file=$selected_row[4]
-        # just in case only file name passed as in dirnames
         selected_file=$selected_row[-1]
-        break # 2012-12-26 - 19:05 
+        if [[ -n "$ZFM_SINGLE_SELECT" ]]; then
+            # select as a user presses a number and get out
+            break # 2012-12-26 - 19:05 
+        else
+            # accumulate selection
+            if [[ $deleted[(i)$selected_file] -le $#deleted ]]; then
+                deleted[$deleted[(i)$selected_file]]=()
+                pdebug "Removing $selected_file from list - $#deleted remaining"
+            else
+                deleted=(
+                $deleted
+                $selected_file
+                )
+                pdebug "Adding $selected_file to list - $#deleted selected"
+            fi
+        fi
+    elif [[ "$reply" == "?" ]]; then
+        print -rl  "Keys are <CR> Accept selection"
+        print -rl  "         <ESC> Cancel"
+        print -rl  "         [a-z] to narrow down search"
+        print -rl  "         [1-9] to add to selection"
+        print -rl  "         $ZFM_MENU_KEY menu"
+        print -rl  "         ^ Toggle fuzzy mode"
+        print -rl  "         = Toggle 2 columns"
+        pause
     else
         #perror "Sorry. [$reply] not numeric"
         # Use chars to drill down
@@ -142,7 +189,8 @@ fuzzyselectrow() {
                     rejpattern=${rejpattern:-"tmp Trash Backups"}
                     vared -p "Enter pattern to reject: " rejpattern
                     #files=( $(print -rl -- $ff ) )
-                    files=("${(@f)$(print -rl -- $ff | egrep -v "$rejpattern")}")
+                    rejpattern=${rejpattern:gs/ /|/}
+                    files=("${(@f)$(print -rl -- $ff | egrep -v "\.($rejpattern)$")}")
                     ;;
                 "truncate")
                     echo "truncates beginning of files to shorten name, toggles "
@@ -303,22 +351,26 @@ selectmulti() {
             ;; 
             *)
 
-                ff=("${(@f)$(print -rl -- $files)}")
-                line=${ff[$reply]}
-                # only a physical tab was working, \t etc was not working
-                #split
-                selected_row=("${(s/	/)line}")
-                selected_file=$selected_row[-1]
-                pdebug "selected: $selected_file"
-                if [[ $deleted[(i)$line] -le $#deleted ]]; then
-                    deleted[$deleted[(i)$line]]=()
+                if [[ "$reply" == <-> ]]; then
+                    ff=("${(@f)$(print -rl -- $files)}")
+                    line=${ff[$reply]}
+                    # only a physical tab was working, \t etc was not working
+                    #split
+                    selected_row=("${(s/	/)line}")
+                    selected_file=$selected_row[-1]
+                    pdebug "selected: $selected_file"
+                    if [[ $deleted[(i)$line] -le $#deleted ]]; then
+                        deleted[$deleted[(i)$line]]=()
+                    else
+                        deleted=(
+                        $deleted
+                        $line
+                        )
+                    fi
+                    files=$( print -rl -- $ff)
                 else
-                    deleted=(
-                    $deleted
-                    $line
-                    )
+                    perror "Don't know what to do with $reply"
                 fi
-                files=$( print -rl -- $ff)
                 ;;
     #*)
         #echo "default got $reply"
@@ -686,7 +738,7 @@ m_dirstack() {
         pbold "These are directories on internal stack (dirs command)"
         files=$(eval "listdir.pl $(dirs)" )
     fi
-    fuzzyselectrow $files
+    ZFM_SINGLE_SELECT=1 fuzzyselectrow $files
     [[ -d $selected_file ]] && {
         $ZFM_CD_COMMAND $selected_file
     }
@@ -703,7 +755,7 @@ m_child_dirs() {
     #else
         #files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
     fi
-    fuzzyselectrow $files
+    ZFM_SINGLE_SELECT=1 fuzzyselectrow $files
     [[ -d $selected_file ]] && {
         [[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
         $ZFM_CD_COMMAND $selected_file
@@ -733,9 +785,13 @@ m_recentfiles() {
             ZFM_FUZZY_MATCH_DIR="1"
             fuzzyselectrow $files
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
-            [[ -n "$selected_file" ]] && {
+            if [[ $#selected_files -eq 1 ]]; then
                 fileopt "$selected_file"
-            }
+            elif [[ $#selected_files -gt 1 ]]; then
+                multifileopt $selected_files
+            elif [[ -n "$selected_file" ]]; then
+                fileopt "$selected_file"
+            fi
         fi
     }
 }
