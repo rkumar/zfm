@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2012-12-31 19:51
+#  Last update: 2013-01-02 01:07
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -288,7 +288,7 @@ multifileopt() {
     print_title "File summary for $#files files:"
     # eval otherwise files with spaces will cause an error
     eval "ls -lh $files"
-    IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,rmtrash,git add,git com" "zcg!#a"
+    IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,rmtrash,git add,git com,vim,vimdiff" "zcg!#a vd"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
@@ -303,7 +303,7 @@ multifileopt() {
             ;;
         "")
             [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in fileopt $menu_char. Coud be programmer error or key needs to be handled"
+            perror "got nothing in fileopt $menu_char. Could be programmer error or key needs to be handled"
             }
             ;;
         "mv") 
