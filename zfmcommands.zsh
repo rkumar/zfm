@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2012-12-31 10:38
+#  Last update: 2013-01-02 00:52
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -66,9 +66,13 @@ ZFM_ffind() {
         files=$( echo $files | xargs ls -t )
         fuzzyselectrow $files
 
-        [[ -n "$selected_file" ]] && {
+        if [[ $#selected_files -eq 1 ]]; then
             fileopt "$selected_file"
-        }
+        elif [[ $#selected_files -gt 1 ]]; then
+            multifileopt $selected_files
+        elif [[ -n "$selected_file" ]]; then
+            fileopt "$selected_file"
+        fi
     else
         perror "No files matching $searchpattern"
     fi
