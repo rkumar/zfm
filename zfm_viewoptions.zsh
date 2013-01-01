@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-01 19:26
+# Last update: 2013-01-02 01:04
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -70,6 +70,7 @@ fuzzyselectrow() {
 
     typeset -U deleted
     deleted=()
+    selected_file=
     local rows=24 # try to columnate if more than 24 items, should be decided based on tput lines
                   # or user pref TODO
     # should we try printing in 2 columns if items more than $rows
@@ -110,6 +111,17 @@ fuzzyselectrow() {
         # typically in cases of directories pressing enter selects #1
         if [[ -n "$ZFM_SINGLE_SELECT" ]]; then
             reply=1 # in case of auto selection we need to exit with all select XXX
+        #elif [[ $#deleted -eq 0 && $#vpa -eq 1 ]]; then
+            # user has not selected anything, and there's only one row on screen
+            # assume he is selecting
+        elif [[ $#deleted -eq 0 ]]; then
+            # user has not selected anything and presses enter, assume he selects first
+            line="$vpa[1]"
+            # only a physical tab was working, \t etc was not working
+            # split row with tabs into an array
+            selected_row=("${(s/	/)line}")
+            selected_file=$selected_row[-1]
+            break
         else
             # put all selection in selected_files and break
             # why are we keeping two arrays here, just keep selected CLEANUP 
