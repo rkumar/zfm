@@ -127,7 +127,7 @@ files to interface with autojump or whatever other utility you use.
 
 A summary of version-wise changes. 
 
-###0.0.1v###
+###0.0.1w###
 
     * fuzzyselectrow allows multiple selection too, on pressing ENTER
       Trying to standardize the select to one only - currently the select single 

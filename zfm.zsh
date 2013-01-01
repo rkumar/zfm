@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-01 17:39
+#  Last update: 2013-01-01 19:33
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -490,7 +490,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1v"
+ZFM_VERSION="0.0.1w"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01.01"
 #  Array to place selected files
 typeset -U selectedfiles
