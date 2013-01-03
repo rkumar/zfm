@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-03 20:42
+#  Last update: 2013-01-04 00:35
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -62,8 +62,10 @@ list_printer() {
     # 2012-12-26 - 00:49 trygin this out so after a selection i don't lose what's filtered
     # but changing dirs must clear this, so it's dicey
     patt=${patt:-""}
-    local mark ic
+    local mark ic approx
+    globflags=
     ic=
+    approx=
     while (true)
     do
         (( fin = sta + $PAGESZ )) # 60
@@ -77,12 +79,17 @@ list_printer() {
         # this line replace grep and searches from start. if we plae a * after
         # the '#' then the match works throughout filename
         ic=${ZFM_IGNORE_CASE+i}
+        approx=${ZFM_APPROX_MATCH+a1}
+        # in case other programs need to display or account for, put in round bracks
+        globflags="$ic$approx"
+        # we keep filtering, not refreshing so deleted moved files still show up
+        # the caller queries, and that sucks
         if [[ -z $M_MATCH_ANYWHERE ]]; then
-            viewport=(${(M)myopts:#(#${ic})$patt*})
-            mark="^$ic"
+            viewport=(${(M)myopts:#(#${ic}${approx})$patt*})
+            mark="^"
         else
-            viewport=(${(M)myopts:#(${ic})*$patt*})
-            mark="*$ic"
+            viewport=(${(M)myopts:#(${ic}${approx})*$patt*})
+            mark="*"
         fi
         # this line replaces the sed filter
         viewport=(${viewport[$sta, $fin]})
@@ -106,7 +113,7 @@ list_printer() {
         [[ $fin -gt $tot ]] && fin=$tot
         local sortorder=""
         [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
-        print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING${COLOR_DEFAULT}"
+        print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}"
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " " ""  ) | tr -s "" |  tr "" " " 
         print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" ""  ) | tr -s "" |  tr "" " \t" 
@@ -251,7 +258,7 @@ list_printer() {
                 fi # M_FULL
                 ;;
             $ZFM_TOGGLE_MENU_KEY)
-                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase" "ihfc"
+                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle" "ihfcx"
                 case "$menu_text" in
                     "FullIndexing")
                         full_indexing_toggle
@@ -265,7 +272,13 @@ list_printer() {
                     "IgnoreCase")
                         ignore_case_toggle
                         ;;
+                    "ApproxMatchToggle")
+                        approx_match_toggle
+                        ;;
                 esac
+                ;;
+            $ZFM_REFRESH_KEY)
+                post_cd
                 ;;
             $ZFM_SIBLING_DIR_KEY)
                 # XXX FIXME TODO sibling and next should move to caller
@@ -375,11 +388,12 @@ check_patt() {
     local p=${1:s/^//}  # obsolete, refers to earlier grep version
     local ic=
     ic=${ZFM_IGNORE_CASE+i}
+    approx=${ZFM_APPROX_MATCH+a1}
     if [[ -z $M_MATCH_ANYWHERE ]]; then
         # match from start - default
-        lines=$(print -rl -- (#$ic)${p}*)
+        lines=$(print -rl -- (#$ic${approx})${p}*)
     else
-        lines=$(print -rl -- (#$ic)*${p}*)
+        lines=$(print -rl -- (#$ic${approx})*${p}*)
     fi
     # need to account for match from start
     echo $lines
@@ -483,6 +497,7 @@ print_help_keys() {
         	* S - Save current dir in list
         	* P - Pop dirs from list
     $ZFM_RESET_PATTERN_KEY	- Clear existing search pattern    **
+    $ZFM_REFRESH_KEY	- refresh/rescan dir listing     **
     $ZFM_SORT_KEY	- change sort order (pref. use menu) **
     $ZFM_FILTER_KEY	- change filter criteria (pref. use menu) **
     $ZFM_SIBLING_DIR_KEY	- view/select sibling directories **
@@ -529,6 +544,7 @@ ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
 ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
 ZFM_FFIND_KEY=${ZFM_FFIND_KEY:-'/'}  # reset the pattern, use something else
+ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*' # this is separate from patt which is a temp filter based on hotkeys
@@ -617,6 +633,7 @@ param=$(print -rl -- *(M))
                         vared -p "Filename to search for (enter 3 characters): " searchpattern
                         # recurse and match filename only
                         #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
+                        # find is more optimized acco to zsh users guide
                         files=$( print -rl -- **/*$searchpattern*(.) )
                         if [[ $#files -gt 0 ]]; then
                             files=$( echo $files | xargs ls -t )
@@ -729,19 +746,20 @@ numberlines() {
             fi
         }
     fi
-
+    link=
+    _detail=
     if [[ -n "$ZFM_LS_L" ]]; then
-        if [[ -n "$line" ]]; then
+        if [[ -n "$line" && -e "$line" ]]; then
             mtime=$(zstat -L -F "%Y/%m/%d %H:%M" +mtime $line)
             zstat -L -H hash $line
             sz=$hash[size]
             link=$hash[link]
             [[ -n $link ]] && link=" -> $link"
             _detail="${TAB}$sz${TAB}$mtime${TAB}"
+        else
+            _detail="(deleted?)"
+            # file does not exist so it could be deleted ?
         fi
-    else
-        link=
-        _detail=
     fi
     # only if there are selections we check against the array and color
     # otherwise no check, remember that the cut that comes later can cut the 
