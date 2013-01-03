@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-02 01:36
+#  Last update: 2013-01-03 20:40
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -74,7 +74,9 @@ ZFM_ffind() {
     pinfo "Pattern entered must match basename not dirname"
     vared -p "Filename to search for (enter 3 characters): " searchpattern
     # recurse and match filename only
-    files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
+    #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
+    files=$( print -rl -- **/*$searchpattern*(.) )
+    #   print ~/**/*.txt
     if [[ $#files -gt 0 ]]; then
         files=$( echo $files | xargs ls -t )
         fuzzyselectrow $files
