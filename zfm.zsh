@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-04 00:35
+#  Last update: 2013-01-04 01:28
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -200,7 +200,7 @@ list_printer() {
             fi # M_FULL
                 [[ -n "$selection" ]] && break
                 ;;
-            ","|"+"|"~"|":"|"\`"|"/"|"@"|"%"|"#"|"?")
+            ","|"+"|"~"|":"|"\`"|"/"|"@"|"%"|"#"|"?"|'*')
                 # we break these keys so caller can handle them, other wise they
                 # get unhandled PLACE SWALLOWED keys here to handle
                 # go down to MARK1 section to put in handling code
@@ -258,7 +258,7 @@ list_printer() {
                 fi # M_FULL
                 ;;
             $ZFM_TOGGLE_MENU_KEY)
-                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle" "ihfcx"
+                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa"
                 case "$menu_text" in
                     "FullIndexing")
                         full_indexing_toggle
@@ -275,10 +275,23 @@ list_printer() {
                     "ApproxMatchToggle")
                         approx_match_toggle
                         ;;
+                    "AutoView")
+                        pinfo "Autoview determines whether file selection automatically opens files for viewing or allow user to decide action"
+                        toggle_auto_view
+                        if [[ "$ZFM_AUTOVIEW_TOGGLE_KEY" == "1" ]]; then
+                            pinfo "Files will be viewed upon selection"
+                        else
+                            pinfo "Files will NOT be viewed upon selection. Other actions may be performed"
+                        fi
+                        ;;
                 esac
                 ;;
             $ZFM_REFRESH_KEY)
+                pbold "refreshing rescanning"
                 post_cd
+                # why is next line not in post_cd 
+                myopts=("${(@f)$(print -rl -- $param)}")
+                #break
                 ;;
             $ZFM_SIBLING_DIR_KEY)
                 # XXX FIXME TODO sibling and next should move to caller
@@ -653,6 +666,28 @@ param=$(print -rl -- *(M))
                 "?") 
                     print_help_keys
                     ;;
+                '*')
+
+                        for line in $vpa
+                        do
+                            echo "line $line"
+                            selected_row=("${(s/	/)line}")
+                            selected_file=$selected_row[-1]
+                            selectedfiles=(
+                            $selectedfiles
+                            $selected_file:q
+                            )
+                        done
+                    pinfo "selected files $#selectedfiles"
+                    if [[ -n "$M_SELECTION_MODE" ]]; then
+                        pbold "Press $ZFM_SELECTION_MODE_KEY when done selecting"
+                    else
+                        # this is outside of selection mode
+                        [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
+                        [[ $#selectedfiles -eq 1 ]] && fileopt_noauto $selectedfiles
+                        selectedfiles=()
+                    fi
+                    ;;
                 *)
                     perror "unhandled key $ans, type ? for key help"
                     ;;
@@ -768,7 +803,7 @@ numberlines() {
         if [[ $selectedfiles[(i)$line] -gt $selct ]]; then
             print -r -- "$sub) $_detail $line"
         else
-            print -- "$sub) ${COLOR_BOLD}$line${COLOR_DEFAULT}"
+            print -- "$sub) $_detail ${COLOR_BOLD}$line${COLOR_DEFAULT}"
         fi
     else
         print -r -- "$sub) $_detail $line $link"
