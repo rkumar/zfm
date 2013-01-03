@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-02 00:52
+#  Last update: 2013-01-02 01:36
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -18,9 +18,9 @@ ZFM_MY_DELIM=,
 # usually directory level. They are currently parsed using "read -A" and use IFS.
 #
 #
-ZFM_MY_COMMANDS="ack,ag,tig stats,git stats,ffind,mdfind,locate"
+ZFM_MY_COMMANDS="ack,ag,tree,ffind,tig stats,git stats,locate,structure"
 # hotkeys for commands, put space if no hotkey
-ZFM_MY_MNEM="agtsf"
+ZFM_MY_MNEM="a tfigls"
 
 #  Now place functions for above commands, otherwise it is expected they
 #  are in path, if ZFM_xxx is first looked for, otherwise xxx in $PATH
@@ -56,9 +56,22 @@ ZFM_gitstats() {
     # check for whether you have git installed
     git status -sb | $PAGER
 }
+ZFM_tree() {
+    # check for whether you have git installed
+    tree -aCFl --charset=UTF8 --du --si -I .git | $PAGER
+    #tree | $PAGER
+    pause
+}
+ZFM_structure() {
+    # check for whether you have git installed
+    tree -aCFl --charset=UTF8 --du --si -I .git -d | $PAGER
+    #tree | $PAGER
+    pause
+}
 ZFM_ffind() {
     # find files with string in filename, uses perl expressions and requires GNU grep (coreutils)
     searchpattern=${searchpattern:-""}
+    pinfo "Pattern entered must match basename not dirname"
     vared -p "Filename to search for (enter 3 characters): " searchpattern
     # recurse and match filename only
     files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
