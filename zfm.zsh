@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-02 01:15
+#  Last update: 2013-01-03 20:04
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -62,7 +62,8 @@ list_printer() {
     # 2012-12-26 - 00:49 trygin this out so after a selection i don't lose what's filtered
     # but changing dirs must clear this, so it's dicey
     patt=${patt:-""}
-    local mark
+    local mark ic
+    ic=
     while (true)
     do
         (( fin = sta + $PAGESZ )) # 60
@@ -75,12 +76,13 @@ list_printer() {
         #viewport=$(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d')
         # this line replace grep and searches from start. if we plae a * after
         # the '#' then the match works throughout filename
+        ic=${ZFM_IGNORE_CASE+i}
         if [[ -z $M_MATCH_ANYWHERE ]]; then
-            viewport=(${(M)myopts:#$patt*})
-            mark="^"
+            viewport=(${(M)myopts:#(#${ic})$patt*})
+            mark="^$ic"
         else
-            viewport=(${(M)myopts:#*$patt*})
-            mark="*"
+            viewport=(${(M)myopts:#(${ic})*$patt*})
+            mark="*$ic"
         fi
         # this line replaces the sed filter
         viewport=(${viewport[$sta, $fin]})
@@ -249,7 +251,7 @@ list_printer() {
                 fi # M_FULL
                 ;;
             $ZFM_TOGGLE_MENU_KEY)
-                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch"
+                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase"
                 case "$menu_text" in
                     "FullIndexing")
                         full_indexing_toggle
@@ -260,8 +262,11 @@ list_printer() {
                     "FuzzyMatch")
                         fuzzy_match_toggle
                         ;;
-                esac
+                    "IgnoreCase")
+                        ignore_case_toggle
                         ;;
+                esac
+                ;;
             $ZFM_SIBLING_DIR_KEY)
                 # XXX FIXME TODO sibling and next should move to caller
                 # This should only have search and drill down functionality
@@ -365,13 +370,16 @@ toggle_match_from_start() {
 # utility functions {
 # check if there is only one file for this pattern, then straight go for it
 # with some rare cases the next char is a number, so then don't jump.
+# TODO needs to be aware of case 
 check_patt() {
     local p=${1:s/^//}  # obsolete, refers to earlier grep version
+    local ic=
+    ic=${ZFM_IGNORE_CASE+i}
     if [[ -z $M_MATCH_ANYWHERE ]]; then
         # match from start - default
-        lines=$(print -rl -- ${p}*)
+        lines=$(print -rl -- (#$ic)${p}*)
     else
-        lines=$(print -rl -- *${p}*)
+        lines=$(print -rl -- (#$ic)*${p}*)
     fi
     # need to account for match from start
     echo $lines
@@ -492,8 +500,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1x"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/02"
+ZFM_VERSION="0.0.1y"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/03"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
