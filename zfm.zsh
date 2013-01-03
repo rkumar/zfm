@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-03 20:08
+#  Last update: 2013-01-03 20:42
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -616,7 +616,8 @@ param=$(print -rl -- *(M))
                         searchpattern=${searchpattern:-""}
                         vared -p "Filename to search for (enter 3 characters): " searchpattern
                         # recurse and match filename only
-                        files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
+                        #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
+                        files=$( print -rl -- **/*$searchpattern*(.) )
                         if [[ $#files -gt 0 ]]; then
                             files=$( echo $files | xargs ls -t )
                             ZFM_FUZZY_MATCH_DIR="1" fuzzyselectrow $files
