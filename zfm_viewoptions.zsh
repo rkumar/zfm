@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-03 20:07
+# Last update: 2013-01-03 22:12
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -568,15 +568,26 @@ ignore_case_toggle() {
     fi
     export ZFM_IGNORE_CASE
 }
+approx_match_toggle() {
+    if [[ -z "ZFM_APPROX_MATCH" ]]; then
+        ZFM_APPROX_MATCH=1
+    else
+        ZFM_APPROX_MATCH=
+    fi
+    export ZFM_APPROX_MATCH
+}
 settingsmenu(){
     select_menu "Options" "i) Full Indexing toggle" "c) case toggle" "h) hidden files toggle" "p) Paging key" "4) Dupe check" \
-        "a) Auto select action" "A) Toggle Auto Action"
+        "a) Auto select action" "A) Toggle Auto Action" "x) Approximate match toggle"
     case $reply in
         "i")
             full_indexing_toggle
             ;;
         "c")
             ignore_case_toggle
+            ;;
+        "x")
+            approx_match_toggle
             ;;
         "h")
             pinfo "may work after changing directory, and should be set from Filters"
