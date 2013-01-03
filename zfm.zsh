@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-03 20:04
+#  Last update: 2013-01-03 20:08
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -251,7 +251,7 @@ list_printer() {
                 fi # M_FULL
                 ;;
             $ZFM_TOGGLE_MENU_KEY)
-                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase"
+                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase" "ihfc"
                 case "$menu_text" in
                     "FullIndexing")
                         full_indexing_toggle
