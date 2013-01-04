@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-05 00:51
+#  Last update: 2013-01-05 01:39
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -528,8 +528,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1z"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/04"
+ZFM_VERSION="0.0.1za"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/05"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -819,7 +819,8 @@ numberlines() {
 done
 } # numberlines
 selection_menu() {
-    menu_loop "Selection Options" "today ago recent largest dirs +extn oldest substring ack" "tarldxos"
+    menu_loop "Selection Options" "today +extn -extn " "txX"
+    files=
     case $menu_text in
         "today")
             # finding common rows between what's visible and today's files
@@ -829,29 +830,37 @@ selection_menu() {
             ;;
         "+extn")
             # finding common rows between what's visible and today's files
-            print -n "Enter extensions to select (space delim)"
+            print -n "Enter extensions to select (space delim *.c *.h): "
             read extns
-            files=($(eval "print -rl -- $extns"))
-            files=("${(@f)$(print -rl -- $files)}")
-            echo "x $extns"
-            echo "f $files"
+            #files=($(eval "print -rl -- $extns"))
+            files=("${(@f)$(eval print -rl -- $extns)}")
+            #echo "x $extns"
+            ##echo "f $#files : $files"
             ;;
         "-extn")
             # finding common rows between what's visible and today's files
-            files=( $(print -rl -- *(.m0) ) )
+            print -n "Enter extensions to remove (space delim *.c *.h): "
+            read extns
+            remfiles=("${(@f)$(eval print -rl -- $extns)}")
+            echo "f $#remfiles : $remfiles"
+            # unable to match files with spaces in next line, okay we quote remfiles
+            remfiles=( $remfiles:q )
+            selectedfiles=(${selectedfiles:|remfiles})
             ;;
     esac
-    common=( ${viewport:*files} )
-    for line in $common
-    do
-        echo "line $line"
-        selected_row=("${(s/	/)line}")
-        selected_file=$selected_row[-1]
-        selectedfiles=(
-        $selectedfiles
-        $selected_file:q
-        )
-    done
+    if [[ -n $files ]]; then
+        common=( ${viewport:*files} )
+        for line in $common
+        do
+            echo "line $line"
+            selected_row=("${(s/	/)line}")
+            selected_file=$selected_row[-1]
+            selectedfiles=(
+            $selectedfiles
+            $selected_file:q
+            )
+        done
+    fi
     pinfo "selected files $#selectedfiles"
     #files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str $viewport")
     #filterstr=${filterstr:-M}
