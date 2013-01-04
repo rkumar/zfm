@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-04 01:28
+#  Last update: 2013-01-05 00:51
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -15,7 +15,7 @@
 # ----------------------------------------------------------------------------- #
 #   Copyright (C) 2012-2013 rahul kumar
 
-#  TODO means to refresh dir listing after changing an option, rather than going up and back
+#  TODO cut erases BOLD face chars in long file names, need to trunc while printing in numberlines
 #  TODO multiple selection
 #    TODO select all
 #    TODO invert selection
@@ -103,7 +103,7 @@ list_printer() {
             ZFM_LS_L=1
         elif [[ $ttcount -lt 40 ]]; then
             cols=2
-            width=40
+            width=50
         else
             cols=3
             width=30
@@ -528,8 +528,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1y"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/03"
+ZFM_VERSION="0.0.1z"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/04"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -557,7 +557,7 @@ ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
 ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
 ZFM_FFIND_KEY=${ZFM_FFIND_KEY:-'/'}  # reset the pattern, use something else
-ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
+export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*' # this is separate from patt which is a temp filter based on hotkeys
@@ -603,14 +603,18 @@ param=$(print -rl -- *(M))
                     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && break
                     ;;
                 "$ZFM_MENU_KEY")
-                    local olddir=$PWD
-                    view_menu
-                    [[ $olddir == $PWD ]] || {
+                    if [[ -n "$M_SELECTION_MODE" ]]; then
+                        selection_menu
+                    else
+                        local olddir=$PWD
+                        view_menu
+                        [[ $olddir == $PWD ]] || {
                         # dir has changed
                         patt=""
                         filterstr=${filterstr:-M}
                         param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                     }
+                fi
                     #pause
                     ;; 
                 "$ZFM_POPD_KEY")
@@ -630,7 +634,8 @@ param=$(print -rl -- *(M))
                         pbold "selection mode is off"
                     else
                         M_SELECTION_MODE=1
-                        pbold "selection mode is on. After selecting files, use same key to toggle off and operate on files"
+                        pinfo "selection mode is on. After selecting files, use same key to toggle off and operate on files"
+                        pinfo "Use '*' to select all"
                     fi
                     ;; 
                 $ZFM_SORT_KEY)
@@ -667,17 +672,16 @@ param=$(print -rl -- *(M))
                     print_help_keys
                     ;;
                 '*')
-
-                        for line in $vpa
-                        do
-                            echo "line $line"
-                            selected_row=("${(s/	/)line}")
-                            selected_file=$selected_row[-1]
-                            selectedfiles=(
-                            $selectedfiles
-                            $selected_file:q
-                            )
-                        done
+                    for line in $vpa
+                    do
+                        echo "line $line"
+                        selected_row=("${(s/	/)line}")
+                        selected_file=$selected_row[-1]
+                        selectedfiles=(
+                        $selectedfiles
+                        $selected_file:q
+                        )
+                    done
                     pinfo "selected files $#selectedfiles"
                     if [[ -n "$M_SELECTION_MODE" ]]; then
                         pbold "Press $ZFM_SELECTION_MODE_KEY when done selecting"
@@ -800,7 +804,10 @@ numberlines() {
     # otherwise no check, remember that the cut that comes later can cut the 
     # escape chars
     if [[ $selct -gt 0 ]]; then
-        if [[ $selectedfiles[(i)$line] -gt $selct ]]; then
+        #perror "matching $#selct, ($line:q) , $selectedfiles[$c]"
+        # quoted spaces coausing failure in matching,
+        # however if i don't quote then other programs fail such as ls and tar
+        if [[ $selectedfiles[(i)${line:q}] -gt $selct ]]; then
             print -r -- "$sub) $_detail $line"
         else
             print -- "$sub) $_detail ${COLOR_BOLD}$line${COLOR_DEFAULT}"
@@ -811,6 +818,48 @@ numberlines() {
     let c++
 done
 } # numberlines
+selection_menu() {
+    menu_loop "Selection Options" "today ago recent largest dirs +extn oldest substring ack" "tarldxos"
+    case $menu_text in
+        "today")
+            # finding common rows between what's visible and today's files
+            #files=( $(print -rl -- *(.m0) ) )
+            files=("${(@f)$(print -rl -- *(.m0))}")
+            echo "files $#files : $files"
+            ;;
+        "+extn")
+            # finding common rows between what's visible and today's files
+            print -n "Enter extensions to select (space delim)"
+            read extns
+            files=($(eval "print -rl -- $extns"))
+            files=("${(@f)$(print -rl -- $files)}")
+            echo "x $extns"
+            echo "f $files"
+            ;;
+        "-extn")
+            # finding common rows between what's visible and today's files
+            files=( $(print -rl -- *(.m0) ) )
+            ;;
+    esac
+    common=( ${viewport:*files} )
+    for line in $common
+    do
+        echo "line $line"
+        selected_row=("${(s/	/)line}")
+        selected_file=$selected_row[-1]
+        selectedfiles=(
+        $selectedfiles
+        $selected_file:q
+        )
+    done
+    pinfo "selected files $#selectedfiles"
+    #files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str $viewport")
+    #filterstr=${filterstr:-M}
+    #ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    #export ZFM_STRING
+    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    #export param
+}
 # }
 # comment out next line if sourcing .. sorry could not find a cleaner way
 myzfm
