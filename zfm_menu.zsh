@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-02 01:07
+#  Last update: 2013-01-05 00:50
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -311,7 +311,7 @@ multifileopt() {
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
                 echo $menu_text $files $target 
-                eval "$menu_text $files $target" && psuccess "Please reenter directory to refresh"
+                eval "$menu_text $files $target" && psuccess "Please use $ZFM_REFRESH_KEY (\") to refresh"
             }
             ;;
         "zip") 
