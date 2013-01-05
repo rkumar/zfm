@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-05 01:39
+#  Last update: 2013-01-05 15:56
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -635,7 +635,7 @@ param=$(print -rl -- *(M))
                     else
                         M_SELECTION_MODE=1
                         pinfo "selection mode is on. After selecting files, use same key to toggle off and operate on files"
-                        pinfo "Use '*' to select all"
+                        pinfo "Use '*' to select all, $ZFM_MENU_KEY for selection menu"
                     fi
                     ;; 
                 $ZFM_SORT_KEY)
@@ -805,7 +805,7 @@ numberlines() {
     # escape chars
     if [[ $selct -gt 0 ]]; then
         #perror "matching $#selct, ($line:q) , $selectedfiles[$c]"
-        # quoted spaces coausing failure in matching,
+        # quoted spaces causing failure in matching,
         # however if i don't quote then other programs fail such as ls and tar
         if [[ $selectedfiles[(i)${line:q}] -gt $selct ]]; then
             print -r -- "$sub) $_detail $line"
@@ -819,55 +819,72 @@ numberlines() {
 done
 } # numberlines
 selection_menu() {
-    menu_loop "Selection Options" "today +extn -extn " "txX"
+    local mode="remove_mode"
+    local mmode="Selection"
+    [[ $#selectedfiles -eq 0 ]] && ZFM_REMOVE_MODE=
+    if [[ -n $ZFM_REMOVE_MODE ]]; then
+        mode="add_mode"
+        mmode="Unselection "
+    fi
+    menu_loop "$mmode Options ($#selectedfiles)" "today extn ack $mode" "txam"
     files=
     case $menu_text in
         "today")
             # finding common rows between what's visible and today's files
-            #files=( $(print -rl -- *(.m0) ) )
             files=("${(@f)$(print -rl -- *(.m0))}")
-            echo "files $#files : $files"
+            pdebug "files $#files : $files"
             ;;
-        "+extn")
+        "extn")
             # finding common rows between what's visible and today's files
             print -n "Enter extensions to select (space delim *.c *.h): "
             read extns
-            #files=($(eval "print -rl -- $extns"))
             files=("${(@f)$(eval print -rl -- $extns)}")
-            #echo "x $extns"
-            ##echo "f $#files : $files"
             ;;
-        "-extn")
-            # finding common rows between what's visible and today's files
-            print -n "Enter extensions to remove (space delim *.c *.h): "
-            read extns
-            remfiles=("${(@f)$(eval print -rl -- $extns)}")
-            echo "f $#remfiles : $remfiles"
-            # unable to match files with spaces in next line, okay we quote remfiles
-            remfiles=( $remfiles:q )
-            selectedfiles=(${selectedfiles:|remfiles})
+        "ack")
+            # files containing some text
+            print -n "Enter pattern to search : "
+            read cpattern
+            files=("${(@f)$(eval ack -l $M_ACK_REC_FLAG $cpattern)}")
+            pdebug "file $#files : $files"
             ;;
+        "remove_mode")
+            if [[ $#selectedfiles -eq 0 ]]; then
+                perror "There are no files to unselect"
+            else
+                ZFM_REMOVE_MODE=1
+                pinfo "Files selected will be removed from selection"
+            fi
+            ;;
+            #(( ZFM_REMOVE_FLAG =  ZFM_REMOVE_MODE * -1 ))
+        "add_mode")
+            ZFM_REMOVE_MODE=
+            pinfo "Files selected will be added to selection (normal mode)"
+            ;;
+            #(( ZFM_REMOVE_FLAG =  ZFM_REMOVE_MODE * -1 ))
+
+
     esac
     if [[ -n $files ]]; then
-        common=( ${viewport:*files} )
-        for line in $common
-        do
-            echo "line $line"
-            selected_row=("${(s/	/)line}")
-            selected_file=$selected_row[-1]
-            selectedfiles=(
-            $selectedfiles
-            $selected_file:q
-            )
-        done
+        # don't quote files again in common loop or spaced files will not get added
+        if [[ -n $ZFM_REMOVE_MODE ]]; then
+            files=( $files:q )
+            selectedfiles=(${selectedfiles:|files})
+        else
+
+            common=( ${viewport:*files} )
+            for line in $common
+            do
+                pdebug "line $line"
+                selected_row=("${(s/	/)line}")
+                selected_file=$selected_row[-1]
+                selectedfiles=(
+                $selectedfiles
+                $selected_file:q
+                )
+            done
+        fi
     fi
-    pinfo "selected files $#selectedfiles"
-    #files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str $viewport")
-    #filterstr=${filterstr:-M}
-    #ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
-    #export ZFM_STRING
-    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
-    #export param
+    pdebug "selected files $#selectedfiles"
 }
 # }
 # comment out next line if sourcing .. sorry could not find a cleaner way
