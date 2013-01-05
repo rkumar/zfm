@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-03 22:12
+# Last update: 2013-01-05 19:05
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -133,7 +133,7 @@ fuzzyselectrow() {
                 selected_file=$selected_row[-1]
                 selected_files=(
                 $selected_files
-                $selected_file:q
+                $selected_file
                 )
             done
             pdebug "$#selected_files selected"
@@ -399,7 +399,7 @@ esac
         selected_file=$selected_row[-1]
         selected_files=(
         $selected_files
-        $selected_file:q
+        $selected_file
         )
         pdebug " file: $selected_file "
     done
