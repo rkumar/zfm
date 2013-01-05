@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-05 21:01
+#  Last update: 2013-01-06 01:10
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -18,7 +18,7 @@ ZFM_MY_DELIM=,
 # usually directory level. They are currently parsed using "read -A" and use IFS.
 #
 #
-ZFM_MY_COMMANDS="ack,ag,tree,ffind,tig stats,git stats,locate,structure,sitree"
+ZFM_MY_COMMANDS="ack,ag,tree,ffind,tig stats,git stats,locate,structure,stree"
 # hotkeys for commands, put space if no hotkey
 ZFM_MY_MNEM="a tfiglse"
 
@@ -113,7 +113,7 @@ ZFM_locate() {
 ZFM_mdfind() {
     perror "Not yet implemented, the results are usually too massive to be of use here"
 }
-ZFM_sitree() {
+ZFM_stree() {
     print "."
     print -rl -- **/*(/N) | sed 's#/$##;s#/\([^/]*\)$#	\1#;s#\([^/]*/\)#    #g;s#\( *\)\(.*\)	#    \1|___#;s#^\([^ ]\)#|--  \1#;s#^ #| #'
     ct=$( print -rl -- **/*(/N) )
