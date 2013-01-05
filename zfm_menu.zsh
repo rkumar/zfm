@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-05 00:50
+#  Last update: 2013-01-05 19:30
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -283,7 +283,9 @@ filetype(){
 #   This procedure has operations for multiple files
 multifileopt() {
     local files
-    files=($@) # NOTE since array incoming we need to bracket else converts to string
+    # careful I am quoting spaces so some commands can work like the tar
+    # this may cause problems with some commands
+    files=($@:q) # NOTE since array incoming we need to bracket else converts to string
     #array2lines $files
     print_title "File summary for $#files files:"
     # eval otherwise files with spaces will cause an error
@@ -346,13 +348,13 @@ multifileopt() {
 }
 textfileopt() {
     local files="$@"
-    # NOTE XXX splitting on space means space in files will cause misbehavior
-    #[[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
+    # NOTE eval commands require quoting of spaces whereas other commands will fail
     # NOTE what about multiple files
     print_title "File summary for $files:"
     file $files
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
+    files=${files:q}
     #menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
     menu_loop "File operations:" "vim cmd less mv rmtrash archive tail head open auto $default_app" "vcl!#zthoa"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
@@ -390,7 +392,8 @@ textfileopt() {
             echo -n "Enter target: [$arch]"
             read target
             [[ -z $target ]] && target="$arch"
-            tar zcvf $arch $files
+            # eval required since strings quoted above
+            eval "tar zcvf $arch $files"
             ;;
         *)
 
@@ -403,19 +406,18 @@ zipfileopt() {
     # TODO allow user to add a string in ENV for other executables which we can add here
     # such as als or atools aunpack
     local files="$@"
-    [[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
-    print -rl -- $files
     print_title "File summary for $files:"
     file $files
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     tar -ztvf $files | head -n 20
+    files=${files:q} # required for eval
     menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "cvl!#d"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "view") 
-            tar ztvf $files
+            eval "tar ztvf $files"
             ;;
         "cmd")
             [[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
@@ -434,7 +436,7 @@ zipfileopt() {
             [[ -n $target ]] && { 
                 echo $menu_text $files $target 
                 eval "$menu_text $files $target"
-                psuccess "Please reenter directory to refresh"
+                psuccess "Please use refresh key to rescan files"
             }
             ;;
         *)
@@ -453,6 +455,7 @@ otherfileopt() {
     file $files
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
+    files=${files:q} # required for eval
     menu_loop "Other operations:" "cmd open mv rmtrash od stat vim $default_app" "co!#dsv"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
@@ -481,8 +484,6 @@ otherfileopt() {
             eval "$EDITOR $files"
             ;;
         *)
-            # fails on stat command if spaces in file, therefore quoting
-            files=${files:q}
             eval "$menu_text $files"
             ;;
     esac
