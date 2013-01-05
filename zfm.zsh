@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-05 15:56
+#  Last update: 2013-01-05 19:05
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -679,7 +679,7 @@ param=$(print -rl -- *(M))
                         selected_file=$selected_row[-1]
                         selectedfiles=(
                         $selectedfiles
-                        $selected_file:q
+                        $selected_file
                         )
                     done
                     pinfo "selected files $#selectedfiles"
@@ -723,7 +723,7 @@ param=$(print -rl -- *(M))
                 else
                     selectedfiles=(
                     $selectedfiles
-                    $selection:q
+                    $selection
                     )
                     pinfo "Adding $selection to array, $#selectedfiles "
                 fi
@@ -804,10 +804,10 @@ numberlines() {
     # otherwise no check, remember that the cut that comes later can cut the 
     # escape chars
     if [[ $selct -gt 0 ]]; then
-        #perror "matching $#selct, ($line:q) , $selectedfiles[$c]"
+        perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
         # quoted spaces causing failure in matching,
         # however if i don't quote then other programs fail such as ls and tar
-        if [[ $selectedfiles[(i)${line:q}] -gt $selct ]]; then
+        if [[ $selectedfiles[(i)${line}] -gt $selct ]]; then
             print -r -- "$sub) $_detail $line"
         else
             print -- "$sub) $_detail ${COLOR_BOLD}$line${COLOR_DEFAULT}"
@@ -826,7 +826,7 @@ selection_menu() {
         mode="add_mode"
         mmode="Unselection "
     fi
-    menu_loop "$mmode Options ($#selectedfiles)" "today extn ack $mode" "txam"
+    menu_loop "$mmode Options ($#selectedfiles)" "today extn ack invert $mode" "txaim"
     files=
     case $menu_text in
         "today")
@@ -861,16 +861,25 @@ selection_menu() {
             pinfo "Files selected will be added to selection (normal mode)"
             ;;
             #(( ZFM_REMOVE_FLAG =  ZFM_REMOVE_MODE * -1 ))
+        "invert")
+            local vp
+            # this whole string quoting thing sucks so bad
+            #vp=${viewport:q}
+            selectedfiles=( ${viewport:|selectedfiles} )
+            #selectedfiles=( ${(Q)selectedfiles:q} )
+            ;;
 
 
     esac
     if [[ -n $files ]]; then
         # don't quote files again in common loop or spaced files will not get added
         if [[ -n $ZFM_REMOVE_MODE ]]; then
-            files=( $files:q )
+            #files=( $files:q )
             selectedfiles=(${selectedfiles:|files})
         else
 
+            # i think viewport has only file names, no details
+            # so we can just do a one line operation
             common=( ${viewport:*files} )
             for line in $common
             do
@@ -879,7 +888,7 @@ selection_menu() {
                 selected_file=$selected_row[-1]
                 selectedfiles=(
                 $selectedfiles
-                $selected_file:q
+                $selected_file
                 )
             done
         fi
