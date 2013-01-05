@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-05 19:05
+# Last update: 2013-01-06 00:47
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -576,9 +576,24 @@ approx_match_toggle() {
     fi
     export ZFM_APPROX_MATCH
 }
+#
+# Display selected files with an asterisk or using ANSI colors
+# THis is because sometimes colors may not show, or long files can have the ANSI escape
+# sequence truncated at end
+#
+color_toggle() {
+    if [[ -z "$ZFM_NO_COLOR" ]]; then
+        ZFM_NO_COLOR=1
+        pinfo "Selected files will be displayed in bold"
+    else
+        ZFM_NO_COLOR=
+        pinfo "Selected files will be displayed with a '*'"
+    fi
+    export ZFM_NO_COLOR
+}
 settingsmenu(){
-    select_menu "Options" "i) Full Indexing toggle" "c) case toggle" "h) hidden files toggle" "p) Paging key" "4) Dupe check" \
-        "a) Auto select action" "A) Toggle Auto Action" "x) Approximate match toggle"
+    select_menu "Options" "i) Full Indexing toggle" "c) Case toggle" "h) Hidden files toggle" "p) Paging key" "4) Dupe check" \
+        "a) Auto select action" "A) Toggle Auto Action" "x) Approximate match toggle" "C) Color toggle"
     case $reply in
         "i")
             full_indexing_toggle
@@ -645,6 +660,9 @@ settingsmenu(){
             ;;
         "A")
             toggle_auto_view
+            ;;
+        "C")
+            color_toggle
             ;;
     esac
 
@@ -847,7 +865,7 @@ select_menu() {
 }
 mycommands() {
     source $ZFM_DIR/zfmcommands.zsh
-    IFS=$ZFM_MY_DELIM menu_loop "My Commands" "$ZFM_MY_COMMANDS${ZFM_MY_DELIM:-' '}cmd" "$ZFM_MY_MNEM"
+    IFS=$ZFM_MY_DELIM menu_loop "My Commands" "$ZFM_MY_COMMANDS${ZFM_MY_DELIM:-' '}cmd" "${ZFM_MY_MNEM}!"
     local zcmd z
 
     # check for internall defined function, removing spaces
