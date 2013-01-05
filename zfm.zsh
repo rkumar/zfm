@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-05 19:05
+#  Last update: 2013-01-06 00:57
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -558,6 +558,7 @@ ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
 ZFM_FFIND_KEY=${ZFM_FFIND_KEY:-'/'}  # reset the pattern, use something else
 export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
+#export ZFM_NO_COLOR   # use to swtich off color in selection
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
 pattern='*' # this is separate from patt which is a temp filter based on hotkeys
@@ -753,6 +754,13 @@ param=$(print -rl -- *(M))
 numberlines() {
     let c=1
     local patt='.'
+    if [[ -n "$ZFM_NO_COLOR" ]]; then
+        BOLD='*'
+        BOLD_OFF=''
+    else
+        BOLD=$COLOR_BOLD
+        BOLD_OFF=$COLOR_DEFAULT
+    fi
     ##local defpatt='.'
     local defpatt=""
     local selct=$#selectedfiles
@@ -804,13 +812,13 @@ numberlines() {
     # otherwise no check, remember that the cut that comes later can cut the 
     # escape chars
     if [[ $selct -gt 0 ]]; then
-        perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
+        ##perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
         # quoted spaces causing failure in matching,
         # however if i don't quote then other programs fail such as ls and tar
         if [[ $selectedfiles[(i)${line}] -gt $selct ]]; then
             print -r -- "$sub) $_detail $line"
         else
-            print -- "$sub) $_detail ${COLOR_BOLD}$line${COLOR_DEFAULT}"
+            print -- "$sub) $_detail ${BOLD}$line${BOLD_OFF}"
         fi
     else
         print -r -- "$sub) $_detail $line $link"
