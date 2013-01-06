@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-07 00:34
+#  Last update: 2013-01-07 01:02
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -73,10 +73,14 @@ print_menu() {
     local c=1
     for f in $myopts
     do
-        echo "$c ${mnem[$c]})  $f"
+        sub=$c
+        [[ $c -gt 9 ]] && { sub=" " }
+        echo "$sub ${mnem[$c]})  $f"
         let c++
     done
-    echo -n "Enter choice 1-${#myopts} (q=quit): "
+    (( c-- ))
+    (( c > 9 )) && c=9
+    echo -n "Enter choice 1-${c} (q=quit): "
     read -r -k menu_char
 }
 
