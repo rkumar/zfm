@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-06 01:14
+#  Last update: 2013-01-06 15:43
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -493,6 +493,10 @@ post_cd() {
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
 }
+zfm_refresh() {
+    post_cd
+    myopts=("${(@f)$(print -rl -- $param)}")
+}
 print_help_keys() {
 
     pbold "$ZFM_APP_NAME some keys"
@@ -528,8 +532,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1zb"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/05"
+ZFM_VERSION="0.0.1zc"
+echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/06"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -694,6 +698,7 @@ param=$(print -rl -- *(M))
                     fi
                     ;;
                 *)
+                    [[ "$ans" == $ZFM_REFRESH_KEY ]] && { break }
                     perror "unhandled key $ans, type ? for key help"
                     ;;
             }
@@ -705,9 +710,7 @@ param=$(print -rl -- *(M))
         if [[ -d "$selection" ]]; then
             [[ -n $ZFM_VERBOSE ]] && echo "got a directory $selection"
             $ZFM_CD_COMMAND $selection
-                    patt="" # 2012-12-26 - 00:54 
-            #param=$(print -rl -- *)
-            #param=$(eval "print -rl -- *${MFM_LISTORDER}")
+            patt="" # 2012-12-26 - 00:54 
             filterstr=${filterstr:-M}
             param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
         elif [[ -f "$selection" ]]; then
@@ -796,16 +799,18 @@ numberlines() {
     link=
     _detail=
     if [[ -n "$ZFM_LS_L" ]]; then
-        if [[ -n "$line" && -e "$line" ]]; then
-            mtime=$(zstat -L -F "%Y/%m/%d %H:%M" +mtime $line)
-            zstat -L -H hash $line
-            sz=$hash[size]
-            link=$hash[link]
-            [[ -n $link ]] && link=" -> $link"
-            _detail="${TAB}$sz${TAB}$mtime${TAB}"
-        else
-            _detail="(deleted?)"
-            # file does not exist so it could be deleted ?
+        if [[ -n "$line" ]]; then
+            if [[ -e "$line" ]]; then
+                mtime=$(zstat -L -F "%Y/%m/%d %H:%M" +mtime $line)
+                zstat -L -H hash $line
+                sz=$hash[size]
+                link=$hash[link]
+                [[ -n $link ]] && link=" -> $link"
+                _detail="${TAB}$sz${TAB}$mtime${TAB}"
+            else
+                _detail="(deleted?)"
+                # file does not exist so it could be deleted ?
+            fi
         fi
     fi
     # only if there are selections we check against the array and color
