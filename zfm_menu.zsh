@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-06 15:42
+#  Last update: 2013-01-07 00:34
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -91,14 +91,11 @@ menu_loop () {
     menu_index=0 # this contain index numeric
 
     mnem="$3"
-# we read only one char, so if the options go beyond 9 then we are royally screwed, take off -1
+    # we read only one char, so if the options go beyond 9 then we are royally screwed, take off -1
     local myopts var
 while (true) 
 do
     local options="$2"
-    # next line prints value
-    #local myopts
-    # TODO use IFS=, or something unusual so params cn be passed
     read -A myopts <<< "$2"
     print_menu "$@"
     echo
@@ -119,7 +116,7 @@ do
         # hash '#' needs to be escaped to be detected
         [[ "$menu_char" =~ [q,] ]] && { return }
         echo ""
-        if [[ "$menu_char" == [0-9] ]]; then
+        if [[ "$menu_char" == [1-9] ]]; then
             var="${myopts[$menu_char]}" # 2>/dev/null
             menu_index=$menu_char
         else
@@ -132,6 +129,10 @@ do
             else
                 var=${myopts[$index]} 
                 menu_index=$index
+                # this is a clever loophole for an extra mnemonic that is beyond the 
+                # menu options NOTE XXX
+                [[ -z "$var" ]] && {  menu_text=$menu_char; break }
+                
             fi
             #pdebug "menu_loop index in mnem is $index , $menu_char, $var : $mnem"
         fi
@@ -140,14 +141,17 @@ do
         #var2="${myhash[$menu_char]}"
         #var=${var1:-$var2}
         if [[ "$menu_char" = "?" ]]; then
-            #echo "${COLOR_BOLD}Mnemonics are:${COLOR_DEFAULT}"
             print_title "   Mnemonics are:"
-            #for f (${(k)myhash}) do
-                #print -l "[$f]  => ${myhash[$f]}"
-            #done
-            local i=0
-            # ${string// /}
-            while (( i++ < $#mnem )) { [[ -n ${mnem[$i]// /} ]] && echo "    ${mnem[$i]}      =>  ${options[(w)$i]}  ";  }
+            local i=1
+            spl=( ${(s/ /)options})
+            while (( i++ < $#mnem )) { 
+                if [[ $i -gt $#spl ]]; then
+                    # extra key added in call for passing back 
+                    echo "    $mnem[$i]      =>  (extra key)"
+                else
+                    [[ -n ${mnem[$i]// /} ]] && echo "    ${mnem[$i]}      =>  ${options[(w)$i]}  ";  
+                fi
+            }
             echo "    [q]    => quit"
             echo ""
             echo -n " Press a key ... "
@@ -493,4 +497,15 @@ otherfileopt() {
             [[ "$menu_text" == "rmtrash" ]] && zfm_refresh
             ;;
     esac
+}
+#
+# print a hash with key in bold
+
+function print_hash () {
+   local h
+   h=( "$@" ) 
+   for (( i = 1; i < $#h; i+=2 )); do
+       print -n "${COLOR_BOLD}$h[i]${COLOR_DEFAULT} ${COLOR_GREEN}$h[i+1] ${COLOR_DEFAULT}  "
+   done
+   print
 }
