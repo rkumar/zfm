@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-06 19:07
+#  Last update: 2013-01-06 23:53
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -110,7 +110,7 @@ list_printer() {
         [[ $fin -gt $tot ]] && fin=$tot
         local sortorder=""
         [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
-        print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}"
+        print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}  "
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " " ""  ) | tr -s "" |  tr "" " " 
         print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" ""  ) | tr -s "" |  tr "" " \t" 
@@ -255,7 +255,8 @@ list_printer() {
                 fi # M_FULL
                 ;;
             $ZFM_TOGGLE_MENU_KEY)
-                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa"
+                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
+                [[ $menu_text == $ZFM_TOGGLE_MENU_KEY ]] && { menu_text=$toggle_menu_last_choice }
                 case "$menu_text" in
                     "FullIndexing")
                         full_indexing_toggle
@@ -281,7 +282,10 @@ list_printer() {
                             pinfo "Files will NOT be viewed upon selection. Other actions may be performed"
                         fi
                         ;;
+                    *)
+                        perror "Wrong option $menu_text"
                 esac
+                toggle_menu_last_choice=$menu_text
                 ;;
             $ZFM_REFRESH_KEY)
                 pbold "refreshing rescanning"
@@ -530,7 +534,7 @@ myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
 ZFM_VERSION="0.0.2"
-echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/06"
+print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/06"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -567,6 +571,9 @@ filterstr="M"
 MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
 export ZFM_STRING
+#print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
+aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
+print_hash $aa
 param=$(print -rl -- *(M))
     while (true)
     do
@@ -801,6 +808,13 @@ numberlines() {
                 mtime=$(zstat -L -F "%Y/%m/%d %H:%M" +mtime $line)
                 zstat -L -H hash $line
                 sz=$hash[size]
+                if [[ $sz -gt 1048576 ]]; then
+                    (( sz = sz / 1048576 )) ; sz="${sz}M" 
+                    # statements
+                elif [[ $sz -gt 9999 ]]; then
+                    (( sz = sz / 1024 )) ; sz="${sz}k" 
+                fi
+                    #[[ $sz -gt 9999 ]] && {  (( sz = sz / 1024 )) ; sz="${sz}k" }
                 link=$hash[link]
                 [[ -n $link ]] && link=" -> $link"
                 _detail="${TAB}$sz${TAB}$mtime${TAB}"
