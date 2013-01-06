@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-06 15:43
+#  Last update: 2013-01-06 19:07
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -16,11 +16,6 @@
 #   Copyright (C) 2012-2013 rahul kumar
 
 #  TODO cut erases BOLD face chars in long file names, need to trunc while printing in numberlines
-#  TODO multiple selection
-#    TODO select all
-#    TODO invert selection
-#    TODO maybe some spec *.txt etc
-#    TODO select deselect ranges
 # TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
 # TODO what if user wants to send in some args suc as folder to start in, or resume where one left off.
 # TODO If user does not use z/j/autojmp etc then we should have option to build dir database and save it
@@ -49,6 +44,8 @@ PAGESZ=59     # used for incrementing while paging
 #    rest is files to list
 list_printer() {
     selection="" # contains return value if anything chosen
+    integer ZFM_COLS=$(tput cols)
+    integer ZFM_LINES=$(tput lines)
     local width=30
     local title=$1
     shift
@@ -97,16 +94,16 @@ list_printer() {
         #vpa=("${(f)=viewport}")
         local ttcount=$#vpa
         ZFM_LS_L=
-        if [[ $ttcount -lt 15 ]]; then
+        if [[ $ttcount -lt  $ZFM_LINES ]]; then
             cols=1
-            width=80
+            width=$ZFM_COLS
             ZFM_LS_L=1
         elif [[ $ttcount -lt 40 ]]; then
             cols=2
-            width=50
+            (( width = $ZFM_COLS / $cols ))
         else
             cols=3
-            width=30
+            (( width = $ZFM_COLS / $cols ))
         fi
         # NO, vpa is not entire thing, its grepped and filtered
         #let tot=$#vpa
@@ -532,7 +529,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.1zc"
+ZFM_VERSION="0.0.2"
 echo "$ZFM_APP_NAME $ZFM_VERSION 2013/01/06"
 #  Array to place selected files
 typeset -U selectedfiles
