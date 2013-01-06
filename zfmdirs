@@ -8,5 +8,6 @@
 #
 local _f="$HOME/.z"
 if [[ -r "$_f" ]]; then
-    cut -f1 -d '|' $_f
+    #cut -f1 -d '|' $_f
+    sort -rn -k2 -t '|' $_f | cut -f1 -d '|'
 fi
