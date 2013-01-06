@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-06 00:47
+# Last update: 2013-01-07 00:32
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -17,6 +17,8 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 # files=$(listdir.pl --file-type *(.m0) | nl)
 view_menu() {
     select_menu "Menu"  "f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings"
+    [[ $reply == $ZFM_MENU_KEY ]] && reply=$view_menu_last_choice
+    view_menu_last_choice=$reply
     case $reply in
         "o")
             settingsmenu
