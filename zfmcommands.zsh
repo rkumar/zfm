@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-06 01:10
+#  Last update: 2013-01-06 15:09
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -18,9 +18,9 @@ ZFM_MY_DELIM=,
 # usually directory level. They are currently parsed using "read -A" and use IFS.
 #
 #
-ZFM_MY_COMMANDS="ack,ag,tree,ffind,tig stats,git stats,locate,structure,stree"
+ZFM_MY_COMMANDS="ack,ag,tree,ffind,tig stats,git stats,locate,structure,stree,newfile,newdir"
 # hotkeys for commands, put space if no hotkey
-ZFM_MY_MNEM="a tfiglse"
+ZFM_MY_MNEM="a tfiglse%d"
 
 #  Now place functions for above commands, otherwise it is expected they
 #  are in path, if ZFM_xxx is first looked for, otherwise xxx in $PATH
@@ -114,7 +114,6 @@ ZFM_mdfind() {
     perror "Not yet implemented, the results are usually too massive to be of use here"
 }
 ZFM_stree() {
-    print "."
     print -rl -- **/*(/N) | sed 's#/$##;s#/\([^/]*\)$#	\1#;s#\([^/]*/\)#    #g;s#\( *\)\(.*\)	#    \1|___#;s#^\([^ ]\)#|--  \1#;s#^ #| #'
     ct=$( print -rl -- **/*(/N) )
     if [[ -z "$ct" ]]; then
@@ -123,4 +122,20 @@ ZFM_stree() {
         print "$(echo $ct | wc -l) directories"
     fi
     pause
+}
+ZFM_newfile() {
+
+    print -n "Enter filename: "
+    read filename
+    $EDITOR $filename
+    [[ -e $filename ]] && zfm_refresh 
+
+}
+ZFM_newdir() {
+
+    print -n "Enter directory name: "
+    read filename
+    mkdir $filename && pushd $filename
+    [[ -d $filename ]] && zfm_refresh
+
 }
