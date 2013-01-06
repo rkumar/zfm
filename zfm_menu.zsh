@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-05 19:30
+#  Last update: 2013-01-06 15:42
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -106,7 +106,7 @@ do
     # next line crashes program on ESC
     [[ $menu_char = "" ]] && { perror "Got a ESC XXX"; menu_char="q" }
     menu_char=$(echo "$menu_char" | tr -d '[\n\r\t ]')
-    #perror "key is 2 $menu_char"
+    pdebug "key is 2 $menu_char"
     #[[ -z $menu_char ]] && menu_char="$default"
     if [[ -z $menu_char ]] ;
     then
@@ -116,13 +116,16 @@ do
     else
         # FIXME, ! is a shortcut for command, now that we are checking later
         # we can release it. The comma is used as it is the back key
+        # hash '#' needs to be escaped to be detected
         [[ "$menu_char" =~ [q,] ]] && { return }
         echo ""
         if [[ "$menu_char" == [0-9] ]]; then
             var="${myopts[$menu_char]}" # 2>/dev/null
             menu_index=$menu_char
         else
+            [[ $menu_char == '#' ]] && menu_char='\#'
             index=$mnem[(i)$menu_char]; 
+            #pdebug " index is $index of $#mnem, $mnem"
             if [[ $index -gt $#mnem ]]; then
                 var=
                 menu_index=
@@ -286,7 +289,6 @@ multifileopt() {
     # careful I am quoting spaces so some commands can work like the tar
     # this may cause problems with some commands
     files=($@:q) # NOTE since array incoming we need to bracket else converts to string
-    #array2lines $files
     print_title "File summary for $#files files:"
     # eval otherwise files with spaces will cause an error
     eval "ls -lh $files"
@@ -313,7 +315,8 @@ multifileopt() {
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
                 echo $menu_text $files $target 
-                eval "$menu_text $files $target" && psuccess "Please use $ZFM_REFRESH_KEY (\") to refresh"
+                eval "$menu_text $files $target"
+                zfm_refresh
             }
             ;;
         "zip") 
@@ -324,7 +327,7 @@ multifileopt() {
             vared -p "Enter zip file name: " arch
             #[[ -z $target ]] && target="$arch"
             # if you don't check the first file will get overwritten with the tar file
-            [[ -n "$arch" ]] && eval "tar zcvf $arch $files"
+            [[ -n "$arch" ]] && eval "tar zcvf $arch $files" && zfm_refresh
             ;;
         "grep")
             greppatt=${greppatt:-""}
@@ -343,6 +346,7 @@ multifileopt() {
 
             #[[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text $files"
             eval "$menu_text $files"
+            [[ "$menu_text" == "rmtrash" ]] && zfm_refresh
             ;;
     esac
 }
@@ -364,7 +368,7 @@ textfileopt() {
             #[[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
             command=${command:-""}
             vared -p "Enter command: " command
-            eval "$command $files"
+            eval "$command $files" && zfm_refresh
             ;;
         "auto")
             # added this 2012-12-26 - 01:11 
@@ -383,7 +387,7 @@ textfileopt() {
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
             echo $menu_text $files $target 
-            eval "$menu_text $files $target"
+            eval "$menu_text $files $target" && zfm_refresh
             }
             ;;
         "archive") 
@@ -393,12 +397,12 @@ textfileopt() {
             read target
             [[ -z $target ]] && target="$arch"
             # eval required since strings quoted above
-            eval "tar zcvf $arch $files"
+            eval "tar zcvf $arch $files" && zfm_refresh
             ;;
         *)
 
             [[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text $files"
-            eval "$menu_text $files"
+            eval "$menu_text $files" && zfm_refresh
             ;;
     esac
 }
@@ -414,7 +418,7 @@ zipfileopt() {
     files=${files:q} # required for eval
     menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "cvl!#d"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
-    [[ "$menu_char" = "!" ]] && menu_text="cmd"
+    #[[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "view") 
             eval "tar ztvf $files"
@@ -435,12 +439,13 @@ zipfileopt() {
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
                 echo $menu_text $files $target 
-                eval "$menu_text $files $target"
+                eval "$menu_text $files $target" && zfm_refresh
                 psuccess "Please use refresh key to rescan files"
             }
             ;;
         *)
             eval "$menu_text $files"
+            [[ "$menu_text" == "rmtrash" ]] && zfm_refresh
             ;;
     esac
 }
@@ -457,7 +462,7 @@ otherfileopt() {
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     files=${files:q} # required for eval
     menu_loop "Other operations:" "cmd open mv rmtrash od stat vim $default_app" "co!#dsv"
-    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menu_text "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
@@ -477,7 +482,7 @@ otherfileopt() {
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
                 echo $menu_text $files $target 
-                eval "$menu_text $files $target"
+                eval "$menu_text $files $target" && zfm_refresh
             }
             ;;
         "vim")
@@ -485,6 +490,7 @@ otherfileopt() {
             ;;
         *)
             eval "$menu_text $files"
+            [[ "$menu_text" == "rmtrash" ]] && zfm_refresh
             ;;
     esac
 }
