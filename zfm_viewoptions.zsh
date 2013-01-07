@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-07 18:23
+# Last update: 2013-01-08 00:53
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -68,7 +68,8 @@ view_menu() {
 # in that the pattern is not contiguous, if you press abc it matches "a.*b.*c"
 #
 fuzzyselectrow() {
-    local files=$@
+    local files
+    files=($@)
     [[ $#files -eq 0 ]] && return
 
     typeset -U deleted
@@ -91,22 +92,40 @@ fuzzyselectrow() {
         local _hv=$#vpa # size of result after grep
 
         if [[ $ZFM_AUTO_COLUMNS == "1" && $_hv -gt $rows ]]; then
-        # this is fine, but on locate or mdfind where entire paths comes this can be awful
-        # split into 2 columns, hopefully only name was sent in and not details
-        #print -rC2 -- $files 
-        #print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
-        print -rC2 -- $(print -rl -- $viewport | numbernine | sed "s#$HOME#~#g" |  tr "[ \t]" "" ) | tr "" " "
-    else
-        #print  "   No.\t  Size \t  Modified Date  \t  Name"
-        print -rl -- $viewport | numbernine 
-    fi
-    [[ $_hv -gt 9 ]] && _hv=9
-    #print  -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
-    # PROMPT prompt
-    print  -n "Select a row [1-$_hv] [a-z] filter, ${ZFM_MENU_KEY} menu, ? Help, ESC/CR ($#deleted/$#vpa)/$gpatt/: "
-    len=1
-    read -k $len reply
-    echo
+            # this is fine, but on locate or mdfind where entire paths comes this can be awful
+            # split into 2 columns, hopefully only name was sent in and not details
+            #print -rC2 -- $files 
+            #print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
+            # we can't use a slash here because full paths will come
+            print -rC2 -- $(print -rl -- $viewport | numbernine | sed "s#$HOME#~#g" |  tr " \t" "" ) | tr "" " \t"
+        else
+            #print  "   No.\t  Size \t  Modified Date  \t  Name"
+            print -rl -- $viewport | numbernine
+        fi
+        [[ $_hv -gt 9 ]] && _hv=9
+        #print  -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
+        # PROMPT prompt
+        print  -n "Select a row [1-$_hv] [a-z] filter, ${ZFM_MENU_KEY} menu, ? Help, ESC/CR ($#deleted/$#vpa)/$gpatt/: "
+        len=1
+        read -k $len reply
+        # if user enters a numeric and there are double digit values too
+        # then wait for a second number. e.g. if he types 1 and there are 10 items
+        # wait for another keypress for a second. BUt if he types 2 and there are less than
+        # 20 then continue without taking another key
+        if [[ "$reply" == <1-9> ]]; then
+            (( tens = reply * 10 ))
+            (( $#vpa >= tens )) && {
+                read -k -t 1 ret1
+                if [[  $? -eq 0 ]]; then
+                    # check it is numeric not a CR, if no input then $? gives 1
+                    if [[ $ret1 == <0-9> ]]; then
+                        (( reply = reply * 10 + ret1 ))
+                    fi
+                fi
+
+            }
+        fi
+        echo
 
     #
     #  pressing ENTER selects first item by default
@@ -146,11 +165,11 @@ fuzzyselectrow() {
     }
 
 
-    [[ $reply = "" ]] && { pdebug "Got esc" ; selected_file=; break }
+    [[ $reply = "" ]] && { pdebug "Got esc" ; selected_file=; selected_files=; break }
     pdebug "got $reply"
     [[ -z "$reply" ]] && break
     #  check for numeric as some values like "o" can cause abort
-    if [[ "$reply" == <-> ]]; then
+    if [[ "$reply" == <1-> ]]; then
         line="$vpa[$reply]"
         # only a physical tab was working, \t etc was not working
         # split row with tabs into an array
@@ -533,8 +552,8 @@ handle_selection() {
             commandpost=${commandpost:-""}
             commandpre=${commandpre:-""}
             vared -p "Enter command (e.g. mv) :" commandpre
-            [[ -z "$commandpre" ]] && return
-            vared -p "Enter command to append to filenames (e.g. target) :" commandpost
+            [[ -z "$commandpre" ]] && { print "No action." ; return }
+            vared -p "Enter command to place after filenames (e.g. target) :" commandpost
             pdebug "$commandpre $selected_files $commandpost"
             eval "$commandpre $selected_files $commandpost"
         }
@@ -833,10 +852,16 @@ m_recentfiles() {
     if [[ -x "${ZFM_DIR}/zfmfiles" ]]; then
         # next line resulted in spaces getting broken into multiple files
         #files=$(print -rl -- $(${ZFM_DIR}/zfmfiles))
-        files=$(${ZFM_DIR}/zfmfiles)
+        files=( $(${ZFM_DIR}/zfmfiles) )
+        (( $#files < 25 )) && {
+            files+=( *(.om[1,10]) )  # add 10 recent files from current dir if not enough
+        }
     else
         perror "No ~/.viminfo file found"
-        files=$(listdir.pl *(.m0) ~/.vimrc ~/.zshrc ~/.bashrc ~/.screenrc ~/.tmux.conf)
+        # fuzzy doesn't expect dettails i think - it can but won't be able to color bold any longer
+        #files=$(listdir.pl *(.m0) ~/.vimrc ~/.zshrc ~/.bashrc ~/.screenrc ~/.tmux.conf)
+        files=( *(.om[1,10]) ~/.vimrc ~/.zshrc ~/.bashrc ~/.screenrc ~/.tmux.conf)
+        # if no files for today add recent files here TODO
     fi
     [[ -n "$files" ]] && {
         if [[ -n "$ZFM_RECENT_MULTI" ]]; then
@@ -850,11 +875,12 @@ m_recentfiles() {
             ZFM_FUZZY_MATCH_DIR="1"
             fuzzyselectrow $files
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
+            #perror "XXX $#selected_files ,, $selected_file"
             if [[ $#selected_files -eq 1 ]]; then
                 fileopt "$selected_file"
             elif [[ $#selected_files -gt 1 ]]; then
                 multifileopt $selected_files
-            elif [[ -n "$selected_file" ]]; then
+            elif [[ -e "$selected_file" ]]; then
                 fileopt "$selected_file"
             fi
         fi
@@ -921,10 +947,11 @@ numbernine() {
     local tabd=$'\t'
     local selct=$#deleted
     local csel cres
+    integer maxct=99
 
     while IFS= read -r line; do
         sub="$c)"
-        if [[ $c -gt 9 ]]; then
+        if [[ $c -gt $maxct ]]; then
             sub="  "
             #print -r -- "  ${tabd}$line"
         else
