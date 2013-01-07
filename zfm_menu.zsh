@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-07 12:32
+#  Last update: 2013-01-07 20:36
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -181,6 +181,7 @@ done
 }
 fileopt() {
     local name="$1"
+    [[ -z $name ]] && return
     local type="$(filetype $name)"
     extn=$name:e
     # we can store def app in a hash so not queried each time
@@ -246,6 +247,7 @@ fileopt_noauto() {
 #  check file type based on output of file command and return a few
 filetype(){
     local name="$1"
+    [[ -z $name ]] && return
     local type=""
     extn=$name:e
     pdebug "extn: $extn"
