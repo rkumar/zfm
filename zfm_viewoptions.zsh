@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-07 00:32
+# Last update: 2013-01-07 18:23
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -17,6 +17,7 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 # files=$(listdir.pl --file-type *(.m0) | nl)
 view_menu() {
     select_menu "Menu"  "f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings"
+    # pressing menu key again, repeats last seletion
     [[ $reply == $ZFM_MENU_KEY ]] && reply=$view_menu_last_choice
     view_menu_last_choice=$reply
     case $reply in
@@ -73,7 +74,7 @@ fuzzyselectrow() {
     typeset -U deleted
     deleted=()
     selected_file=
-    local rows=24 # try to columnate if more than 24 items, should be decided based on tput lines
+    local rows=$ZFM_LINES # try to columnate if more than 24 items, should be decided based on tput lines
                   # or user pref TODO
     # should we try printing in 2 columns if items more than $rows
     ZFM_AUTO_COLUMNS=${ZFM_AUTO_COLUMNS:-"1"}
@@ -84,7 +85,7 @@ fuzzyselectrow() {
 
     while (true)
     do
-        echo "   No.\t  Name"
+        print  "   No.\t  Name"
         viewport=$(print -rl -- $files  | grep "$gpatt")
         vpa=("${(@f)$(print -rl -- $viewport)}")
         local _hv=$#vpa # size of result after grep
@@ -96,13 +97,13 @@ fuzzyselectrow() {
         #print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
         print -rC2 -- $(print -rl -- $viewport | numbernine | sed "s#$HOME#~#g" |  tr "[ \t]" "" ) | tr "" " "
     else
-        #echo "   No.\t  Size \t  Modified Date  \t  Name"
+        #print  "   No.\t  Size \t  Modified Date  \t  Name"
         print -rl -- $viewport | numbernine 
     fi
     [[ $_hv -gt 9 ]] && _hv=9
-    #echo -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
+    #print  -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
     # PROMPT prompt
-    echo -n "Select a row [1-$_hv] [a-z] filter, ${ZFM_MENU_KEY} menu, ? Help, ESC/CR ($#deleted/$#vpa)/$gpatt/: "
+    print  -n "Select a row [1-$_hv] [a-z] filter, ${ZFM_MENU_KEY} menu, ? Help, ESC/CR ($#deleted/$#vpa)/$gpatt/: "
     len=1
     read -k $len reply
     echo
@@ -130,13 +131,14 @@ fuzzyselectrow() {
             selected_files=()
             for line in $deleted
             do
-                #echo "line $line"
-                selected_row=("${(s/	/)line}")
-                selected_file=$selected_row[-1]
-                selected_files=(
-                $selected_files
-                $selected_file
-                )
+                selected_files+=( $line )
+                #print  "line $line"
+                #selected_row=("${(s/	/)line}")
+                #selected_file=$selected_row[-1]
+                #selected_files=(
+                #$selected_files
+                #$selected_file
+                #)
             done
             pdebug "$#selected_files selected"
             break
@@ -163,10 +165,11 @@ fuzzyselectrow() {
                 deleted[$deleted[(i)$selected_file]]=()
                 pdebug "Removing $selected_file from list - $#deleted remaining"
             else
-                deleted=(
-                $deleted
-                $selected_file
-                )
+                deleted+=($selected_file)
+                #deleted=(
+                #$deleted
+                #$selected_file
+                #)
                 pdebug "Adding $selected_file to list - $#deleted selected"
             fi
         fi
@@ -199,7 +202,7 @@ fuzzyselectrow() {
             menu_loop "Options" "remove truncate rem_extn extn" ""
             case $menu_text in
                 "remove")
-                    echo "removes all files matching given pattern"
+                    print  "removes all files matching given pattern"
                     rejpattern=${rejpattern:-"tmp Trash Backups"}
                     vared -p "Enter pattern to reject: " rejpattern
                     #files=( $(print -rl -- $ff ) )
@@ -207,19 +210,19 @@ fuzzyselectrow() {
                     files=("${(@f)$(print -rl -- $ff | egrep -v "\.($rejpattern)$")}")
                     ;;
                 "truncate")
-                    echo "truncates beginning of files to shorten name, toggles "
+                    print  "truncates beginning of files to shorten name, toggles "
                     (( ZFM_TRUNCATE = ZFM_TRUNCATE * -1 ))
                     #pdebug "truncate value is: $ZFM_TRUNCATE "
                     ;;
                 "rem_extn")
-                    echo "removes files for given extensions (space delim)"
+                    print  "removes files for given extensions (space delim)"
                     xrejpattern=${xrejpattern:-"~ bak swp o pyo class lib"}
                     vared -p "Enter extensions to reject: " xrejpattern
                     xrejpattern=${xrejpattern:gs/ /|/}
                     files=("${(@f)$(print -rl -- $ff | egrep -v "\.($xrejpattern)$")}")
                     ;;
                 "extn")
-                    echo "only keep files for given extensions (space delim) remove others"
+                    print  "only keep files for given extensions (space delim) remove others"
                     accpattern=${accpattern:-""}
                     vared -p "Enter pattern to accept: " accpattern
                     accpattern=${accpattern:gs/ /|/}
@@ -279,16 +282,16 @@ selectmulti() {
     typeset -U deleted
     deleted=()
     local delix=1
-    echo "Enter row numbers to select, press ENTER when finished selection"
-    echo "  Press I to invert selection, A to select all"
-    echo "  e opens EDITOR on selected files, z zips selected files"
-    echo " Press 'S' for short 2-col list, 's' to revert to 1-col"
+    print  "Enter row numbers to select, press ENTER when finished selection"
+    print  "  Press I to invert selection, A to select all"
+    print  "  e opens EDITOR on selected files, z zips selected files"
+    print  " Press 'S' for short 2-col list, 's' to revert to 1-col"
     echo
     local M_SHORT="1"
     while (true) 
     do
         local c=1
-        echo "No.\t  Size \t  Modified Date  \t  Name"
+        print  "No.\t  Size \t  Modified Date  \t  Name"
         #print -rl -- $files
         ff=("${(@f)$(print -rl -- $files)}")
 
@@ -310,16 +313,16 @@ selectmulti() {
                     fil=$rfile
                 fi
             if [[ $delix -gt $#deleted ]]; then
-                echo "$c${tabd}$fil"
+                print  "$c${tabd}$fil"
             else
-                echo "$c${tabd}${COLOR_BOLD}${fil}${COLOR_DEFAULT}"
+                print  "$c${tabd}${COLOR_BOLD}${fil}${COLOR_DEFAULT}"
             fi
             let c++
 
         done \
         | tr " \t" "" )  | tr "" " \t"
 
-        echo -n "select rows by number (ENTER when done, all-A, invert-I, e - edit, z - zip): "
+        print  -n "select rows by number (ENTER when done, all-A, invert-I, e - edit, z - zip): "
         read -r reply
         [[ -z $reply ]] && { pdebug "breaking on blank" ; break }
         case $reply in
@@ -338,31 +341,35 @@ selectmulti() {
             "A") 
                 pdebug "selected all"
                 ff=("${(@f)$(print -rl -- $files)}")
-                deleted=(
-                $deleted
-                $ff
-                )
+                deleted+=($ff)
+                #deleted=(
+                #$deleted
+                #$ff
+                #)
                 #break
                 ;;
             'I')
                 # invert selection
-                delix=0
-                ttmp=($deleted)
-                deleted=()
                 ff=("${(@f)$(print -rl -- $files)}")
-                for fil in $ff
-                do
-                    [[ $#ttmp -gt 0 ]] && 
-                    { delix=$ttmp[(i)$fil]
-                    #echo "      [ $fi ] : delix, deleted: $delix => $#deleted "
-                }
-                if [[ $delix -gt $#ttmp ]]; then
-                    deleted=(
-                    $deleted
-                    $fil
-                    )
-                fi
-            done
+                deleted=( ${ff:|deleted} )
+                #delix=0
+                #ttmp=($deleted)
+                #deleted=()
+                #ff=("${(@f)$(print -rl -- $files)}")
+                #for fil in $ff
+                #do
+                    #[[ $#ttmp -gt 0 ]] && 
+                    #{ delix=$ttmp[(i)$fil]
+                    ##print  "      [ $fi ] : delix, deleted: $delix => $#deleted "
+                #}
+                #if [[ $delix -gt $#ttmp ]]; then
+                    #deleted+=($fil)
+                    ##deleted=(
+                    ##$deleted
+                    ##$fil
+                    ##)
+                #fi
+                #done
             ;; 
             *)
 
@@ -377,10 +384,11 @@ selectmulti() {
                     if [[ $deleted[(i)$line] -le $#deleted ]]; then
                         deleted[$deleted[(i)$line]]=()
                     else
-                        deleted=(
-                        $deleted
-                        $line
-                        )
+                        deleted+=($line)
+                        #deleted=(
+                        #$deleted
+                        #$line
+                        #)
                     fi
                     files=$( print -rl -- $ff)
                 else
@@ -388,7 +396,7 @@ selectmulti() {
                 fi
                 ;;
     #*)
-        #echo "default got $reply"
+        #print  "default got $reply"
         #;;
 esac
     done
@@ -396,13 +404,14 @@ esac
     selected_files=()
     for line in $deleted
     do
-        #echo "line $line"
+        #print  "line $line"
         selected_row=("${(s/	/)line}")
         selected_file=$selected_row[-1]
-        selected_files=(
-        $selected_files
-        $selected_file
-        )
+        selected_files+=($selected_file)
+        #selected_files=(
+        #$selected_files
+        #$selected_file
+        #)
         pdebug " file: $selected_file "
     done
 }
@@ -424,13 +433,13 @@ nonrecviewoptions(){
 # various canned listings like today's modified files or recent ones
 viewoptions() {
     local str=""
-    menu_loop "Directory views" "today ago recent largest dirs extn oldest substring ack" "tarldxos"
+    menu_loop "Directory views" "today ago recent largest dirs extn oldest substring ack" "tarldxosk"
     case $menu_text in
         "today")
             str="(.m0)"
             ;; 
         "ago")
-            echo "Examples : 1 -1 2 -2  -5[1,10]  -10[10,20] "
+            print  "Examples : 1 -1 2 -2  -5[1,10]  -10[10,20] "
             ago=${ago:-1}
             vared -p "Modified how many days ago: " ago
             str="(.m${ago})"
@@ -446,7 +455,7 @@ viewoptions() {
             str="(.OL[1,15])"
             ;; 
         "extn" )
-            print -n "Enter extension e.g log tmp :"
+            print -n "Enter one extension e.g log tmp :"
             read extn
             files=$(eval "listdir.pl  ${M_REC_STRING}*.${extn}(.)" )
             selectmulti $files
@@ -489,10 +498,10 @@ viewoptions() {
             #echo "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str"
             files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str")
             selectmulti $files
-            [[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
+            [[ -n $ZFM_VERBOSE ]] && print  "file: $selected_file"
         }
     [[ -n "$selected_files" ]] && {
-        handle_selection "$reply" "$selected_files"
+        handle_selection "$reply" $selected_files
     }
 }
 # handle multiple selection
@@ -502,8 +511,9 @@ viewoptions() {
 handle_selection() {
     local reply=$1
     shift
-    selected_files=$@
-    pdebug "handle_selection with $reply"
+    selected_files=($@:q)
+    #selected_files=${selected_files:q}
+    pdebug "handle_selection with $reply $#selected_files"
 
     case $reply in
         "q")
@@ -611,16 +621,16 @@ settingsmenu(){
             show_hidden_toggle
             ;;
         "p")
-            echo "Page key is (default <ENTER>: [$M_PAGE_KEY]"
-            echo -n "Enter key to use for paging (should preferable not exist in filenames): "
+            print  "Page key is (default <ENTER>: [$M_PAGE_KEY]"
+            print  -n "Enter key to use for paging (should preferable not exist in filenames): "
             read -k cha
             M_PAGE_KEY=cha
-            echo "Using page key: $cha"
+            print  "Using page key: $cha"
             ;;
         "4")
-            echo "When pressing hotkeys 1-9, we check if there are files with numbers in that position"
-            echo "Without this check some numbered files can become inaccessible"
-            echo "If you rarely use this, you can switch it off here, or permanently at top of source"
+            print  "When pressing hotkeys 1-9, we check if there are files with numbers in that position"
+            print  "Without this check some numbered files can become inaccessible"
+            print  "If you rarely use this, you can switch it off here, or permanently at top of source"
             if [[ -z "$M_SWITCH_OFF_DUPL_CHECK" ]]; then
                 M_SWITCH_OFF_DUPL_CHECK=1
             else
@@ -629,9 +639,9 @@ settingsmenu(){
             export M_SWITCH_OFF_DUPL_CHECK
             ;;
         "k")
-            echo "Change the character used for various functions (Enter leaves them as they are"
+            print  "Change the character used for various functions (Enter leaves them as they are"
 
-            echo "TODO someday not immed"
+            print  "TODO someday not immed"
             # what is this anyway ? changing hotkeys ?
             # menu
             # back (up dir)
@@ -646,17 +656,17 @@ settingsmenu(){
             # Misses out on OTHER category, not sure what to do
             # but some text files land in there, `file` says "data".
             echo
-            echo "Type Ctrl-u to clear line"
-            echo "Blank line disables auto action"
+            print  "Type Ctrl-u to clear line"
+            print  "Blank line disables auto action"
             echo
             ZFM_AUTO_TEXT_ACTION=${ZFM_AUTO_TEXT_ACTION:-$EDITOR}
             ZFM_AUTO_IMAGE_ACTION=open
             ZFM_AUTO_ZIP_ACTION="tar ztvf"
-            echo "Choose automatic action when selecting a text-file"
+            print  "Choose automatic action when selecting a text-file"
             vared ZFM_AUTO_TEXT_ACTION
-            echo "Choose automatic action when selecting an image file"
+            print  "Choose automatic action when selecting an image file"
             vared ZFM_AUTO_IMAGE_ACTION
-            echo "Choose automatic action when selecting a zip file"
+            print  "Choose automatic action when selecting a zip file"
             vared ZFM_AUTO_ZIP_ACTION
             export ZFM_AUTO_ZIP_ACTION ZFM_AUTO_IMAGE_ACTION ZFM_AUTO_TEXT_ACTION
             ;;
@@ -812,7 +822,7 @@ m_child_dirs() {
     fi
     ZFM_SINGLE_SELECT=1 fuzzyselectrow $files
     [[ -d $selected_file ]] && {
-        [[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
+        [[ -n $ZFM_VERBOSE ]] && print  "file: $selected_file"
         $ZFM_CD_COMMAND $selected_file
     }
 }
@@ -856,12 +866,12 @@ select_menu() {
     shift
     local moptions
     moptions=( "$@" )
-    echo "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
+    print  "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
     for o in $moptions
     do
-        echo "  $o"
+        print  "  $o"
     done
-    echo -n "Select :"
+    print  -n "Select :"
     read -k reply
     echo
 }
@@ -874,7 +884,7 @@ mycommands() {
     pdebug "menu_text is $menu_text"
     z=${menu_text:gs/ //}
     zcmd=ZFM_$z
-    #echo "testing $zcmd"
+    #print  "testing $zcmd"
     type $zcmd >/dev/null
     stat=$?
     if [[ $stat -eq 0 ]]; then
