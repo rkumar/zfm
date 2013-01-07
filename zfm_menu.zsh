@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-07 01:02
+#  Last update: 2013-01-07 12:32
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -21,35 +21,37 @@ export COLOR_BOLD="\\033[1m"
 export COLOR_BOLDOFF="\\033[22m"
 #  Print error to stderr so it doesn't mingle with output of method
 perror(){
-    echo "ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    print "ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
 }
+#  Print debug statement to stderr so it doesn't mingle with output of method
 pdebug(){
-    [[ -n "$ZFM_VERBOSE" ]] && echo "DEBUG: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    [[ -n "$ZFM_VERBOSE" ]] && print "DEBUG: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
 }
 psuccess(){
-    echo "${COLOR_GREEN}$@${COLOR_DEFAULT}" 1>&2
+    print "${COLOR_GREEN}$@${COLOR_DEFAULT}" 1>&2
 }
 
+#  Print info statement to stderr so it doesn't mingle with output of method
 pinfo(){
-    echo "INFO: $@" 1>&2
+    print "INFO: $@" 1>&2
 }
 #  Print something bold to stderr
 pbold() {
-    echo "${COLOR_BOLD}$*${COLOR_DEFAULT}" 1>&2
+    print "${COLOR_BOLD}$*${COLOR_DEFAULT}" 1>&2
 }
 #  Pause and get a single key
 pause() {
     #local prompt=${1:"Press a key ..."}
     local prompt="Press a key ..."
     local kk
-    echo "$prompt"
+    print "$prompt"
     read -k -r kk
-    echo
+    print
 }
 #  Print a title in bold
 print_title() {
     local title="$@"
-    echo "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
+    print "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
 }
 
 array2lines() {
@@ -75,12 +77,13 @@ print_menu() {
     do
         sub=$c
         [[ $c -gt 9 ]] && { sub=" " }
-        echo "$sub ${mnem[$c]})  $f"
+        print "$sub ${mnem[$c]})  $f"
         let c++
     done
+    # show only a max of 9 in text
     (( c-- ))
     (( c > 9 )) && c=9
-    echo -n "Enter choice 1-${c} (q=quit): "
+    print -n "Enter choice 1-${c} (q=quit): "
     read -r -k menu_char
 }
 
@@ -102,24 +105,24 @@ do
     local options="$2"
     read -A myopts <<< "$2"
     print_menu "$@"
-    echo
+    print
     #perror "key is 1 $menu_char"
     # next line crashes program on ESC
     [[ $menu_char = "" ]] && { perror "Got a ESC XXX"; menu_char="q" }
-    menu_char=$(echo "$menu_char" | tr -d '[\n\r\t ]')
+    menu_char=$(print "$menu_char" | tr -d '[\n\r\t ]')
     pdebug "key is 2 $menu_char"
     #[[ -z $menu_char ]] && menu_char="$default"
     if [[ -z $menu_char ]] ;
     then
         # enter pressed
-        echo "press q or ',' to exit without selection " 1>&2
+        print "press q or ',' to exit without selection " 1>&2
         #print_menu 
     else
         # FIXME, ! is a shortcut for command, now that we are checking later
         # we can release it. The comma is used as it is the back key
         # hash '#' needs to be escaped to be detected
         [[ "$menu_char" =~ [q,] ]] && { return }
-        echo ""
+        print ""
         if [[ "$menu_char" == [1-9] ]]; then
             var="${myopts[$menu_char]}" # 2>/dev/null
             menu_index=$menu_char
@@ -151,16 +154,16 @@ do
             while (( i++ < $#mnem )) { 
                 if [[ $i -gt $#spl ]]; then
                     # extra key added in call for passing back 
-                    echo "    $mnem[$i]      =>  (extra key)"
+                    print "    $mnem[$i]      =>  (extra key)"
                 else
-                    [[ -n ${mnem[$i]// /} ]] && echo "    ${mnem[$i]}      =>  ${options[(w)$i]}  ";  
+                    [[ -n ${mnem[$i]// /} ]] && print "    ${mnem[$i]}      =>  ${options[(w)$i]}  ";  
                 fi
             }
-            echo "    [q]    => quit"
-            echo ""
-            echo -n " Press a key ... "
+            print "    [q]    => quit"
+            print ""
+            print -n " Press a key ... "
             read -q hitenter
-            echo
+            print
         elif [[ -z "$var" ]] ; then
             perror "Wrong option $menu_char, q - quit, ? - options"
         elif [[ -n "$var" ]] ; then
@@ -261,11 +264,11 @@ filetype(){
             type="zip"
             ;;
     esac
-    [[ -n "$type" ]] && { echo "$type" && return }
+    [[ -n "$type" ]] && { print "$type" && return }
     if [[ "$name" =~ "^..*rc$" ]]; then
         pdebug "inside check for rc file" 
         type="text"
-        echo "$type"
+        print "$type"
         return
     fi
     str="$(file $name)"
@@ -285,7 +288,7 @@ filetype(){
             fi
         fi
     fi
-    echo $type
+    print $type
 }
 # WARNING XXX some of these commands will fail is a file has a space in it
 # Then you must put the command in a string and eval it.
@@ -310,7 +313,7 @@ multifileopt() {
             postcommand=${postcommand:-""}
             vared -p "Enter command (first part) : " command
             vared -p "Enter command (second part): " postcommand
-            echo "$command $files $postcommand"
+            print "$command $files $postcommand"
             eval "$command $files $postcommand"
             ;;
         "")
@@ -322,7 +325,7 @@ multifileopt() {
             target=${target:-$HOME/}
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
-                echo $menu_text $files $target 
+                print $menu_text $files $target 
                 eval "$menu_text $files $target"
                 zfm_refresh
             }
@@ -394,14 +397,14 @@ textfileopt() {
             target=${target:-$HOME/}
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
-            echo $menu_text $files $target 
+            print $menu_text $files $target 
             eval "$menu_text $files $target" && zfm_refresh
             }
             ;;
         "archive") 
             ddate=$(date +%Y%m%d)
             local arch="archive-${ddate}.tgz"
-            echo -n "Enter target: [$arch]"
+            print -n "Enter target: [$arch]"
             read target
             [[ -z $target ]] && target="$arch"
             # eval required since strings quoted above
@@ -446,7 +449,7 @@ zipfileopt() {
             target=${target:-$HOME/}
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
-                echo $menu_text $files $target 
+                print $menu_text $files $target 
                 eval "$menu_text $files $target" && zfm_refresh
                 psuccess "Please use refresh key to rescan files"
             }
@@ -477,7 +480,7 @@ otherfileopt() {
             [[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
             command=${command:-""}
             vared -p "Enter command: " command
-            echo "executing: $command $files"
+            print "executing: $command $files"
             eval "$command $files"
             ;;
         "")
@@ -489,7 +492,7 @@ otherfileopt() {
             target=${target:-$HOME/}
             vared -p "Enter target: " target
             [[ -n $target ]] && { 
-                echo $menu_text $files $target 
+                print $menu_text $files $target 
                 eval "$menu_text $files $target" && zfm_refresh
             }
             ;;
@@ -504,6 +507,7 @@ otherfileopt() {
 }
 #
 # print a hash with key in bold
+# We need to have some options of separator (space, line) and color
 
 function print_hash () {
    local h
