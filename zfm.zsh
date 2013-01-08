@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-08 22:06
+#  Last update: 2013-01-09 01:39
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -67,7 +67,6 @@ list_printer() {
     while (true)
     do
         (( fin = sta + $PAGESZ )) # 60
-        [[ $fin -gt $tot ]] && fin=$tot
         #  We are now using grep to filter based on what user types
         #  However, this means that our index is wrong since we don't save this new array
         #  Saving this array doesn't make sense since we truncate file name and add numbers and mnem
@@ -89,24 +88,29 @@ list_printer() {
             viewport=(${(M)myopts:#(${ic}${approx})*$patt*})
             mark="*"
         fi
+        let tot=$#viewport  # store the size of matching rows prior to paging it. 2013-01-09 - 01:37 
+        [[ $fin -gt $tot ]] && fin=$tot
         # this line replaces the sed filter
         viewport=(${viewport[$sta, $fin]})
         vpa=("${(@f)$(print -rl -- $viewport)}")
         #vpa=("${(f)=viewport}")
         local ttcount=$#vpa
         ZFM_LS_L=
-        if [[ $ttcount -lt  $ZFM_LINES ]]; then
+        if (( $ttcount <  (ZFM_LINES -1 ) )); then
+            # need to account for title and read lines at least
             cols=1
-            width=$ZFM_COLS
+            # this could have the entire listing which contains TABS !!!
+            (( width= ZFM_COLS - 2 ))
             ZFM_LS_L=1
         elif [[ $ttcount -lt 40 ]]; then
             cols=2
-            (( width = $ZFM_COLS / $cols ))
+            (( width = (ZFM_COLS / cols) - 2 ))
         else
             cols=3
-            (( width = $ZFM_COLS / $cols ))
+            # i can use 1 instead of 2, it touches the end, 2 to be safe for other widths
+            (( width = (ZFM_COLS / cols) - 2 ))
         fi
-        # NO, vpa is not entire thing, its grepped and filtered
+        # NO, vpa is not entire thing, its grepped and filtered, so it can't be more than page size=
         #let tot=$#vpa
         [[ $fin -gt $tot ]] && fin=$tot
         local sortorder=""
@@ -118,7 +122,7 @@ list_printer() {
         # C-a C-b are non-printing and so print columnates without allocating a space for them, then i put the space back so the next column
         # gets pushed ahead by those many spaces. therefore i use a slash for a space -- slash is not allowed in a filename
         #  2013-01-08 - 17:33 the extended output does have slashes (datetime) and links too
-        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" "þ"  ) |  tr "þ" " \t" 
+        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" "þ"  ) |  tr "þ" "  " 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
         #echo -n "> $patt"
@@ -295,9 +299,9 @@ list_printer() {
                 ;;
             $ZFM_REFRESH_KEY)
                 pbold "refreshing rescanning"
-                post_cd
+                zfm_refresh
                 # why is next line not in post_cd 
-                myopts=("${(@f)$(print -rl -- $param)}")
+                #myopts=("${(@f)$(print -rl -- $param)}")
                 #break
                 ;;
             $ZFM_SIBLING_DIR_KEY)
@@ -501,7 +505,8 @@ post_cd() {
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
 }
 zfm_refresh() {
-    post_cd
+    filterstr=${filterstr:-M}
+    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     myopts=("${(@f)$(print -rl -- $param)}")
 }
 print_help_keys() {
@@ -539,7 +544,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.2b"
+ZFM_VERSION="0.0.2c"
 print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/09"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -712,7 +717,7 @@ param=$(print -rl -- *(M))
                     fi
                     ;;
                 *)
-                    [[ "$ans" == $ZFM_REFRESH_KEY ]] && { break }
+                    [[ "$ans" == $ZFM_REFRESH_KEY ]] && { perror "breaking";  break }
                     perror "unhandled key $ans, type ? for key help"
                     ;;
             }
@@ -824,6 +829,7 @@ numberlines() {
                 elif [[ $sz -gt 9999 ]]; then
                     (( sz = sz / 1024 )) ; sz="${sz}k" 
                 fi
+                sz=$( print ${(l:6:)sz} )
                     #[[ $sz -gt 9999 ]] && {  (( sz = sz / 1024 )) ; sz="${sz}k" }
                 link=$hash[link]
                 [[ -n $link ]] && link=" -> $link"
