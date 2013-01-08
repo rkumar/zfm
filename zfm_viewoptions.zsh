@@ -1,8 +1,7 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-08 20:43
+# Last update: 2013-01-08 22:28
 # Part of zfm, contains menu portion
 #
-# TODO drill down mdfind list (or locate) - can be very large so avoiding for now
 # ----------------------------------
 # for menu_loop we need to source
 source $ZFM_DIR/zfm_menu.zsh
@@ -75,8 +74,8 @@ fuzzyselectrow() {
     typeset -U deleted
     deleted=()
     selected_file=
-    local rows=$ZFM_LINES # try to columnate if more than 24 items, should be decided based on tput lines
-                  # or user pref TODO
+    #local rows= # try to columnate if more than 24 items, based on tput lines
+    integer rows=$(tput lines)
     # should we try printing in 2 columns if items more than $rows
     ZFM_AUTO_COLUMNS=${ZFM_AUTO_COLUMNS:-"1"}
     ZFM_TRUNCATE=${ZFM_TRUNCATE:-"-1"}
@@ -86,10 +85,10 @@ fuzzyselectrow() {
 
     while (true)
     do
-        print  "   No.\t  Name"
         viewport=$(print -rl -- $files  | grep "$gpatt")
         vpa=("${(@f)$(print -rl -- $viewport)}")
         local _hv=$#vpa # size of result after grep
+        print  "   No.\t  Name"
 
         if [[ $ZFM_AUTO_COLUMNS == "1" && $_hv -gt $rows ]]; then
             # this is fine, but on locate or mdfind where entire paths comes this can be awful
@@ -530,7 +529,7 @@ viewoptions() {
             selectmulti $files
             [[ -n $ZFM_VERBOSE ]] && print  "files: $#selected_files"
         }
-    [[ -n "$selected_files" ]] && {
+    [[ $#selected_files -gt 0 ]] && {
         handle_selection "$reply" $selected_files
     }
 }
@@ -559,7 +558,7 @@ handle_selection() {
             ls -l $arch
             ;;
         *)
-            [[ -n "$selected_files" ]] && {
+            [[ $#selected_files -gt 0 ]] && {
             commandpost=${commandpost:-""}
             commandpre=${commandpre:-""}
             vared -p "Enter command (e.g. mv) :" commandpre
@@ -881,7 +880,7 @@ m_recentfiles() {
         pbold "Recent files"
         if [[ -n "$ZFM_RECENT_MULTI" ]]; then
             selectmulti $files
-            [[ -n "$selected_files" ]] && {
+            [[ $#selected_files -gt 0 ]] && {
                 handle_selection "$reply" $selected_files
             }
         else
