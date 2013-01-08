@@ -1,13 +1,13 @@
 #!/usr/bin/env zsh
 # header {
-# vim: set foldmarker={,} foldlevel=0 foldmethod=marker spell:
+# vim: set foldmarker={,} foldlevel=0 foldmethod=marker :
 # ----------------------------------------------------------------------------- #
 #         File: zfm.zsh
 #  Description: file/dir browser/navigator using hotkeys
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-08 00:47
+#  Last update: 2013-01-08 19:24
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -116,7 +116,8 @@ list_printer() {
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" ""  ) | tr -s "" |  tr "" " \t" 
         # C-a C-b are non-printing and so print columnates without allocating a space for them, then i put the space back so the next column
         # gets pushed ahead by those many spaces. therefore i use a slash for a space -- slash is not allowed in a filename
-        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" "/"  ) |  tr "/" " \t" 
+        #  2013-01-08 - 17:33 the extended output does have slashes (datetime) and links too
+        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" "þ"  ) |  tr "þ" " \t" 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
         #echo -n "> $patt"
@@ -170,6 +171,7 @@ list_printer() {
                     else
                         npatt="$patt$ans"
                     fi
+                    lines=
                     if [[ -n "$M_SWITCH_OFF_DUPL_CHECK" ]]; then
                         lines=$(check_patt $npatt)
                         ct=$(print -rl -- $lines | wc -l)
@@ -177,7 +179,7 @@ list_printer() {
                         ct=0
                     fi
                     [[ -n $lines ]] || ct=0
-                    [[ -n $ZFM_VERBOSE ]] && pdebug "comes here $ct , $lines"
+                    [[ -n $ZFM_VERBOSE ]] && pdebug "comes here $ct , ($lines)"
                     if [[ $ct -eq 1 ]]; then
                         [[ -n "$lines" ]] && { selection=$lines; break }
                     elif [[ $ct -eq 0 ]]; then
@@ -808,7 +810,7 @@ numberlines() {
     if [[ -n "$ZFM_LS_L" ]]; then
         if [[ -n "$line" ]]; then
             if [[ -e "$line" ]]; then
-                mtime=$(zstat -L -F "%Y/%m/%d %H:%M" +mtime $line)
+                mtime=$(zstat -L -F "%Y-%m-%d %H:%M" +mtime $line)
                 zstat -L -H hash $line
                 sz=$hash[size]
                 if [[ $sz -gt 1048576 ]]; then
