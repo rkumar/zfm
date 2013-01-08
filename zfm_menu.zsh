@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-07 20:36
+#  Last update: 2013-01-09 01:19
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -310,7 +310,7 @@ multifileopt() {
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            [[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
+            #[[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
             command=${command:-""}
             postcommand=${postcommand:-""}
             vared -p "Enter command (first part) : " command
