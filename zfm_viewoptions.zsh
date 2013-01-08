@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-08 22:28
+# Last update: 2013-01-09 00:16
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -74,6 +74,7 @@ fuzzyselectrow() {
     typeset -U deleted
     deleted=()
     selected_file=
+    selected_files=
     #local rows= # try to columnate if more than 24 items, based on tput lines
     integer rows=$(tput lines)
     # should we try printing in 2 columns if items more than $rows
@@ -300,6 +301,7 @@ selectmulti() {
     # as they are no longer displayed
     typeset -U deleted
     deleted=()
+    selected_files=
     local delix=1
     print  "Enter row numbers to select, press ENTER when finished selection"
     print  "  Press I to invert selection, A to select all"
@@ -529,6 +531,7 @@ viewoptions() {
             selectmulti $files
             [[ -n $ZFM_VERBOSE ]] && print  "files: $#selected_files"
         }
+        # i am getting selects from a previous selection, i quit this time
     [[ $#selected_files -gt 0 ]] && {
         handle_selection "$reply" $selected_files
     }
@@ -546,6 +549,7 @@ handle_selection() {
 
     case $reply in
         "q")
+            selected_files=
             return
             #break
             ;;
@@ -569,6 +573,7 @@ handle_selection() {
         }
         ;;
     esac
+    selected_files=
 
 }
 #
@@ -587,9 +592,12 @@ show_hidden_toggle() {
     if [[ -z "$M_SHOW_HIDDEN" ]]; then
         M_SHOW_HIDDEN=1
         setopt GLOB_DOTS
+        pinfo "set glob_dots"
     else
         M_SHOW_HIDDEN=
         unsetopt GLOB_DOTS
+        setopt NO_GLOB_DOTS
+        pinfo "unset glob_dots"
     fi
     export M_SHOW_HIDDEN
 }
