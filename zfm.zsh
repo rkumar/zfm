@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-08 19:24
+#  Last update: 2013-01-08 22:06
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -44,8 +44,9 @@ PAGESZ=59     # used for incrementing while paging
 #    rest is files to list
 list_printer() {
     selection="" # contains return value if anything chosen
-    integer ZFM_COLS=$(tput cols)
-    integer ZFM_LINES=$(tput lines)
+    #integer ZFM_COLS=$(tput cols) # it was here since it could change if resize, but not getting passed
+    #integer ZFM_LINES=$(tput lines)
+    #export ZFM_COLS ZFM_LINES
     local width=30
     local title=$1
     shift
@@ -538,8 +539,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.2a"
-print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/08"
+ZFM_VERSION="0.0.2b"
+print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/09"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -575,6 +576,9 @@ pattern='*' # this is separate from patt which is a temp filter based on hotkeys
 filterstr="M"
 MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+integer ZFM_COLS=$(tput cols)
+integer ZFM_LINES=$(tput lines)
+export ZFM_COLS ZFM_LINES
 export ZFM_STRING
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
 aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
@@ -660,7 +664,7 @@ param=$(print -rl -- *(M))
                     # FILTER filter section (think of a better key)
                     ;;
                 $ZFM_FFIND_KEY)
-                        # find files with string in filename, uses perl expressions and requires GNU grep (coreutils)
+                    # find files with string in filename, uses zsh (ffind)
                         searchpattern=${searchpattern:-""}
                         vared -p "Filename to search for (enter 3 characters): " searchpattern
                         # recurse and match filename only
@@ -670,6 +674,7 @@ param=$(print -rl -- *(M))
                         if [[ $#files -gt 0 ]]; then
                             files=$( echo $files | xargs ls -t )
                             ZFM_FUZZY_MATCH_DIR="1" fuzzyselectrow $files
+                            # XXX careful we shold only use the array if one file
                             if [[ $#selected_files -eq 1 ]]; then
                                 fileopt "$selected_file"
                             elif [[ $#selected_files -gt 1 ]]; then
