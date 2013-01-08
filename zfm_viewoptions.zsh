@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-08 00:53
+# Last update: 2013-01-08 20:43
 # Part of zfm, contains menu portion
 #
 # TODO drill down mdfind list (or locate) - can be very large so avoiding for now
@@ -102,10 +102,10 @@ fuzzyselectrow() {
             #print  "   No.\t  Size \t  Modified Date  \t  Name"
             print -rl -- $viewport | numbernine
         fi
-        [[ $_hv -gt 9 ]] && _hv=9
+        #[[ $_hv -gt 9 ]] && _hv=9
         #print  -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
         # PROMPT prompt
-        print  -n "Select a row [1-$_hv] [a-z] filter, ${ZFM_MENU_KEY} menu, ? Help, ESC/CR ($#deleted/$#vpa)/$gpatt/: "
+        print  -n "Select a row [1-$_hv] ? Help, ESC/ENTER ($#deleted/$#vpa)/$gpatt/: "
         len=1
         read -k $len reply
         # if user enters a numeric and there are double digit values too
@@ -182,20 +182,20 @@ fuzzyselectrow() {
             # accumulate selection
             if [[ $deleted[(i)$selected_file] -le $#deleted ]]; then
                 deleted[$deleted[(i)$selected_file]]=()
-                pdebug "Removing $selected_file from list - $#deleted remaining"
+                pinfo "Removing $selected_file from list - $#deleted remaining"
             else
                 deleted+=($selected_file)
                 #deleted=(
                 #$deleted
                 #$selected_file
                 #)
-                pdebug "Adding $selected_file to list - $#deleted selected"
+                pinfo "Adding $selected_file to list - $#deleted selected. Press ENTER when done"
             fi
         fi
     elif [[ "$reply" == "?" ]]; then
         print -rl  "Keys are <CR> Accept selection"
         print -rl  "         <ESC> Cancel"
-        print -rl  "         [a-z] to narrow down search"
+        print -rl  "         [a-zA-Z] to narrow down search"
         print -rl  "         [1-9] to add to selection"
         print -rl  "         $ZFM_MENU_KEY menu"
         print -rl  "         ^ Toggle fuzzy mode"
@@ -295,7 +295,8 @@ fuzzyselectrow() {
 selectmulti() {
     local files
     local tabd=$'\t'
-    files=$@
+    #files=$@
+    files=($@)
     # selected rows go into a buffer named deleted
     # as they are no longer displayed
     typeset -U deleted
@@ -307,6 +308,8 @@ selectmulti() {
     print  " Press 'S' for short 2-col list, 's' to revert to 1-col"
     echo
     local M_SHORT="1"
+    local indices
+    indices=( {1..$#files} )
     while (true) 
     do
         local c=1
@@ -318,8 +321,10 @@ selectmulti() {
         # and break into 2 columns.
         #
         print -rC$M_SHORT -- $( \
-        for fil in $ff
+        #for fil in $ff
+        for ix in $indices
         do
+            fil=$ff[$ix]
             # stores the entire row and matches entire row, so take care when shortening that only
             # filename is matched
 
@@ -332,16 +337,16 @@ selectmulti() {
                     fil=$rfile
                 fi
             if [[ $delix -gt $#deleted ]]; then
-                print  "$c${tabd}$fil"
+                print  "$ix${tabd}$fil"
             else
-                print  "$c${tabd}${COLOR_BOLD}${fil}${COLOR_DEFAULT}"
+                print  "$ix${tabd}${COLOR_BOLD}${fil}${COLOR_DEFAULT}"
             fi
             let c++
 
         done \
         | tr " \t" "" )  | tr "" " \t"
 
-        print  -n "select rows by number (ENTER when done, all-A, invert-I, e - edit, z - zip): "
+        print  -n "Select rows by number (ENTER when done, all-A, invert-I, reverse-R, e - edit, z - zip): "
         read -r reply
         [[ -z $reply ]] && { pdebug "breaking on blank" ; break }
         case $reply in
@@ -350,6 +355,11 @@ selectmulti() {
                 ;;
             "s")
                 M_SHORT="1"
+                ;;
+            "R")
+                # reverse the output in case important files are no longer on screen
+                #files=(${(Oa)files} )
+                indices=(${(Oa)indices} )
                 ;;
             "q")
                 break
@@ -433,6 +443,7 @@ esac
         #)
         pdebug " file: $selected_file "
     done
+    pdebug " sm files: $#selected_files "
 }
 #
 # recursive listing
@@ -517,7 +528,7 @@ viewoptions() {
             #echo "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str"
             files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str")
             selectmulti $files
-            [[ -n $ZFM_VERBOSE ]] && print  "file: $selected_file"
+            [[ -n $ZFM_VERBOSE ]] && print  "files: $#selected_files"
         }
     [[ -n "$selected_files" ]] && {
         handle_selection "$reply" $selected_files
@@ -532,7 +543,7 @@ handle_selection() {
     shift
     selected_files=($@:q)
     #selected_files=${selected_files:q}
-    pdebug "handle_selection with $reply $#selected_files"
+    #pdebug "handle_selection with $reply $#selected_files"
 
     case $reply in
         "q")
@@ -822,6 +833,7 @@ m_dirstack() {
         pbold "These are directories on internal stack (dirs command)"
         files=$(eval "listdir.pl $(dirs)" )
     fi
+    pbold "Recent Directories"
     ZFM_SINGLE_SELECT=1 fuzzyselectrow $files
     [[ -d $selected_file ]] && {
         $ZFM_CD_COMMAND $selected_file
@@ -839,6 +851,7 @@ m_child_dirs() {
     #else
         #files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
     fi
+    pbold "Directories"
     ZFM_SINGLE_SELECT=1 fuzzyselectrow $files
     [[ -d $selected_file ]] && {
         [[ -n $ZFM_VERBOSE ]] && print  "file: $selected_file"
@@ -854,7 +867,8 @@ m_recentfiles() {
         #files=$(print -rl -- $(${ZFM_DIR}/zfmfiles))
         files=( $(${ZFM_DIR}/zfmfiles) )
         (( $#files < 25 )) && {
-            files+=( *(.om[1,10]) )  # add 10 recent files from current dir if not enough
+            # if i don't put N then crashes out if no files for match
+            files+=( *(.Nom[1,10]) )  # add 10 recent files from current dir if not enough
         }
     else
         perror "No ~/.viminfo file found"
@@ -864,10 +878,11 @@ m_recentfiles() {
         # if no files for today add recent files here TODO
     fi
     [[ -n "$files" ]] && {
+        pbold "Recent files"
         if [[ -n "$ZFM_RECENT_MULTI" ]]; then
             selectmulti $files
             [[ -n "$selected_files" ]] && {
-                handle_selection "$reply" "$selected_files"
+                handle_selection "$reply" $selected_files
             }
         else
             tmpfuzz=$ZFM_FUZZY_MATCH_DIR
