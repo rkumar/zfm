@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-09 15:41
+#  Last update: 2013-01-09 20:03
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -122,7 +122,7 @@ list_printer() {
         # C-a C-b are non-printing and so print columnates without allocating a space for them, then i put the space back so the next column
         # gets pushed ahead by those many spaces. therefore i use a slash for a space -- slash is not allowed in a filename
         #  2013-01-08 - 17:33 the extended output does have slashes (datetime) and links too
-        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" "þ"  ) |  tr "þ" "  " 
+        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" -w $width | tr " \t" "þ"  ) |  tr "þ" "  " 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
         #echo -n "> $patt"
@@ -790,6 +790,7 @@ numberlines() {
     local defpatt=""
     local selct=$#selectedfiles
     [[ $1 = "-p" ]] && { shift; patt="$1"; shift }
+    [[ $1 = "-w" ]] && { shift; width="$1"; shift }
     # since string searching in zsh isn;t on regular expressions and ^ is not respected
     # i am taking width of match after removing ^ and using next char as next shortcut
     # # no longer required as i don't use grep, but i wish i still were since it allows better
@@ -846,18 +847,29 @@ numberlines() {
     # only if there are selections we check against the array and color
     # otherwise no check, remember that the cut that comes later can cut the 
     # escape chars
+    _line=
+    boldflag=0
+    # 2013-01-09 - 19:33 I am trying out only highlighting the number or else
+    # its becoming too confusing, and even now the trunc is taking size of 
+    # ANSI codes which are not displayed, so a little less is shown that cold be
     if [[ $selct -gt 0 ]]; then
         ##perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
         # quoted spaces causing failure in matching,
         # however if i don't quote then other programs fail such as ls and tar
         if [[ $selectedfiles[(ie)${line}] -gt $selct ]]; then
-            print -r -- "$sub) $_detail $line"
+            #_line="$sub) $_detail $line $link"
         else
-            print -- "$sub) $_detail ${BOLD}$line${BOLD_OFF}"
+            #_line="$sub) $_detail ${BOLD}$line${BOLD_OFF}"
+            #sub="${BOLD}$sub${BOLD_OFF}"
+            boldflag=1
         fi
     else
-        print -r -- "$sub) $_detail $line $link"
+        #_line="$sub) $_detail $line $link"
     fi
+    _line="$sub) $_detail $line $link"
+    (( $#_line > width )) && _line=$_line[1,$width] # cut here itself so ANSI not truncated
+    (( boldflag == 1 )) && _line="${BOLD}$_line${BOLD_OFF}"
+    print -l -- $_line
     let c++
 done
 } # numberlines
