@@ -126,6 +126,11 @@ Currently, I use rupa's Z utility, so `zfmdirs` pulls out directory names from t
 Similarly, `zfmfiles` lists files from my $HOME/.viminfo file. You can replace the code in these
 files to interface with autojump or whatever other utility you use. I'd rather use an existing tool for this that re-invent the same functionality (all these utilities hook into cd or chpwd)
 
+##Issues##
+
+    * selection does not keep path, so cd'ing and selecting from two folders means that
+      some files will give errors. Let's see what i can do ... hmmm
+
 ##Changes##
 
 A summary of version-wise changes. 
