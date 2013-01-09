@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-09 18:54
+# Last update: 2013-01-10 01:56
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -838,6 +838,28 @@ sortoptions() {
     export ZFM_STRING
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     export param
+}
+# cycle through various views
+# This should include long listings
+zfm_views() {
+    #typeset -A views
+    #views=(om Newest Om Oldest OL Largest oL smallest)
+    views=(om Om OL oL On on /)
+    viewlabels=(Newest Oldest Largest Smallest Reverse Name Dirs)
+    viewcount=${viewcount:-0}
+    let viewcount++
+    (( viewcount > $#views )) && viewcount=0 # zero so that normal view (default) can be shown
+
+    MFM_LISTORDER=$views[$viewcount]
+    ZFM_SORT_ORDER=$viewlabels[$viewcount]
+    export ZFM_SORT_ORDER
+    #param=$(eval "print -rl -- *${MFM_LISTORDER}")
+    filterstr=${filterstr:-M}
+    ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    export ZFM_STRING
+    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    export param
+
 }
 # give directories from dirs command
 m_dirstack() {
