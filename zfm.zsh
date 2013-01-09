@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-09 20:16
+#  Last update: 2013-01-10 00:20
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -125,15 +125,15 @@ list_printer() {
         print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" -w $width | tr " \t" "þ"  ) |  tr "þ" "  " 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
-        #echo -n "> $patt"
+        #print -n "> $patt"
         mode=
         [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
-        echo -n "$mode${mark}$patt > "
+        print -n "$mode${mark}$patt > "
         bindkey -s "OD" ","
         bindkey -s "OA" "~"
         # prompt for key PROMPT
         read -k -r ans
-        echo
+        print
         clear # trying this out
         [[ $ans = $'\t' ]] && pdebug "Got a TAB XXX"
         [[ $ans = "" ]] && pdebug "Got a ESC XXX"
@@ -163,8 +163,8 @@ list_printer() {
                 #   - when filtering. (in this case the correct is from viewport/vpa
                 #   - there is a third case of paging after filtering GAAH
                 (( ix = sta + $ans - 1))
-                #[[ -n $ZFM_VERBOSE ]] && echo "actual ix $ix"
-                #[[ -n $ZFM_VERBOSE ]] && echo "OLD selected $myopts[$ix] "
+                #[[ -n $ZFM_VERBOSE ]] && print "actual ix $ix"
+                #[[ -n $ZFM_VERBOSE ]] && print "OLD selected $myopts[$ix] "
                 #perror " vpa $ans : $vpa[$ans]  "
                 #perror " vpa $ix : $vpa[$ix]  "
                 #
@@ -193,7 +193,7 @@ list_printer() {
                     elif [[ $ct -eq 0 ]]; then
                         selection=$vpa[$ans]
                         #selection=$myopts[$ix] # fails on filtering
-                        [[ -n $ZFM_VERBOSE ]] && echo " selected $selection"
+                        [[ -n $ZFM_VERBOSE ]] && print " selected $selection"
                     else
                         patt=$npatt
                     fi
@@ -201,11 +201,11 @@ list_printer() {
                     # there are only 9 or less so just use mnemonics, don't check
                     # earlier
                     # XXX THIS will not work with spaces
-                    #echo " selected $viewport[(w)$ix] "
+                    #print " selected $viewport[(w)$ix] "
                     #selection=$viewport[(w)$ix]
                     selection=$vpa[$ans]
                     #selection=$myopts[$ix]
-                    echo " 1. selected $selection"
+                    print " 1. selected $selection"
                 fi
             fi # M_FULL
                 [[ -n "$selection" ]] && break
@@ -257,7 +257,7 @@ list_printer() {
                     fi
                     #[[ $ans = '.' && $patt = '' ]] && patt="^\."
                     #pdebug "Pattern is $patt "
-                    #[[ -n $ZFM_VERBOSE ]] && echo "Pattern is :$patt:"
+                    #[[ -n $ZFM_VERBOSE ]] && print "Pattern is :$patt:"
                     #[[ -n $ZFM_VERBOSE ]] && pdebug "sending $patt to chcek"
                     # if there's only one file for that char then just jump to it
                     lines=$(check_patt $patt)
@@ -315,9 +315,9 @@ list_printer() {
                 #
                 # siblings (find a better place to put this, and what if there
                 # are too many options)
-                echo "Siblings of this dir:"
+                print "Siblings of this dir:"
                 menu_loop "Siblings" "$(print ${PWD:h}/*(/) )"
-                echo "selected $menu_text"
+                print "selected $menu_text"
                 $ZFM_CD_COMMAND $menu_text
                 patt="" # 2012-12-26 - 00:54 
                 filterstr=${filterstr:-M}
@@ -329,7 +329,7 @@ list_printer() {
                 # siblings (find a better place to put this, and what if there
                 # are too many options)
                 pbold "This implements the: cd OLD NEW metaphor"
-                echo "Part to change :"
+                print "Part to change :"
                 parts=(${(s:/:)PWD})
                 menu_loop "Parts" "$(print $parts )"
                 pbold "Replace $menu_text"
@@ -363,7 +363,7 @@ list_printer() {
                 ;; 
 
 
-            *) echo "default got :$ans:"
+            *) print "default got :$ans:"
                 (( sta = 1 ))
                 ## a case within a case for the same var -- how silly
                 case $ans in
@@ -381,15 +381,15 @@ list_printer() {
                         patt=""
                         ;;
                     *)
-                        [[ "$ans" == "[" ]] && echo "got ["
-                        [[ "$ans" == "{" ]] && echo "got {"
+                        [[ "$ans" == "[" ]] && print "got ["
+                        [[ "$ans" == "{" ]] && print "got {"
                         pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
                         pinfo "? for key help"
                         #  put key in SWALLOW section to pass to caller
                         patt=""
                         ;;
                 esac
-                [[ -n $ZFM_VERBOSE ]] && echo "Pattern is :$patt:"
+                [[ -n $ZFM_VERBOSE ]] && print "Pattern is :$patt:"
         esac
         [[ $sta -ge $tot ]] && break
         # break takes control back to MARK1 section below
@@ -423,7 +423,7 @@ check_patt() {
         lines=$(print -rl -- (#$ic${approx})*${p}*)
     fi
     # need to account for match from start
-    echo $lines
+    print $lines
 }
 subcommand() {
     dcommand=${dcommand:-""}
@@ -432,7 +432,7 @@ subcommand() {
     case "$dcommand" in
         "S"|"save")
             push_pwd
-            echo "$ZFM_DIR_STACK"
+            print "$ZFM_DIR_STACK"
         ;;
         "P"|"pop")
             pop_pwd
@@ -470,7 +470,7 @@ subcommand() {
             print "     another action on selected file"
             print "'q' 'quit' - quit application"
             print "You may enter any other command too such as 'git status'"
-            echo
+            print
         ;;
         *)
         eval "$dcommand"
@@ -547,8 +547,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.2c"
-print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/09"
+ZFM_VERSION="0.0.2d"
+print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/10"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -599,7 +599,7 @@ param=$(print -rl -- *(M))
     do
         list_printer "Directory Listing ${PWD} " $param
         # MARK1 section comes back when list_p breaks from SWALLOW
-        [[ -n $selection ]] && echo "returned with $selection"
+        [[ -n $selection ]] && print "returned with $selection"
         # value selected is in selection, key pressed in ans
         [[ -z "$selection" ]] && {
             [[ "$ans" = "q" || "$ans" = "" ]] && break
@@ -683,7 +683,7 @@ param=$(print -rl -- *(M))
                         # find is more optimized acco to zsh users guide
                         files=$( print -rl -- **/*$searchpattern*(.) )
                         if [[ $#files -gt 0 ]]; then
-                            files=$( echo $files | xargs ls -t )
+                            files=$( print $files | xargs ls -t )
                             ZFM_FUZZY_MATCH_DIR="1" fuzzyselectrow $files
                             # XXX careful we shold only use the array if one file
                             if [[ $#selected_files -eq 1 ]]; then
@@ -704,13 +704,14 @@ param=$(print -rl -- *(M))
                 '*')
                     for line in $vpa
                     do
-                        echo "line $line"
+                        print "line $line"
                         selected_row=("${(s/	/)line}")
                         selected_file=$selected_row[-1]
-                        selectedfiles=(
-                        $selectedfiles
-                        $selected_file
-                        )
+                        selectedfiles+=( $PWD/$selected_file )
+                        #selectedfiles=(
+                        #$selectedfiles
+                        #$selected_file
+                        #)
                     done
                     pinfo "selected files $#selectedfiles"
                     if [[ -n "$M_SELECTION_MODE" ]]; then
@@ -728,12 +729,12 @@ param=$(print -rl -- *(M))
                     ;;
             }
 
-            #echo "Blank selection"
+            #print "Blank selection"
             #read -k
 
         }
         if [[ -d "$selection" ]]; then
-            [[ -n $ZFM_VERBOSE ]] && echo "got a directory $selection"
+            [[ -n $ZFM_VERBOSE ]] && print "got a directory $selection"
             $ZFM_CD_COMMAND $selection
             patt="" # 2012-12-26 - 00:54 
             filterstr=${filterstr:-M}
@@ -743,6 +744,7 @@ param=$(print -rl -- *(M))
             # and what if i want to do something else
             #vim $selection
             if [[ -n "$M_SELECTION_MODE" ]]; then
+                selection=$PWD/$selection
                 if [[ -n  ${selectedfiles[(re)$selection]} ]]; then
                     pinfo "File $selection already selected, removing ..."
                     i=$selectedfiles[(ie)$selection]
@@ -772,11 +774,11 @@ param=$(print -rl -- *(M))
         fi
         #case $selection in 
     done
-    echo "bye"
+    print "bye"
     # do this only if is different from invoking dir
     [[ "$PWD" == "$ZFM_START_DIR" ]] || {
-        echo "sending $PWD to pbcopy"
-        echo "$PWD" | pbcopy
+        print "sending $PWD to pbcopy"
+        print "$PWD" | pbcopy
     }
 } # myzfm
 numberlines() {
@@ -859,7 +861,7 @@ numberlines() {
         ##perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
         # quoted spaces causing failure in matching,
         # however if i don't quote then other programs fail such as ls and tar
-        if [[ $selectedfiles[(ie)${line}] -gt $selct ]]; then
+        if [[ $selectedfiles[(ie)$PWD/${line}] -gt $selct ]]; then
             #_line="$sub) $_detail $line $link"
         else
             #_line="$sub) $_detail ${BOLD}$line${BOLD_OFF}"
@@ -923,13 +925,15 @@ selection_menu() {
             local vp
             # this whole string quoting thing sucks so bad
             #vp=${viewport:q}
-            selectedfiles=( ${viewport:|selectedfiles} )
+            vp=($PWD/${^viewport}) # prepend PWD to each element 2013-01-10 - 00:17
+            selectedfiles=( ${vp:|selectedfiles} )
             #selectedfiles=( ${(Q)selectedfiles:q} )
             ;;
 
 
     esac
     if [[ -n $files ]]; then
+        files=($PWD/${^files}) # prepend PWD to each element
         # don't quote files again in common loop or spaced files will not get added
         if [[ -n $ZFM_REMOVE_MODE ]]; then
             #files=( $files:q )
@@ -938,16 +942,18 @@ selection_menu() {
 
             # i think viewport has only file names, no details
             # so we can just do a one line operation
-            common=( ${viewport:*files} )
+            vp=($PWD/${^viewport})
+            common=( ${vp:*files} )
             for line in $common
             do
                 pdebug "line $line"
                 selected_row=("${(s/	/)line}")
                 selected_file=$selected_row[-1]
-                selectedfiles=(
-                $selectedfiles
-                $selected_file
-                )
+                selectedfiles+=( $selected_file )
+                #selectedfiles=(
+                #$selectedfiles
+                #$selected_file
+                #)
             done
         fi
     fi
@@ -961,7 +967,7 @@ myzfm
     #myzfm
     ## this is running a as a command, run myfunc
 #else
-    #echo "This is being sourced"
+    #print "This is being sourced"
     #alias m=myzfm
     ## this is being sourced, make aliases
 #fi
