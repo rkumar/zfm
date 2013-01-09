@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-09 01:39
+#  Last update: 2013-01-09 15:41
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -556,6 +556,9 @@ ZFM_DIR_STACK=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
 ZFM_START_DIR="$PWD"
+ZFM_FILE_SELECT_FUNCTION=fuzzyselectrow
+export ZFM_FILE_SELECT_FUNCTION
+export last_viewed_files
 
 #  defaults KEYS
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
@@ -737,9 +740,9 @@ param=$(print -rl -- *(M))
             # and what if i want to do something else
             #vim $selection
             if [[ -n "$M_SELECTION_MODE" ]]; then
-                if [[ -n  ${selectedfiles[(r)$selection]} ]]; then
+                if [[ -n  ${selectedfiles[(re)$selection]} ]]; then
                     pinfo "File $selection already selected, removing ..."
-                    i=$selectedfiles[(i)$selection]
+                    i=$selectedfiles[(ie)$selection]
                     selectedfiles[i]=()
                     pinfo "File $selection unselected"
                     pause
@@ -847,7 +850,7 @@ numberlines() {
         ##perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
         # quoted spaces causing failure in matching,
         # however if i don't quote then other programs fail such as ls and tar
-        if [[ $selectedfiles[(i)${line}] -gt $selct ]]; then
+        if [[ $selectedfiles[(ie)${line}] -gt $selct ]]; then
             print -r -- "$sub) $_detail $line"
         else
             print -- "$sub) $_detail ${BOLD}$line${BOLD_OFF}"
