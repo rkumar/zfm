@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-09 20:03
+#  Last update: 2013-01-09 20:16
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -126,9 +126,12 @@ list_printer() {
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
 
         #echo -n "> $patt"
-        echo -n "${mark}$patt > "
+        mode=
+        [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
+        echo -n "$mode${mark}$patt > "
         bindkey -s "OD" ","
         bindkey -s "OA" "~"
+        # prompt for key PROMPT
         read -k -r ans
         echo
         clear # trying this out
