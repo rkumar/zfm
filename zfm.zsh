@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-10 00:20
+#  Last update: 2013-01-10 01:47
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -15,7 +15,6 @@
 # ----------------------------------------------------------------------------- #
 #   Copyright (C) 2012-2013 rahul kumar
 
-#  TODO cut erases BOLD face chars in long file names, need to trunc while printing in numberlines
 # TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
 # TODO what if user wants to send in some args suc as folder to start in, or resume where one left off.
 # TODO If user does not use z/j/autojmp etc then we should have option to build dir database and save it
@@ -210,18 +209,11 @@ list_printer() {
             fi # M_FULL
                 [[ -n "$selection" ]] && break
                 ;;
-            ","|"+"|"~"|":"|"\`"|"/"|"@"|"%"|"#"|"?"|'*')
-                # we break these keys so caller can handle them, other wise they
-                # get unhandled PLACE SWALLOWED keys here to handle
-                # go down to MARK1 section to put in handling code
-                [[ -n $ZFM_VERBOSE ]] && pdebug "breaking here with $ans , sel: $selection"
-                break
-                ;;
             "^")
                 # if you press this anywhere while typing it will toggle ^
                 toggle_match_from_start
                 ;;
-            "q"|"")
+            "q")
                 break
                 ;;
             [a-zA-Z_0\.\ ])
@@ -361,6 +353,13 @@ list_printer() {
                 selection=$vpa[1]
                 [[ -n "$selection" ]] && break
                 ;; 
+            ","|"+"|"~"|":"|"\`"|"/"|"@"|"%"|"#"|"?"|'*'|$'\t')
+                # we break these keys so caller can handle them, other wise they
+                # get unhandled PLACE SWALLOWED keys here to handle
+                # go down to MARK1 section to put in handling code
+                [[ -n $ZFM_VERBOSE ]] && pdebug "breaking here with $ans , sel: $selection"
+                break
+                ;;
 
 
             *) print "default got :$ans:"
@@ -410,7 +409,6 @@ toggle_match_from_start() {
 # utility functions {
 # check if there is only one file for this pattern, then straight go for it
 # with some rare cases the next char is a number, so then don't jump.
-# TODO needs to be aware of case 
 check_patt() {
     local p=${1:s/^//}  # obsolete, refers to earlier grep version
     local ic=
@@ -643,8 +641,11 @@ param=$(print -rl -- *(M))
                         filterstr=${filterstr:-M}
                         param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                     }
-                fi
+                    fi
                     #pause
+                    ;; 
+                $'\t')
+                    zfm_views
                     ;; 
                 "$ZFM_POPD_KEY")
                     dirs
