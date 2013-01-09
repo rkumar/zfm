@@ -16,8 +16,6 @@ The motivation of yet another file manager is to automate as many file-related o
 A Quick Session
 ---------------
 
-I would rather you first try this out without sourceing the file. This way your existing zsh process is not modified. (However, the option of doing this both ways has to be done)
-
 You may either place all these files in your $HOME/bin folder (there are internal links to each other). Or place them somewhere in path and set a ZFM_DIR variable to that path.
 
 In your shell, type "zfm.zsh"
@@ -37,9 +35,11 @@ Type "t". You will see "t" on the left of your prompt, and the list is filtered 
 In my case, "tmp" is the 2nd entry so i press 2. If i use this often I only need press "t2" to get to tmp. 
 I could also press "tm" and if there is no other entry starting with "tm" we automatically go into "tmp".
 
-You may also press "backspace" to erase the pattern one by one. Please note that the pattern accumulates. Usually a stray untrapped key results in the pattern being cleared completely. Otherwise, the "," (BACK key) will take you a level up and clear the pattern. (FIXME need to have a defined way of clearing pattern)
+You may also press "backspace" to erase the pattern one by one. Please note that the pattern accumulates. Usually a stray untrapped key results in the pattern being cleared completely. Otherwise, the "," (BACK key) will take you a level up and clear the pattern.
 
 Press the ZFM_GOTO_KEY (currently "+" (plus sign)). You are prompted for a path. Type /usr/local/lib, pressing the tab after lo and li. Press ENTER to jump to that directory.
+
+Press "?" to see what keys are available. This should work in menu's too.
 
 Press the colon (":") and type an arbitrary shell command. You can type "q" or "quit" to quit, help or ? should show you some canned actions.
 
@@ -59,8 +59,11 @@ Users of vim can use MENU-l or MENU-v, files from your $HOME/.viminfo will be di
 
 If you wish to change the sort order of your listing, try MENU-s. To filter your listings to only files/dirs/links, recent files etc, try MENU-F.
 
-There are some interfaces to ack ag for viewing files containing some text. MENU-f and MENu-r give you the option to ack for this dir or recursively. File names can then be selected for viewing.
+There are some interfaces to ack and ag for viewing files containing some text. MENU-f and MENu-r give you the option to ack for this dir or recursively. File names can then be selected for viewing.
 
+To search for a file in the current heirarchy, press "/"  and enter a pattern. You will see filename containing that pattern and can select one or more for viewing or running a command on.
+
+To toggle various modes, use the TOGGLE_KEY (default =)  you can switch to "all files", "match from start of filename", "ignore case match", "approximate match" and various others.
 
 ###Edge Cases:###
 
@@ -68,16 +71,15 @@ While navigating a directory which has many files with numbers, you may be unabl
 
 Some dirs such as Downloads may contain very long file names containing the same first 10 or 20 characters. In such case, drilling down is tedious. A quicker option is to have FULL_INDEXING. In this all files are indexed using 1-9, then a-zA-Z. However, this is not the default, since the user has to scan the list to see what the hotkey is. I have found that drilling down is much faster -- the first 2 characters of a file or dir often are all we need to get into a dir or get a file.
 
-Other downloaded files may contain funny or unusual characters such as quotes or brackets that i ignore or use for other purposes. Let me know if this is an issue, or use FULL_INDEXING for these cases.
+Other downloaded files may contain funny or unusual characters such as quotes or brackets that i ignore or use for other purposes. Let me know if this is an issue, or use FULL_INDEXING for these cases. Full indexing is available with the TOGGLE_KEY.
 
 ###Match from start or anywhere:###
 
 The default when you type characters is to match from start. If you type "^" anywhere during the command, the match toggles between start and match anywhere in string. Once you start remembering file positions, it helps to always keep in the match-from-start position.
 
-
 ###Matching dot-files###
 
-By default this is off. You can either go to the setting to change the option or if you type a dot at the beggining of a file name, I switch on GLOB_DOTS.
+By default this is off. You can either go to the setting to change the option or if you type a dot at the beginning of a file name, I switch on GLOB_DOTS.
 
 ###Sorting and Filtering###
 
@@ -89,11 +91,12 @@ There are 2 ways of Multiple Selection. One is from the menu: select any file li
 
 The second way is from the file manager itself. There is a toggle key for SELECTION_MODE (currently @). After toggling selection on, any files selected will go into an array. When toggling off, a menu of operations for multiple files appears (zip, move, trash, or enter your own command).
 
-The first method from the menu, shows selected files highlighted so it's nicer. At this time, the main file manager does not use any coloring or highlighting (it may do so later, not a priority).
+The first method from the menu, allows you to select based on a query such as recent files, todays files,
+files for an extension etc while keeping the file manager as-is. 
 
 ### Finding a file based on filename###
 
-This is similar to the `find` command but uses zsh, to find a file given a string. Matches are displayed and can be filtered based on more keys, and files may be selected and edited. Currently, the location of this is MENU-c ("commands") -> "ffind".
+This is similar to the `find` command but uses zsh, to find a file given a string. Matches are displayed and can be filtered based on more keys, and files may be selected and edited. Currently, the location of this is MENU-c ("commands") -> "ffind". You can also use the slash "/" in the file lister.
 
 ###Searching based on file content###
 
@@ -121,11 +124,18 @@ Currently, I am using zsh v5.0.x (homebrew OSX Mountain Lion) inside iTerm and t
 You can interface with your frequent files and directories utilities using `zfmfiles` and `zfmdirs`.
 Currently, I use rupa's Z utility, so `zfmdirs` pulls out directory names from the $HOME/.z database.
 Similarly, `zfmfiles` lists files from my $HOME/.viminfo file. You can replace the code in these
-files to interface with autojump or whatever other utility you use.
+files to interface with autojump or whatever other utility you use. I'd rather use an existing tool for this that re-invent the same functionality (all these utilities hook into cd or chpwd)
 
 ##Changes##
 
 A summary of version-wise changes. 
+
+###0.0.2###
+
+    Too many small changes to document. You can see the git log or tags listing for details.
+
+    * you can select single or multiple files in all views (except for directory listings). Press ENTER
+    for finishing selection, ESCAPE to cancel.
 
 ###0.0.1w###
 
