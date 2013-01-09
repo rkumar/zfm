@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-09 01:19
+#  Last update: 2013-01-09 18:49
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -192,7 +192,8 @@ fileopt() {
         "text")
             #[[ -n "$ZFM_AUTO_TEXT_ACTION" ]] && "$ZFM_AUTO_TEXT_ACTION" $name || textfileopt $name
             if [[ -n "$ZFM_AUTO_TEXT_ACTION" ]]; then
-                "$ZFM_AUTO_TEXT_ACTION" $name 
+                "$ZFM_AUTO_TEXT_ACTION" $name
+                [[ $ZFM_AUTO_TEXT_ACTION == $EDITOR ]] && { last_viewed_files=$name }
             else 
                 textfileopt $name $default_app
             fi
@@ -382,6 +383,7 @@ textfileopt() {
             command=${command:-""}
             vared -p "Enter command: " command
             eval "$command $files" && zfm_refresh
+            [[ $command == $EDITOR ]] && { last_viewed_files=$files }
             ;;
         "auto")
             # added this 2012-12-26 - 01:11 
@@ -389,6 +391,7 @@ textfileopt() {
             vared -p "Enter command to automatically execute for selected text files: " command
             export ZFM_AUTO_TEXT_ACTION="$command"
             eval "$command $files"
+            [[ $command == $EDITOR ]] && { last_viewed_files=$files }
             ;;
         "")
             [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
@@ -484,6 +487,7 @@ otherfileopt() {
             vared -p "Enter command: " command
             print "executing: $command $files"
             eval "$command $files"
+            [[ $command == $EDITOR ]] && { last_viewed_files=$files }
             ;;
         "")
             [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
@@ -500,6 +504,7 @@ otherfileopt() {
             ;;
         "vim")
             eval "$EDITOR $files"
+            last_viewed_files=$files
             ;;
         *)
             eval "$menu_text $files"
