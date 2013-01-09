@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-09 00:16
+# Last update: 2013-01-09 18:54
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -10,12 +10,14 @@ source $ZFM_DIR/zfm_menu.zsh
 setopt EXTENDED_GLOB
 ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 # pass in a list of files using a command such as:
+# files=$(listdir.pl --file-type *(.m0) | nl)
 # Displays a list of files and prompts user for a row number
 # Then selects the row and filename
 # Rows have columns delimited by tabs
-# files=$(listdir.pl --file-type *(.m0) | nl)
+
+# MENU that comes up on ZFM_MENU_KEY 
 view_menu() {
-    select_menu "Menu"  "f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings"
+    select_menu "Menu"  "f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings" "_) Last viewed file"
     # pressing menu key again, repeats last seletion
     [[ $reply == $ZFM_MENU_KEY ]] && reply=$view_menu_last_choice
     view_menu_last_choice=$reply
@@ -55,6 +57,9 @@ view_menu() {
             ;;
         "c")
             mycommands
+            ;;
+        "_")
+            edit_last_file
             ;;
         *)
             perror "Wrong / unhandle option $reply"
@@ -489,7 +494,8 @@ viewoptions() {
             print -n "Enter one extension e.g log tmp :"
             read extn
             files=$(eval "listdir.pl  ${M_REC_STRING}*.${extn}(.)" )
-            selectmulti $files
+            #selectmulti $files
+            $ZFM_FILE_SELECT_FUNCTION $files
             #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "substring" )
@@ -499,7 +505,8 @@ viewoptions() {
             print ${M_REC_STRING}*${patt}*(.)
             listdir.pl ${M_REC_STRING}*${patt}*(.)
             echo
-            selectmulti $files
+            #selectmulti $files
+            $ZFM_FILE_SELECT_FUNCTION $files
             #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "ack" )
@@ -513,7 +520,8 @@ viewoptions() {
             files=$(ack -l $M_ACK_REC_FLAG $cpattern)
             if [[ $#files -gt 0 ]]; then
                 files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern))
-                selectmulti $files
+                #selectmulti $files
+                $ZFM_FILE_SELECT_FUNCTION $files
             else
                 pinfo "No files found containing $cpattern (using ack -l $M_ACK_REC_FLAG)"
             fi
@@ -528,7 +536,8 @@ viewoptions() {
     [[ -n "$str" ]] && {
             #echo "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str"
             files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str")
-            selectmulti $files
+            #selectmulti $files
+            $ZFM_FILE_SELECT_FUNCTION $files
             [[ -n $ZFM_VERBOSE ]] && print  "files: $#selected_files"
         }
         # i am getting selects from a previous selection, i quit this time
@@ -555,6 +564,7 @@ handle_selection() {
             ;;
         "e"|"v")
             eval "$EDITOR $selected_files"
+            last_viewed_files=$selected_files
             ;;
         "z")
             local arch="$(date +%Y%m%d_%H%M).tgz"
@@ -871,9 +881,10 @@ m_recentfiles() {
     files=""
     if [[ -x "${ZFM_DIR}/zfmfiles" ]]; then
         # next line resulted in spaces getting broken into multiple files
-        #files=$(print -rl -- $(${ZFM_DIR}/zfmfiles))
-        files=( $(${ZFM_DIR}/zfmfiles) )
-        (( $#files < 25 )) && {
+        #files=( $(${ZFM_DIR}/zfmfiles) )
+        files=("${(@f)$(${ZFM_DIR}/zfmfiles )}")  # reqd to prevent wrapping on spaces - ugh
+        #pdebug "1 got $#files"
+        (( $#files < 15 )) && {
             # if i don't put N then crashes out if no files for match
             files+=( *(.Nom[1,10]) )  # add 10 recent files from current dir if not enough
         }
@@ -887,7 +898,7 @@ m_recentfiles() {
     [[ -n "$files" ]] && {
         pbold "Recent files"
         if [[ -n "$ZFM_RECENT_MULTI" ]]; then
-            selectmulti $files
+            $ZFM_FILE_SELECT_FUNCTION $files
             [[ $#selected_files -gt 0 ]] && {
                 handle_selection "$reply" $selected_files
             }
@@ -895,7 +906,7 @@ m_recentfiles() {
             tmpfuzz=$ZFM_FUZZY_MATCH_DIR
             # we want a contiguous match, not fuzzy
             ZFM_FUZZY_MATCH_DIR="1"
-            fuzzyselectrow $files
+            $ZFM_FILE_SELECT_FUNCTION $files
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
             #perror "XXX $#selected_files ,, $selected_file"
             if [[ $#selected_files -eq 1 ]]; then
@@ -998,4 +1009,8 @@ numbernine() {
         print -- "$sub ${csel}$line${cres}"
         let c++
     done
+}
+edit_last_file() {
+    print "Last viewed : $last_viewed_files"
+    [[ -n $last_viewed_files ]] && $EDITOR $last_viewed_files
 }
