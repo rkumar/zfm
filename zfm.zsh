@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-10 01:47
+#  Last update: 2013-01-11 01:26
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -128,13 +128,28 @@ list_printer() {
         mode=
         [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
         print -n "$mode${mark}$patt > "
-        bindkey -s "OD" ","
-        bindkey -s "OA" "~"
+        # left arrow
+        #bindkey -s "[D" ","
+        # up arrow
+        #bindkey -s "[A" "<"
         # prompt for key PROMPT
-        read -k -r ans
+        #read -k -r ans
+        _read_keys
+        if [[ $? != 0 ]]; then
+            # maybe ^C
+            print "Got C-c ? $reply, $key"
+            key=''
+            ans=''
+            #break
+        else
+            [[ -n $ckey ]] && reply=$ckey
+            ans="${reply}"
+            #pdebug "Got ($reply)"
+        fi
         print
         clear # trying this out
         [[ $ans = $'\t' ]] && pdebug "Got a TAB XXX"
+        [[ $ans = "C-i" ]] && ans=$'\t'
         [[ $ans = "" ]] && pdebug "Got a ESC XXX"
         case $ans in
             "")
@@ -209,10 +224,6 @@ list_printer() {
             fi # M_FULL
                 [[ -n "$selection" ]] && break
                 ;;
-            "^")
-                # if you press this anywhere while typing it will toggle ^
-                toggle_match_from_start
-                ;;
             "q")
                 break
                 ;;
@@ -258,39 +269,6 @@ list_printer() {
                         [[ -n "$lines" ]] && { selection=$lines; break }
                     fi
                 fi # M_FULL
-                ;;
-            $ZFM_TOGGLE_MENU_KEY)
-                menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
-                [[ $menu_text == $ZFM_TOGGLE_MENU_KEY ]] && { menu_text=$toggle_menu_last_choice }
-                case "$menu_text" in
-                    "FullIndexing")
-                        full_indexing_toggle
-                        ;;
-                    "HiddenFiles")
-                        show_hidden_toggle
-                        ;;
-                    "FuzzyMatch")
-                        fuzzy_match_toggle
-                        ;;
-                    "IgnoreCase")
-                        ignore_case_toggle
-                        ;;
-                    "ApproxMatchToggle")
-                        approx_match_toggle
-                        ;;
-                    "AutoView")
-                        pinfo "Autoview determines whether file selection automatically opens files for viewing or allow user to decide action"
-                        toggle_auto_view
-                        if [[ "$ZFM_AUTOVIEW_TOGGLE_KEY" == "1" ]]; then
-                            pinfo "Files will be viewed upon selection"
-                        else
-                            pinfo "Files will NOT be viewed upon selection. Other actions may be performed"
-                        fi
-                        ;;
-                    *)
-                        perror "Wrong option $menu_text"
-                esac
-                toggle_menu_last_choice=$menu_text
                 ;;
             $ZFM_REFRESH_KEY)
                 pbold "refreshing rescanning"
@@ -380,12 +358,19 @@ list_printer() {
                         patt=""
                         ;;
                     *)
-                        [[ "$ans" == "[" ]] && print "got ["
-                        [[ "$ans" == "{" ]] && print "got {"
-                        pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
-                        pinfo "? for key help"
-                        #  put key in SWALLOW section to pass to caller
-                        patt=""
+                        # lets check if user or we have bound something to the key
+                        # Now we should use this and bind everything, so its more modular
+                        zfm_get_key_binding $ans
+                        if [[ -n $binding ]]; then
+                            $binding
+                        else
+                            [[ "$ans" == "[" ]] && print "got ["
+                            [[ "$ans" == "{" ]] && print "got {"
+                            pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
+                            pinfo "? for key help"
+                            #  put key in SWALLOW section to pass to caller
+                            patt=""
+                        fi
                         ;;
                 esac
                 [[ -n $ZFM_VERBOSE ]] && print "Pattern is :$patt:"
@@ -474,6 +459,8 @@ subcommand() {
         eval "$dcommand"
         ;;
     esac
+    M_SELECTION_MODE=
+    [[ "$dcommand" = "q" || $dcommand = "quit" ]] && quitting=1
     pause
 }
 
@@ -545,8 +532,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.2d"
-print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/10"
+ZFM_VERSION="0.0.3"
+print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/11"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -589,6 +576,8 @@ integer ZFM_COLS=$(tput cols)
 integer ZFM_LINES=$(tput lines)
 export ZFM_COLS ZFM_LINES
 export ZFM_STRING
+init_key_function_map
+# at this point read up users bindings
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
 aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
 print_hash $aa
@@ -602,56 +591,9 @@ param=$(print -rl -- *(M))
         [[ -z "$selection" ]] && {
             [[ "$ans" = "q" || "$ans" = "" ]] && break
             case $ans in 
-                "$ZFM_GOTO_PARENT_KEY")
-                    cd ..
-                    patt="" # 2012-12-26 - 00:54 
-                    filterstr=${filterstr:-M}
-                    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
-                    ;;
-                "$ZFM_GOTO_DIR_KEY")
-                    push_pwd
-                    #ppath="/"
-                    ppath=${ppath:-"$HOME/"}
-                    #stty erase 
-                    # FIXME backspace etc issues in vared here, hist not working
-                    vared -h -p "Enter path: " ppath
-                    selection=${(Q)ppath}  # in case space got quoted, -d etc will all give errors
-                    patt="" # 2012-12-26 - 00:54 
-                    ;;
                 "~")
                     selection=$HOME
                     ;;
-                ":")
-                    # COMMAND SECTION on directory level
-                    # This could be made into something much more
-                    #
-                    subcommand
-                    M_SELECTION_MODE=
-                    [[ "$dcommand" = "q" || $dcommand = "quit" ]] && break
-                    ;;
-                "$ZFM_MENU_KEY")
-                    if [[ -n "$M_SELECTION_MODE" ]]; then
-                        selection_menu
-                    else
-                        local olddir=$PWD
-                        view_menu
-                        [[ $olddir == $PWD ]] || {
-                        # dir has changed
-                        patt=""
-                        filterstr=${filterstr:-M}
-                        param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
-                    }
-                    fi
-                    #pause
-                    ;; 
-                $'\t')
-                    zfm_views
-                    ;; 
-                "$ZFM_POPD_KEY")
-                    dirs
-                    popd && post_cd
-                    selection=
-                    ;; 
                 "$ZFM_SELECTION_MODE_KEY")
                     # maybe we could toggle
                     #  This switches on selection so files will be added to a list
@@ -668,13 +610,6 @@ param=$(print -rl -- *(M))
                         pinfo "Use '*' to select all, $ZFM_MENU_KEY for selection menu"
                     fi
                     ;; 
-                $ZFM_SORT_KEY)
-                    sortoptions
-                    ;;
-                $ZFM_FILTER_KEY)
-                    filteroptions
-                    # FILTER filter section (think of a better key)
-                    ;;
                 $ZFM_FFIND_KEY)
                     # find files with string in filename, uses zsh (ffind)
                         searchpattern=${searchpattern:-""}
@@ -726,7 +661,13 @@ param=$(print -rl -- *(M))
                     ;;
                 *)
                     [[ "$ans" == $ZFM_REFRESH_KEY ]] && { perror "breaking";  break }
-                    perror "unhandled key $ans, type ? for key help"
+                    # why repeat it here too, just do this once in top level
+                    zfm_get_key_binding $ans
+                    if [[ -n $binding ]]; then
+                        $binding
+                    else
+                        perror "unhandled key $ans, type ? for key help"
+                    fi
                     ;;
             }
 
@@ -961,6 +902,182 @@ selection_menu() {
     pdebug "selected files $#selectedfiles"
 }
 # }
+
+function _read_keys() {
+
+    local key key2 key3 key4
+    integer ret
+    ckey=
+
+    read -k key
+    ret=$?
+    reply="${key}"
+    if [[ '#key' -eq '#\\e' ]]; then
+        # M-...
+        read -t $(( KEYTIMEOUT / 1000 )) -k key2
+        ret=$?
+        if [[ "${key2}" == '[' ]]; then
+            # cursor keys
+            read -k key3
+            ret=$?
+            if [[ "${key3}" == [0-9] ]]; then
+                # Home, End, PgUp, PgDn ...
+                read -k key4
+                ret=$?
+                reply="${key}${key2}${key3}${key4}"
+            else
+                # arrow keys
+                reply="${key}${key2}${key3}"
+            fi
+            resolve_key_codes
+        elif [[ $ret == "1" ]]; then
+            # we have an escape
+            ret=0
+        else
+            # alt keys
+            reply="${key}${key2}"
+            if (( key = 27 )); then
+                x=$((#key2))
+                y=${(#)x}
+                ckey="M-$y"
+            fi
+        fi
+    else
+        reply="${key}"
+        ascii=$((#key))
+        # ctrl keys
+        (( ascii >= 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
+    fi
+    return $ret
+}
+# this is for those cases with 3 or 4 keys
+resolve_key_codes() {
+    typeset -A kh;
+    kh[(27 91 54 126)]="PgDn"
+    kh[(27 91 53 126)]="PgUp"
+    kh[(27 91 65)]="UP"
+    kh[(27 91 66)]="DOWN"
+    kh[(27 91 67)]="RIGHT"
+    kh[(27 91 68)]="LEFT"
+    kh[(27 91 70)]="End"
+
+    keyarr=()
+    for (( i = 1; i <= $#reply; i++ )); do
+        j=$reply[$i]
+        k=$((#j))
+        keyarr+=($k)
+    done
+    ckey=$kh[($keyarr)]
+}
+init_key_function_map() {
+    typeset -gA zfm_keymap
+    # testing out key mappings with different kinds of keys
+    zfm_keymap=("$ZFM_GOTO_PARENT_KEY"
+                    goto_parent_dir
+                "$ZFM_GOTO_DIR_KEY"
+                    goto_dir
+                $ZFM_SORT_KEY
+                    sortoptions
+                $ZFM_FILTER_KEY
+                    filteroptions
+                $'\t'
+                    zfm_views
+                "$ZFM_POPD_KEY"
+                    zfm_popd
+                ":"
+                    subcommand
+                "$ZFM_MENU_KEY"
+                    zfm_show_menu
+                "^"
+                    toggle_match_from_start
+                $ZFM_TOGGLE_MENU_KEY
+                    toggle_options_menu
+                    )
+    zfm_bind_key "M-x" "zfm_views"
+    zfm_bind_key "C-x" "zfm_views"
+}
+zfm_bind_key() {
+    # should we check for existing and refuse ?
+    zfm_keymap[$1]=$2
+}
+zfm_unbind_key() {
+    zfm_keymap[$1]=()
+}
+zfm_get_key_binding() {
+    binding=$zfm_keymap[$1]
+    ret=1
+    [[ -n $binding ]] && ret=0
+    return $ret
+}
+toggle_options_menu() {
+    menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
+    [[ $menu_text == $ZFM_TOGGLE_MENU_KEY ]] && { menu_text=$toggle_menu_last_choice }
+    case "$menu_text" in
+        "FullIndexing")
+            full_indexing_toggle
+            ;;
+        "HiddenFiles")
+            show_hidden_toggle
+            ;;
+        "FuzzyMatch")
+            fuzzy_match_toggle
+            ;;
+        "IgnoreCase")
+            ignore_case_toggle
+            ;;
+        "ApproxMatchToggle")
+            approx_match_toggle
+            ;;
+        "AutoView")
+            pinfo "Autoview determines whether file selection automatically opens files for viewing or allow user to decide action"
+            toggle_auto_view
+            if [[ "$ZFM_AUTOVIEW_TOGGLE_KEY" == "1" ]]; then
+                pinfo "Files will be viewed upon selection"
+            else
+                pinfo "Files will NOT be viewed upon selection. Other actions may be performed"
+            fi
+            ;;
+        *)
+        perror "Wrong option $menu_text"
+    esac
+    toggle_menu_last_choice=$menu_text
+}
+zfm_popd() {
+    dirs
+    popd && post_cd
+    selection=
+}
+zfm_show_menu() {
+    if [[ -n "$M_SELECTION_MODE" ]]; then
+        selection_menu
+    else
+        local olddir=$PWD
+        view_menu
+        [[ $olddir == $PWD ]] || {
+            # dir has changed
+            patt=""
+            filterstr=${filterstr:-M}
+            param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+        }
+    fi
+}
+function goto_parent_dir() {
+    cd ..
+    patt="" # 2012-12-26 - 00:54 
+    filterstr=${filterstr:-M}
+    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+}
+function goto_dir() {
+    push_pwd
+    #ppath="/"
+    ppath=${ppath:-"$HOME/"}
+    #stty erase 
+    # FIXME backspace etc issues in vared here, hist not working
+    vared -h -p "Enter path: " ppath
+    selection=${(Q)ppath}  # in case space got quoted, -d etc will all give errors
+    patt="" # 2012-12-26 - 00:54 
+}
+
 # comment out next line if sourcing .. sorry could not find a cleaner way
 myzfm
 #if [ "$(basename $0)" = "m.sh" ]
