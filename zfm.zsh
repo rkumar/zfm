@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-11 01:26
+#  Last update: 2013-01-11 13:51
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -120,9 +120,11 @@ list_printer() {
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" ""  ) | tr -s "" |  tr "" " \t" 
         # C-a C-b are non-printing and so print columnates without allocating a space for them, then i put the space back so the next column
         # gets pushed ahead by those many spaces. therefore i use a slash for a space -- slash is not allowed in a filename
-        #  2013-01-08 - 17:33 the extended output does have slashes (datetime) and links too
-        print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" -w $width | tr " \t" "þ"  ) |  tr "þ" "  " 
         #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
+        #  2013-01-08 - 17:33 the extended output does have slashes (datetime) and links too
+        #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" -w $width | tr " \t" "þ"  ) |  tr "þ" "  " 
+
+        print -rC$cols "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
 
         #print -n "> $patt"
         mode=
@@ -892,10 +894,6 @@ selection_menu() {
                 selected_row=("${(s/	/)line}")
                 selected_file=$selected_row[-1]
                 selectedfiles+=( $selected_file )
-                #selectedfiles=(
-                #$selectedfiles
-                #$selected_file
-                #)
             done
         fi
     fi
