@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-10 01:56
+# Last update: 2013-01-11 17:40
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -66,9 +66,8 @@ view_menu() {
             ;;
     esac
 }
-# this implements a drill-down which employs grep. Why I am not using the drill.zsh
-# which is identical to zfm, i don't know. I've just modified the old selectrows
-# to drill down. You can't backspace or stuff like that. You could call this fuzzy
+# this implements a drill-down which employs grep.
+# You could call this fuzzy
 # in that the pattern is not contiguous, if you press abc it matches "a.*b.*c"
 #
 fuzzyselectrow() {
@@ -97,18 +96,11 @@ fuzzyselectrow() {
         print  "   No.\t  Name"
 
         if [[ $ZFM_AUTO_COLUMNS == "1" && $_hv -gt $rows ]]; then
-            # this is fine, but on locate or mdfind where entire paths comes this can be awful
-            # split into 2 columns, hopefully only name was sent in and not details
-            #print -rC2 -- $files 
-            #print -rC2 -- $(print -rl -- $files | tr "[ \t]" "" ) | tr "" " "
-            # we can't use a slash here because full paths will come
-            print -rC2 -- $(print -rl -- $viewport | numbernine | sed "s#$HOME#~#g" |  tr " \t" "" ) | tr "" " \t"
+            # split into 2 columns
+            print -rC2 -- "${(@f)$(print -rl -- $viewport | numbernine | sed "s#$HOME#~#g")}"
         else
-            #print  "   No.\t  Size \t  Modified Date  \t  Name"
             print -rl -- $viewport | numbernine
         fi
-        #[[ $_hv -gt 9 ]] && _hv=9
-        #print  -n "Select a row [1-$_hv] [a-z] filter, ^ toggle, ${ZFM_MENU_KEY} menu, <ESC> cancel, <CR> accept ($#vpa)/$gpatt/: "
         # PROMPT prompt
         print  -n "Select a row [1-$_hv] ? Help, ESC/ENTER ($#deleted/$#vpa)/$gpatt/: "
         len=1
@@ -156,13 +148,6 @@ fuzzyselectrow() {
             for line in $deleted
             do
                 selected_files+=( $line )
-                #print  "line $line"
-                #selected_row=("${(s/	/)line}")
-                #selected_file=$selected_row[-1]
-                #selected_files=(
-                #$selected_files
-                #$selected_file
-                #)
             done
             pdebug "$#selected_files selected"
             break
