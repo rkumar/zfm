@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-11 17:40
+# Last update: 2013-01-12 02:02
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -17,54 +17,13 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 
 # MENU that comes up on ZFM_MENU_KEY 
 view_menu() {
-    select_menu "Menu"  "f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings" "_) Last viewed file"
+    select_menu_new "Menu" main_menu_options main_menu_command_hash
+    if [  $? -ne 0 ]; then
+        perror "Incorrect option $reply"
+    fi
     # pressing menu key again, repeats last seletion
     [[ $reply == $ZFM_MENU_KEY ]] && reply=$view_menu_last_choice
     view_menu_last_choice=$reply
-    case $reply in
-        "o")
-            settingsmenu
-            ;;
-        "f")
-            nonrecviewoptions
-            ;;
-        "r")
-            recviewoptions
-            ;;
-        "d")
-            m_child_dirs
-            ;;
-        "z"|"k")
-            m_dirstack
-            ;;
-        "v")
-            ZFM_RECENT_MULTI=1
-            m_recentfiles
-            ;;
-        "l")
-            ZFM_RECENT_MULTI=
-            m_recentfiles
-            ;;
-        "F")
-            filteroptions
-            ;;
-        "x")
-            M_EXCLUDE_PATTERN=${M_EXCLUDE_PATTERN:-"~(*.tgz|*.gz|*.z|*.bz2|*.zip)"}
-            vared -p "Enter pattern to exclude from listings: " M_EXCLUDE_PATTERN
-            ;;
-        "s")
-            sortoptions
-            ;;
-        "c")
-            mycommands
-            ;;
-        "_")
-            edit_last_file
-            ;;
-        *)
-            perror "Wrong / unhandle option $reply"
-            ;;
-    esac
 }
 # this implements a drill-down which employs grep.
 # You could call this fuzzy
@@ -519,7 +478,7 @@ viewoptions() {
             ;; 
     esac
     [[ -n "$str" ]] && {
-            #echo "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str"
+            pdebug "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str"
             files=$(eval "listdir.pl --file-type ${M_REC_STRING}*${M_EXCLUDE_PATTERN}$str")
             #selectmulti $files
             $ZFM_FILE_SELECT_FUNCTION $files
@@ -636,80 +595,61 @@ color_toggle() {
     export ZFM_NO_COLOR
 }
 settingsmenu(){
-    select_menu "Options" "i) Full Indexing toggle" "c) Case toggle" "h) Hidden files toggle" "p) Paging key" "4) Dupe check" \
-        "a) Auto select action" "A) Toggle Auto Action" "x) Approximate match toggle" "C) Color toggle"
-    case $reply in
-        "i")
-            full_indexing_toggle
-            ;;
-        "c")
-            ignore_case_toggle
-            ;;
-        "x")
-            approx_match_toggle
-            ;;
-        "h")
-            pinfo "may work after changing directory, and should be set from Filters"
-            show_hidden_toggle
-            ;;
-        "p")
-            print  "Page key is (default <ENTER>: [$M_PAGE_KEY]"
-            print  -n "Enter key to use for paging (should preferable not exist in filenames): "
-            read -k cha
-            M_PAGE_KEY=cha
-            print  "Using page key: $cha"
-            ;;
-        "4")
-            print  "When pressing hotkeys 1-9, we check if there are files with numbers in that position"
-            print  "Without this check some numbered files can become inaccessible"
-            print  "If you rarely use this, you can switch it off here, or permanently at top of source"
-            if [[ -z "$M_SWITCH_OFF_DUPL_CHECK" ]]; then
-                M_SWITCH_OFF_DUPL_CHECK=1
-            else
-                M_SWITCH_OFF_DUPL_CHECK=
-            fi
-            export M_SWITCH_OFF_DUPL_CHECK
-            ;;
-        "k")
-            print  "Change the character used for various functions (Enter leaves them as they are"
-
-            print  "TODO someday not immed"
-            # what is this anyway ? changing hotkeys ?
-            # menu
-            # back (up dir)
-            # sort options
-            # filter options
-            # freq dirs
-            # freq files
-
-            ;;
-        "a")
-            # specify action with various filetypes
-            # Misses out on OTHER category, not sure what to do
-            # but some text files land in there, `file` says "data".
-            echo
-            print  "Type Ctrl-u to clear line"
-            print  "Blank line disables auto action"
-            echo
-            ZFM_AUTO_TEXT_ACTION=${ZFM_AUTO_TEXT_ACTION:-$EDITOR}
-            ZFM_AUTO_IMAGE_ACTION=open
-            ZFM_AUTO_ZIP_ACTION="tar ztvf"
-            print  "Choose automatic action when selecting a text-file"
-            vared ZFM_AUTO_TEXT_ACTION
-            print  "Choose automatic action when selecting an image file"
-            vared ZFM_AUTO_IMAGE_ACTION
-            print  "Choose automatic action when selecting a zip file"
-            vared ZFM_AUTO_ZIP_ACTION
-            export ZFM_AUTO_ZIP_ACTION ZFM_AUTO_IMAGE_ACTION ZFM_AUTO_TEXT_ACTION
-            ;;
-        "A")
-            toggle_auto_view
-            ;;
-        "C")
-            color_toggle
-            ;;
-    esac
-
+    settings_menu_options=("i) Full Indexing toggle" "c) Case toggle" "h) Hidden files toggle" "p) Paging key" "4) Dupe check" \
+        "a) Auto select action" "A) Toggle Auto Action" "x) Approximate match toggle" "C) Color toggle")
+    typeset -A settings_menu_command_hash
+    settings_menu_command_hash=(
+        i full_indexing_toggle
+        c ignore_case_toggle
+        x approx_match_toggle
+        h show_hidden_toggle
+        p change_paging_key
+        4 toggle_duplicate_check
+        a define_auto_action
+        A toggle_auto_view
+        C color_toggle
+        )
+    select_menu_new "Options" settings_menu_options settings_menu_command_hash
+    if [  $? -ne 0 ]; then
+        perror "Incorrect option $reply"
+    fi
+}
+change_paging_key() {
+    print  "Page key is (default <ENTER>: [$M_PAGE_KEY]"
+    print  -n "Enter key to use for paging (should preferable not exist in filenames): "
+    read -k cha
+    M_PAGE_KEY=cha
+    print  "Using page key: $cha"
+}
+define_auto_action() {
+    # specify action with various filetypes
+    # Misses out on OTHER category, not sure what to do
+    # but some text files land in there, `file` says "data".
+    echo
+    print  "Type Ctrl-u to clear line"
+    print  "Blank line disables auto action"
+    echo
+    ZFM_AUTO_TEXT_ACTION=${ZFM_AUTO_TEXT_ACTION:-$EDITOR}
+    ZFM_AUTO_IMAGE_ACTION=open
+    ZFM_AUTO_ZIP_ACTION="tar ztvf"
+    print  "Choose automatic action when selecting a text-file"
+    vared ZFM_AUTO_TEXT_ACTION
+    print  "Choose automatic action when selecting an image file"
+    vared ZFM_AUTO_IMAGE_ACTION
+    print  "Choose automatic action when selecting a zip file"
+    vared ZFM_AUTO_ZIP_ACTION
+    export ZFM_AUTO_ZIP_ACTION ZFM_AUTO_IMAGE_ACTION ZFM_AUTO_TEXT_ACTION
+}
+toggle_duplicate_check() {
+    print  "When pressing hotkeys 1-9, we check if there are files with numbers in that position"
+    print  "Without this check some numbered files can become inaccessible"
+    print  "If you rarely use this, you can switch it off here, or permanently at top of source"
+    if [[ -z "$M_SWITCH_OFF_DUPL_CHECK" ]]; then
+        M_SWITCH_OFF_DUPL_CHECK=1
+    else
+        M_SWITCH_OFF_DUPL_CHECK=
+    fi
+    export M_SWITCH_OFF_DUPL_CHECK
 }
 #  toggle between automatuc viewing on selection, the other mode
 #  being that the fileopt menu is opened
@@ -941,6 +881,37 @@ select_menu() {
     read -k reply
     echo
 }
+# this is a retake on select_menu using datastructures, so one may add or modify 
+# items and hotkeys at startup thru a config file
+select_menu_new() {
+    local title="$1"
+    shift
+    local moptions
+    moptions=(${(P)1})
+    typeset -A myhas
+    myhas=(${(Pkv)2})
+    #print $#moptions
+    #print $#myhas
+    #print $#myhas  :: ${(kv)myhas}
+    print  "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
+    for o in $moptions
+    do
+        print  "  $o"
+    done
+    print  -n "Select :"
+    read -k reply
+    local ret=0
+    if (( ${+myhas[$reply]} )); then
+        #pdebug found $reply in hash as $myhas[$reply]
+        $myhas[$reply]
+    else
+        #print
+        #print $#myhas :: $myhas
+        ret=1
+    fi
+    echo
+    return $ret
+}
 mycommands() {
     source $ZFM_DIR/zfmcommands.zsh
     IFS=$ZFM_MY_DELIM menu_loop "My Commands" "$ZFM_MY_COMMANDS${ZFM_MY_DELIM:-' '}cmd" "${ZFM_MY_MNEM}!"
@@ -1020,4 +991,8 @@ numbernine() {
 edit_last_file() {
     print "Last viewed : $last_viewed_files"
     [[ -n $last_viewed_files ]] && $EDITOR $last_viewed_files
+}
+get_exclude_pattern() {
+    M_EXCLUDE_PATTERN=${M_EXCLUDE_PATTERN:-"~(*.tgz|*.gz|*.z|*.bz2|*.zip)"}
+    vared -p "Enter pattern to exclude from listings: " M_EXCLUDE_PATTERN
 }
