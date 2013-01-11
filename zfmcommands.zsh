@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-06 15:09
+#  Last update: 2013-01-12 00:46
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -28,19 +28,23 @@ ZFM_MY_MNEM="a tfiglse%d"
 
 ZFM_ack() {
     # check for whether you have ack installed
-    searchpattern=${searchpattern:-""}
-    vared -p "Pattern to ack for:" searchpattern
-    ack "$searchpattern"
+    cpattern=${cpattern:-""}
+    vared -p "Pattern to ack for:" cpattern
+    ack "$cpattern"
     pause
+    files=$( ack -l "$cpattern" )
+    handle_files $files
 }
 
 
 ZFM_ag() {
     # check for whether you have ag installed (the_silver_searcher)
-    searchpattern=${searchpattern:-""}
-    vared -p "Pattern to ag for:" searchpattern
-    ag "$searchpattern"
+    cpattern=${cpattern:-""}
+    vared -p "Pattern to ag for:" cpattern
+    ag "$cpattern"
     pause
+    files=$( ag -l "$cpattern" )
+    handle_files $files
 }
 #
 # remove the space when defining the function and add ZFM_ before it.
@@ -69,7 +73,7 @@ ZFM_structure() {
     pause
 }
 ZFM_ffind() {
-    # find files with string in filename, uses perl expressions and requires GNU grep (coreutils)
+    # find files with string in filename
     searchpattern=${searchpattern:-""}
     pinfo "Pattern entered must match basename not dirname"
     vared -p "Filename to search for (enter 3 characters): " searchpattern
@@ -138,4 +142,21 @@ ZFM_newdir() {
     mkdir $filename && pushd $filename
     [[ -d $filename ]] && zfm_refresh
 
+}
+handle_files() {
+    files=($@)
+    if [[ $#files -gt 0 ]]; then
+        #files=$( echo $files | xargs ls -t )
+        fuzzyselectrow $files
+
+        if [[ $#selected_files -eq 1 ]]; then
+            fileopt "$selected_file"
+        elif [[ $#selected_files -gt 1 ]]; then
+            multifileopt $selected_files
+        elif [[ -n "$selected_file" ]]; then
+            fileopt "$selected_file"
+        fi
+    else
+        perror "No files matching $searchpattern"
+    fi
 }
