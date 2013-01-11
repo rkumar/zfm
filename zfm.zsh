@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-11 13:51
+#  Last update: 2013-01-12 02:03
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -534,8 +534,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.3"
-print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/11"
+ZFM_VERSION="0.0.4"
+print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/12"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -579,6 +579,7 @@ integer ZFM_LINES=$(tput lines)
 export ZFM_COLS ZFM_LINES
 export ZFM_STRING
 init_key_function_map
+init_menu_options
 # at this point read up users bindings
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
 aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
@@ -966,6 +967,28 @@ resolve_key_codes() {
         keyarr+=($k)
     done
     ckey=$kh[($keyarr)]
+}
+# this is the main menu used in the list when pressing MENU_KEY
+# The purpose of initializing this is to make it configurable or modifiable through
+# a config file
+init_menu_options() {
+    typeset -gA main_menu_command_hash
+    main_menu_options=("f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings" "_) Last viewed file")
+    main_menu_command_hash=(
+        o settingsmenu
+        f nonrecviewoptions
+        r recviewoptions
+        d m_child_dirs
+        z m_dirstack
+        k m_dirstack
+        v m_recentfiles
+        l m_recentfiles
+        F filteroptions
+        x get_exclude_pattern
+        s sortoptions
+        c mycommands
+        _ edit_last_file
+        )
 }
 init_key_function_map() {
     typeset -gA zfm_keymap
