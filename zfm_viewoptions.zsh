@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-12 02:02
+# Last update: 2013-01-12 14:54
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -17,7 +17,7 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 
 # MENU that comes up on ZFM_MENU_KEY 
 view_menu() {
-    select_menu_new "Menu" main_menu_options main_menu_command_hash
+    select_menu "Menu" main_menu_options main_menu_command_hash
     if [  $? -ne 0 ]; then
         perror "Incorrect option $reply"
     fi
@@ -609,7 +609,7 @@ settingsmenu(){
         A toggle_auto_view
         C color_toggle
         )
-    select_menu_new "Options" settings_menu_options settings_menu_command_hash
+    select_menu "Options" settings_menu_options settings_menu_command_hash
     if [  $? -ne 0 ]; then
         perror "Incorrect option $reply"
     fi
@@ -866,24 +866,9 @@ m_recentfiles() {
         fi
     }
 }
-# select_menu "A menu" "r) recursive menu" "l) listing files" "o) Options and setttings"
-select_menu() {
-    local title="$1"
-    shift
-    local moptions
-    moptions=( "$@" )
-    print  "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
-    for o in $moptions
-    do
-        print  "  $o"
-    done
-    print  -n "Select :"
-    read -k reply
-    echo
-}
 # this is a retake on select_menu using datastructures, so one may add or modify 
 # items and hotkeys at startup thru a config file
-select_menu_new() {
+select_menu() {
     local title="$1"
     shift
     local moptions
