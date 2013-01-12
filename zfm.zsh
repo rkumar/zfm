@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-12 02:03
+#  Last update: 2013-01-12 20:28
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -291,9 +291,10 @@ list_printer() {
                 menu_loop "Siblings" "$(print ${PWD:h}/*(/) )"
                 print "selected $menu_text"
                 $ZFM_CD_COMMAND $menu_text
-                patt="" # 2012-12-26 - 00:54 
-                filterstr=${filterstr:-M}
-                param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+                post_cd
+                #patt="" # 2012-12-26 - 00:54 
+                #filterstr=${filterstr:-M}
+                #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 break
                 ;;
             $ZFM_CD_OLD_NEW_KEY)
@@ -315,9 +316,10 @@ list_printer() {
                 menu_loop "Select target" "$(eval print  $newpath)"
                 [[ -n "$menu_text" ]] && { 
                     $ZFM_CD_COMMAND $menu_text
-                    patt="" # 2012-12-26 - 00:54 
-                    filterstr=${filterstr:-M}
-                    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+                    post_cd
+                    #patt="" # 2012-12-26 - 00:54 
+                    #filterstr=${filterstr:-M}
+                    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
                 }
                 break
                 ;;
@@ -492,11 +494,12 @@ pop_pwd() {
 post_cd() {
     patt="" # 2012-12-26 - 00:54 
     filterstr=${filterstr:-M}
-    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
 }
 zfm_refresh() {
     filterstr=${filterstr:-M}
-    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
     myopts=("${(@f)$(print -rl -- $param)}")
 }
 print_help_keys() {
@@ -534,7 +537,7 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.4"
+ZFM_VERSION="0.0.4b"
 print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/12"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -570,6 +573,7 @@ export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
 #export ZFM_NO_COLOR   # use to swtich off color in selection
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
+M_EXCLUDE_PATTERN=
 pattern='*' # this is separate from patt which is a temp filter based on hotkeys
 filterstr="M"
 MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -681,9 +685,10 @@ param=$(print -rl -- *(M))
         if [[ -d "$selection" ]]; then
             [[ -n $ZFM_VERBOSE ]] && print "got a directory $selection"
             $ZFM_CD_COMMAND $selection
-            patt="" # 2012-12-26 - 00:54 
-            filterstr=${filterstr:-M}
-            param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+            post_cd
+            #patt="" # 2012-12-26 - 00:54 
+            #filterstr=${filterstr:-M}
+            #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
         elif [[ -f "$selection" ]]; then
             # although nice to immediately open, but what if its not a text file
             # and what if i want to do something else
@@ -1076,17 +1081,19 @@ zfm_show_menu() {
         view_menu
         [[ $olddir == $PWD ]] || {
             # dir has changed
-            patt=""
-            filterstr=${filterstr:-M}
-            param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+            post_cd
+            #patt=""
+            #filterstr=${filterstr:-M}
+            #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
         }
     fi
 }
 function goto_parent_dir() {
     cd ..
-    patt="" # 2012-12-26 - 00:54 
-    filterstr=${filterstr:-M}
-    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    post_cd
+    #patt="" # 2012-12-26 - 00:54 
+    #filterstr=${filterstr:-M}
+    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
 }
 function goto_dir() {
     push_pwd
