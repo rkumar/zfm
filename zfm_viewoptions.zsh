@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-12 14:54
+# Last update: 2013-01-12 20:24
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -438,9 +438,7 @@ viewoptions() {
             print -n "Enter one extension e.g log tmp :"
             read extn
             files=$(eval "listdir.pl  ${M_REC_STRING}*.${extn}(.)" )
-            #selectmulti $files
             $ZFM_FILE_SELECT_FUNCTION $files
-            #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "substring" )
             print "Filenames containing pattern:"
@@ -448,8 +446,7 @@ viewoptions() {
             files=$(eval "listdir.pl ${M_REC_STRING}*${patt}*(.)")
             print ${M_REC_STRING}*${patt}*(.)
             listdir.pl ${M_REC_STRING}*${patt}*(.)
-            echo
-            #selectmulti $files
+            print
             $ZFM_FILE_SELECT_FUNCTION $files
             #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
@@ -464,7 +461,6 @@ viewoptions() {
             files=$(ack -l $M_ACK_REC_FLAG $cpattern)
             if [[ $#files -gt 0 ]]; then
                 files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern))
-                #selectmulti $files
                 $ZFM_FILE_SELECT_FUNCTION $files
             else
                 pinfo "No files found containing $cpattern (using ack -l $M_ACK_REC_FLAG)"
@@ -721,7 +717,7 @@ filteroptions() {
             ;;
     esac
     filterstr=${filterstr:-M}
-    ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
     export ZFM_STRING
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     export param
@@ -759,7 +755,8 @@ sortoptions() {
     export ZFM_SORT_ORDER
     #param=$(eval "print -rl -- *${MFM_LISTORDER}")
     filterstr=${filterstr:-M}
-    ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    #ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
     export ZFM_STRING
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     export param
@@ -780,7 +777,8 @@ zfm_views() {
     export ZFM_SORT_ORDER
     #param=$(eval "print -rl -- *${MFM_LISTORDER}")
     filterstr=${filterstr:-M}
-    ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    #ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
     export ZFM_STRING
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     export param
@@ -810,7 +808,6 @@ m_child_dirs() {
     [[ $ff -eq 0 ]] && { perror "No child dirs." ; return }
     if [[ $ff -gt 0 ]]; then
         # only send dir name, not details.
-        #files=$(eval "print -rl -- ${M_REC_STRING}*(/)" | nl)
         files=$(eval "print -rl -- ${M_REC_STRING}*(/)" )
     #else
         #files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
@@ -885,6 +882,7 @@ select_menu() {
     done
     print  -n "Select :"
     read -k reply
+    print
     local ret=0
     if (( ${+myhas[$reply]} )); then
         #pdebug found $reply in hash as $myhas[$reply]
@@ -894,7 +892,7 @@ select_menu() {
         #print $#myhas :: $myhas
         ret=1
     fi
-    echo
+    print
     return $ret
 }
 mycommands() {
@@ -980,4 +978,5 @@ edit_last_file() {
 get_exclude_pattern() {
     M_EXCLUDE_PATTERN=${M_EXCLUDE_PATTERN:-"~(*.tgz|*.gz|*.z|*.bz2|*.zip)"}
     vared -p "Enter pattern to exclude from listings: " M_EXCLUDE_PATTERN
+    ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
 }
