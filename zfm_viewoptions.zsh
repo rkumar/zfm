@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-12 20:24
+# Last update: 2013-01-18 18:22
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -617,24 +617,24 @@ change_paging_key() {
     M_PAGE_KEY=cha
     print  "Using page key: $cha"
 }
+## define actions for various file types, if you don't want to be prompted with a menu
 define_auto_action() {
     # specify action with various filetypes
     # Misses out on OTHER category, not sure what to do
     # but some text files land in there, `file` says "data".
-    echo
+    print
     print  "Type Ctrl-u to clear line"
     print  "Blank line disables auto action"
-    echo
-    ZFM_AUTO_TEXT_ACTION=${ZFM_AUTO_TEXT_ACTION:-$EDITOR}
-    ZFM_AUTO_IMAGE_ACTION=open
-    ZFM_AUTO_ZIP_ACTION="tar ztvf"
-    print  "Choose automatic action when selecting a text-file"
-    vared ZFM_AUTO_TEXT_ACTION
-    print  "Choose automatic action when selecting an image file"
-    vared ZFM_AUTO_IMAGE_ACTION
-    print  "Choose automatic action when selecting a zip file"
-    vared ZFM_AUTO_ZIP_ACTION
-    export ZFM_AUTO_ZIP_ACTION ZFM_AUTO_IMAGE_ACTION ZFM_AUTO_TEXT_ACTION
+    print
+    #
+    local v=""
+    print -rl "Choose automatic action when selecting :"
+    for ff in ${(k)FT_EXTNS} ; do
+        v=$ZFM_AUTO_ACTION[$ff]
+        vared -p "   $ff file: " v
+        ZFM_AUTO_ACTION[$ff]=$v
+    done
+
 }
 toggle_duplicate_check() {
     print  "When pressing hotkeys 1-9, we check if there are files with numbers in that position"
@@ -658,19 +658,24 @@ toggle_auto_view(){
 }
 set_auto_view(){
     ZFM_AUTOVIEW_TOGGLE_KEY="1"
-    ZFM_AUTO_IMAGE_ACTION=${ZFM_AUTO_IMAGE_ACTION_BAK:-"open"}
-    ZFM_AUTO_TEXT_ACTION=${ZFM_AUTO_TEXT_ACTION_BAK:-$EDITOR}
-    ZFM_AUTO_ZIP_ACTION=${ZFM_AUTO_ZIP_ACTION_BAK:-"tar ztvf"}
-    export ZFM_AUTO_ZIP_ACTION ZFM_AUTO_IMAGE_ACTION ZFM_AUTO_TEXT_ACTION
+    typeset -Ag ZFM_AUTO_ACTION ZFM_AUTO_ACTION_BAK; 
+    ZFM_AUTO_ACTION=("${(@kv)ZFM_AUTO_ACTION_BAK}")
+    ZFM_AUTO_ACTION[IMAGE]=${ZFM_AUTO_ACTION_BAK[IMAGE]:-"open"}
+    ZFM_AUTO_ACTION[OTHER]=${ZFM_AUTO_ACTION_BAK[OTHER]:-"open"}
+    ZFM_AUTO_ACTION[TXT]=${ZFM_AUTO_ACTION_BAK[TXT]:-$EDITOR}
+    ZFM_AUTO_ACTION[ZIP]=${ZFM_AUTO_ACTION_BAK[ZIP]:-"tar ztvf"}
 }
 unset_auto_view(){
     ZFM_AUTOVIEW_TOGGLE_KEY=
-    ZFM_AUTO_TEXT_ACTION_BAK=$ZFM_AUTO_TEXT_ACTION
-    ZFM_AUTO_ZIP_ACTION_BAK=$ZFM_AUTO_ZIP_ACTION
-    ZFM_AUTO_IMAGE_ACTION_BAK=$ZFM_AUTO_IMAGE_ACTION
-    ZFM_AUTO_IMAGE_ACTION=
-    ZFM_AUTO_TEXT_ACTION=
-    ZFM_AUTO_ZIP_ACTION=
+    ## store values in bak hash and clear this one
+    typeset -Ag ZFM_AUTO_ACTION_BAK; ZFM_AUTO_ACTION_BAK=("${(@kv)ZFM_AUTO_ACTION}")
+    unset ZFM_AUTO_ACTION
+
+    #for key in ${(k)ZFM_AUTO_ACTION} ; do
+        #val=$ZFM_AUTO_ACTION[$key]
+        #ZFM_AUTO_ACTION_BAK[$key]=$val
+        #ZFM_AUTO_ACTION[$key]=
+    #done
 }
 filteroptions() {
     menu_loop "Filter Options " "Today Files Dirs Recent Old Large Pattern Small Hidden Links Clear" "tfdrolpshLc"
