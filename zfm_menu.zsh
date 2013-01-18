@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-18 17:28
+#  Last update: 2013-01-19 00:45
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -118,7 +118,7 @@ do
     # next line crashes program on ESC
     [[ $menu_char = "" ]] && { perror "Got a ESC XXX"; menu_char="q" }
     menu_char=$(print "$menu_char" | tr -d '[\n\r\t ]')
-    pdebug "key is 2 $menu_char"
+    pdebug "$0 : key is :: $menu_char"
     #[[ -z $menu_char ]] && menu_char="$default"
     if [[ -z $menu_char ]] ;
     then
@@ -129,7 +129,7 @@ do
         # FIXME, ! is a shortcut for command, now that we are checking later
         # we can release it. The comma is used as it is the back key
         # hash '#' needs to be escaped to be detected
-        [[ "$menu_char" =~ [q,] ]] && { return }
+        [[ "$menu_char" =~ [q,] ]] && { return 1 }
         print ""
         if [[ "$menu_char" == [1-9] ]]; then
             var="${myopts[$menu_char]}" # 2>/dev/null
@@ -197,25 +197,32 @@ fileopt() {
     extn=$name:e
     if [[ -n $extn ]]; then
         uextn=${(U)extn}
-        apps=$FT_ALL_APPS[$extn]  # check FT_ALL_APPS[pdf]
+        apps=$FT_ALL_APPS[$extn]  # check cache FT_ALL_APPS[pdf]
         ## if we have not already calculated apps for extension then do so
         if [[ -z "$apps" ]]; then
             ## check for specific apps for this file extn
-            local x="FT_$uextn"  # check FT_PDF
-            pdebug "checking $x : ${(P)x}"
-            apps=( ${(P)x} )
+            #local x="FT_$uextn"  # check FT_PDF
+            #pdebug "checking $x : ${(P)x}"
+            #apps=( ${(P)x} )
+            apps=( $FT_OPTIONS[$uextn] )
             if [[ -z "$apps" ]]; then
                 oextn=$FT_ALIAS[$extn]  # htm will translate to html or MARKDOWN to md
-                pdebug "checking FT_ALIAS with $extn : got $oextn"
-                [[ -n $oextn ]] && { apps=( ${(P)oextn} ) }
+                pdebug "$0 checking FT_ALIAS with $extn : got $oextn"
+                #[[ -n $oextn ]] && { apps=( ${(P)oextn} ) }
+                [[ -n $oextn ]] && { apps=( $FT_OPTIONS[$oextn] ) }
+                #pdebug "$0 got apps ... $apps "
             fi
             # repeated below in else
             ## determine filetype and general apps for it
             file_type="$(filetype $name)"
             file_type=${file_type:-other}
-            x="FT_${(U)file_type}"  # check FT_PDF
-            pdebug "checking after filetype $x"
-            apps+=( ${(P)x} ) 
+            #x="FT_${(U)file_type}"  # check FT_PDF
+            #pdebug "checking after filetype $x"
+            #apps+=( ${(P)x} ) 
+            pdebug "$0 got filetype $file_type "
+            uft="${(U)file_type}"  # check PDF or TXT in FT_OPTIONS
+            apps+=( $FT_OPTIONS[$uft] )
+            #pdebug "$0 got apps $apps "
 
             ## store for that extension so we can quickly reuse
             ##  It could have been for file type but then we would have to calc that all over
@@ -230,9 +237,11 @@ fileopt() {
         # repeated from above
         file_type="$(filetype $name)"
         file_type=${file_type:-other}
-        x="FT_${(U)file_type}"  # check FT_TXT or FT_ZIP etc
-        pdebug "checking after filetype $x"
-        apps+=( ${(P)x} ) 
+        #x="FT_${(U)file_type}"  # check FT_TXT or FT_ZIP etc
+        pdebug "checking after filetype $file_type"
+        #apps+=( ${(P)x} ) 
+            uft="${(U)file_type}"  # check FT_PDF
+            apps+=( $FT_OPTIONS[$uft] )
         FT_ALL_APPS[$extn]=$apps
         # calculate hotkeys
         hotkeys=$(get_hotkeys "$apps")
@@ -251,25 +260,30 @@ fileopt() {
         name=${name:q}
         eval "${act} $name"
         [[ $act == $EDITOR ]] && { last_viewed_files=$name }
+        [[ $act == $EDITOR ]] || pause
         return
     else
-        pinfo "got no action for $uft"
+        pdebug "$0 got no auto action for $uft"
         print -rl -- ${(k)ZFM_AUTO_ACTION}
     fi
     print_title "File summary for $name:"
     file $name
     ls -lh $name
     [[ -f "$name" ]] || { perror "$name not found."; pause; return }
-    menu_loop "File Operations:" $apps $hotkeys
-    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
+    pdebug "$0 before ML : $apps"
+    menu_loop "File Operations:" "$apps" $hotkeys
+    [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned 270 $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
-    eval_menu_text $menu_text $name
+    [[ -z "$menu_text" ]] && { return 1; } # q pressed
+    eval_menu_text "$menu_text" $name
+    pause
     # we can store def app in a hash so not queried each time
     #default_app=$(alias -s | grep $extn | cut -f2 -d= )
     #[[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
 }
 function eval_menu_text () {
     local menu_text=$1
+    [[ -z "$menu_text" ]] && { perror "$0 Empty command passed"; return 1; } # q pressed
     shift
     local files="$@"
     files=${files:q}
@@ -382,7 +396,7 @@ filetype(){
     local type=""
     extn=$name:e
     uextn=${(U)extn}
-    pdebug "extn: $extn"
+    pdebug "$0 extn: $extn"
 
     if [[ -n "$extn" ]]; then
         ## don't go in if no extension
@@ -390,7 +404,7 @@ filetype(){
         ## loop through each definition list and search for our extn
         for ff in ${(k)FT_EXTNS} ; do
             v=$FT_EXTNS[$ff]
-            pdebug "$ff in ft_extns will search $v"
+            pdebug "$0 $ff in ft_extns will search $v"
             ## we still need to put a spce around extn otherwise small extns like c and a will match wrongly
             local spextn=" $extn "
             if [[ $v[(i)$spextn] -le $#v ]]; then
@@ -435,8 +449,10 @@ multifileopt() {
     print_title "File summary for $#files files:"
     # eval otherwise files with spaces will cause an error
     eval "ls -lh $files"
-    IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,${ZFM_RM_COMMAND},git add,git com,vim,vimdiff" "zcg!#a vd"
-    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
+    #IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,${ZFM_RM_COMMAND},git add,git com,vim,vimdiff" "zcg!#a vd"
+    hotkeys=$(get_hotkeys "$FT_OPTIONS[MULTI]")
+    menu_loop "Multiple File operations:" $FT_OPTIONS[MULTI] $hotkeys
+    [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
@@ -460,17 +476,19 @@ multifileopt() {
             eval "grep $greppatt $files " 
             pause
             ;;
-        "git add")
+        "gitadd")
             eval "git add $files"
             ;;
-        "git com")
+        "gitcom")
             eval "git commit $files"
             ;;
         *)
 
-            #[[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text $files"
-            eval "$menu_text $files"
-            [[ "$menu_text" == "${ZFM_RM_COMMAND}" ]] && zfm_refresh
+            evaluate_command "$menu_text" $files
+            [  $? -eq 0 ] && zfm_refresh
+            #[[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text , $files"
+            #eval "$menu_text $files"
+            #[[ "$menu_text" == "${ZFM_RM_COMMAND}" ]] && zfm_refresh
             ;;
     esac
 }
@@ -494,7 +512,7 @@ textfileopt() {
         M_TEXT_HOTKEYS=$(get_hotkeys "$FT_TEXT")
     fi
     menu_loop "File operations:" "$FT_TEXT" $M_TEXT_HOTKEYS
-    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
@@ -533,11 +551,14 @@ textfileopt() {
 function evaluate_command () {
     local menu_text=$1
     shift
-    local files="$@"
+    #bombs if spaces in files
+    #local files="$@"
+    local files
+    files="$@"
     local ret=0
 
     _cmd=$(get_command_for_title $menu_text)
-    pdebug "got command $_cmd "
+    pdebug "$0 got command ($_cmd) for ($menu_text)"
     if [[ -n $_cmd ]]; then
         ## check for variables that need to be prompted
         ##  -- I tried doing this in zsh but did not get too far!
@@ -561,7 +582,7 @@ function evaluate_command () {
         fi
     else
         # no translation just use the title as is
-        [[ -n $ZFM_VERBOSE ]] && pdebug "213: $menu_text $files"
+        [[ -n $ZFM_VERBOSE ]] && pdebug "213: $menu_text , $files"
         eval "$menu_text $files" && ret=0 || ret=1
     fi
     return $ret
@@ -581,7 +602,7 @@ zipfileopt() {
     fi
     menu_loop "File operations:" "$FT_ZIP" $M_ZIP_HOTKEYS
     #menu_loop "Zip operations:" "cmd view zless mv ${ZFM_RM_COMMAND} $ZFM_UNZIP_COMMAND" "cvl!#d"
-    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
+    [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned $menu_char, $menutext "
     #[[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "view") 
@@ -623,7 +644,7 @@ otherfileopt() {
     fi
     menu_loop "File operations:" "$FT_OTHER" $M_OTHER_HOTKEYS
     #menu_loop "Other operations:" "cmd open mv ${ZFM_RM_COMMAND} od stat vim $default_app" "co!#dsv"
-    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menu_text "
+    [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned $menu_char, $menu_text "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
@@ -686,10 +707,12 @@ function zfm_zip () {
 }
 function zfm_mv() {
     files=($@)
+    pinfo "Got $#files : $files"
     target=${target:-$HOME/}
     vared -p "Enter target: " target
     [[ -n $target ]] && { 
-        print $menu_text $files $target 
+        [[ -d $target ]] || perror "$target not a directory, mv likely to fail"
+        print "[$menu_text] [$files] $target"
         eval "$menu_text $files $target"
         zfm_refresh
     }
