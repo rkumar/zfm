@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-18 17:18
+#  Last update: 2013-01-18 23:49
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -1036,7 +1036,7 @@ function init_file_menus() {
     ## Applications used for text files -- currently only executable names in path
     ##  will be difficult to remove from both arrays, better to use a hash
     ##  However, a hash won't gaurantee positions in menu each time!
-    typeset -Ag FT_EXTNS
+    typeset -Ag FT_EXTNS FT_ALIAS FT_OPTIONS
     typeset -Ag FT_ALIAS
     typeset -Ag FT_ALL_APPS FT_ALL_HK
     ## THis way could get long and tedious for some types like zip and others
@@ -1052,19 +1052,27 @@ function init_file_menus() {
     FT_EXTNS[VIDEO]=" flv mp4 "    # ends with ~ not an extension
     FT_EXTNS[AUDIO]=" mp3 aiff aac ogg "    # ends with ~ not an extension
     FT_COMMON="open cmd mv trash auto"
-    FT_TXT="vim less archive tail head ${FT_COMMON}"
-    FT_OTHER="$FT_COMMON od stat vim"
-    FT_IMAGE="${FT_COMMON}"
-    FT_ZIP="view zless unzip zipgrep $FT_COMMON"
-    FT_SWAP="vim cmd"
+    
+    ## options displayed when you select multiple files
+    ##  Sadly, this is not taking into account filetypes selected, thatcould be helpful
+    FT_OPTIONS[MULTI]="zip grep gitadd gitcom vim vimdiff ${FT_COMMON}"
+
+    # These were variables like FT_TXT which allowded me to use an array inside if
+    # i wanted but complicated programs since i need to derive the name. Since I am
+    # using a string, might as well just use a hash, we can loop it then. 2013-01-18 - 19:27 
+    FT_OPTIONS[TXT]="vim less archive tail head ${FT_COMMON}"
+    FT_OPTIONS[OTHER]="$FT_COMMON od stat vim"
+    FT_OPTIONS[IMAGE]="${FT_COMMON}"
+    FT_OPTIONS[ZIP]="view zless unzip zipgrep $FT_COMMON"
+    FT_OPTIONS[SWAP]="vim cmd"
     ## in addiition to other commands for pdf's
-    FT_PDF="pdftohtml pdfgrep"
-    FT_VIDEO="open vlc mplayer ${FT_COMMON}"
-    FT_AUDIO="open mpg321 afplay ${FT_COMMON}"
-    FT_HTML="html2text w3m elvis sgrep"
+    FT_OPTIONS[PDF]="pdftohtml pdfgrep"
+    FT_OPTIONS[VIDEO]="open vlc mplayer ${FT_COMMON}"
+    FT_OPTIONS[AUDIO]="open mpg321 afplay ${FT_COMMON}"
+    FT_OPTIONS[HTML]="html2text w3m elvis sgrep"
     # now we need to define what constitutes markdown files such as MD besides MARKDOWN extension
-    FT_MARKDOWN="Markdown.pl multimarkdown"
-    FT_BIN="od bgrep strings"
+    FT_OPTIONS[MARKDOWN]="Markdown.pl w3m1 multimarkdown"
+    FT_OPTIONS[BIN]="od bgrep strings"
     ## -- how to specify a space, no mnemonic?
     #FT_TEXT=(v vim : cmd l less # mv D ${ZFM_RM_COMMAND} z archive t tail h head o open a auto)
     typeset -Ag COMMAND_HOTKEYS
@@ -1080,9 +1088,13 @@ function init_file_menus() {
     #COMMANDS[head]="head -25"
     #COMMANDS[tail]='tail -${lines} %%'
     COMMANDS[pdftohtml]='vim =(pdftohtml %%)'
+    COMMANDS[Markdown.pl]='Markdown.pl %% | $PAGER'
+    COMMANDS[w3m1]='w3m -T text/html =(Markdown.pl %%)'
+    COMMANDS[gitadd]='git add'
+    COMMANDS[gitcom]='git commit'
     # pdftohtml -stdout %% | links -stdin
     #FT_DEFAULT_PDF="pdftohtml"
-    export FT_TEXT FT_ZIP FT_OTHERS COMMANDS COMMAND_HOTKEYS
+    #export FT_TXT FT_ZIP FT_OTHERS COMMANDS COMMAND_HOTKEYS
 }
 function get_command_for_title() {
     print $COMMANDS[$1]
