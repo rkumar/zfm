@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-18 18:22
+# Last update: 2013-01-19 00:11
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -902,7 +902,7 @@ select_menu() {
 }
 mycommands() {
     source $ZFM_DIR/zfmcommands.zsh
-    IFS=$ZFM_MY_DELIM menu_loop "My Commands" "$ZFM_MY_COMMANDS${ZFM_MY_DELIM:-' '}cmd" "${ZFM_MY_MNEM}!"
+    IFS=$ZFM_MY_DELIM menu_loop "My Commands" "$ZFM_MY_COMMANDS${ZFM_MY_DELIM:-' '}cmd" "${ZFM_MY_MNEM}:"
     local zcmd z
 
     # check for internall defined function, removing spaces
