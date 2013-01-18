@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-12 20:28
+#  Last update: 2013-01-18 17:18
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -537,8 +537,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.0.4b"
-print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/12"
+ZFM_VERSION="0.1.0-alpha"
+print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/18"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -584,6 +584,7 @@ export ZFM_COLS ZFM_LINES
 export ZFM_STRING
 init_key_function_map
 init_menu_options
+init_file_menus
 # at this point read up users bindings
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
 aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
@@ -1021,6 +1022,70 @@ init_key_function_map() {
                     )
     zfm_bind_key "M-x" "zfm_views"
     zfm_bind_key "C-x" "zfm_views"
+}
+function init_file_menus() {
+    # edit these or override in ENV
+    ZFM_ZIP_COMMAND=${ZFM_ZIP_COMMAND:-'tar zcvf ${archive} %%'}
+    ZFM_RM_COMMAND=${ZFM_RM_COMMAND:-rmtrash}
+    ZFM_UNZIP_COMMAND=${ZFM_UNZIP_COMMAND:-dtrx}
+    #
+    ## Apps used for text files, will be used in menus on file selection
+    #FT_TEXT=(vim cmd less 'mv % ${target}' ${ZFM_RM_COMMAND} archive tail head open auto)
+    #FT_DEFAULT_PDF=("vim =(pdf2html %)" htmlize h)
+    #
+    ## Applications used for text files -- currently only executable names in path
+    ##  will be difficult to remove from both arrays, better to use a hash
+    ##  However, a hash won't gaurantee positions in menu each time!
+    typeset -Ag FT_EXTNS
+    typeset -Ag FT_ALIAS
+    typeset -Ag FT_ALL_APPS FT_ALL_HK
+    ## THis way could get long and tedious for some types like zip and others
+    FT_ALIAS[md]="MARKDOWN"
+    FT_ALIAS[htm]="HTML"
+    FT_ALIAS[zsh]="TXT"   # lets me jump there rather than go through extns  NOOO
+    FT_ALIAS[rb]="TXT"   # lets me jump there rather than go through extns
+    FT_EXTNS[TXT]=" txt rb pl py java js c cpp cc css mk h Makefile Rakefile gemspec zsh sh rc conf md markdown TXT html htm"
+    FT_EXTNS[ZIP]=" zip jar tgz bz2 arj gz Z "
+    FT_EXTNS[BIN]=" o a class pyc lib "
+    FT_EXTNS[SWAP]=" ~ swp "    # ends with ~ not an extension
+    FT_EXTNS[IMAGE]=" png jpg jpeg gif "    # ends with ~ not an extension
+    FT_EXTNS[VIDEO]=" flv mp4 "    # ends with ~ not an extension
+    FT_EXTNS[AUDIO]=" mp3 aiff aac ogg "    # ends with ~ not an extension
+    FT_COMMON="open cmd mv trash auto"
+    FT_TXT="vim less archive tail head ${FT_COMMON}"
+    FT_OTHER="$FT_COMMON od stat vim"
+    FT_IMAGE="${FT_COMMON}"
+    FT_ZIP="view zless unzip zipgrep $FT_COMMON"
+    FT_SWAP="vim cmd"
+    ## in addiition to other commands for pdf's
+    FT_PDF="pdftohtml pdfgrep"
+    FT_VIDEO="open vlc mplayer ${FT_COMMON}"
+    FT_AUDIO="open mpg321 afplay ${FT_COMMON}"
+    FT_HTML="html2text w3m elvis sgrep"
+    # now we need to define what constitutes markdown files such as MD besides MARKDOWN extension
+    FT_MARKDOWN="Markdown.pl multimarkdown"
+    FT_BIN="od bgrep strings"
+    ## -- how to specify a space, no mnemonic?
+    #FT_TEXT=(v vim : cmd l less # mv D ${ZFM_RM_COMMAND} z archive t tail h head o open a auto)
+    typeset -Ag COMMAND_HOTKEYS
+    COMMAND_HOTKEYS=(vim v cmd : mv \# trash D archive z zless l)
+
+    typeset -Ag COMMANDS
+    # remember that in such cases we have to check for file existing, overwriting etc
+    # so it is not advisable unless you call a file, in viewing cases it is fine
+    #COMMANDS[mv]='mv %% ${target}'
+    COMMANDS[trash]="$ZFM_RM_COMMAND"
+    COMMANDS[archive]="$ZFM_ZIP_COMMAND"
+    COMMANDS[unzip]="$ZFM_UNZIP_COMMAND"
+    #COMMANDS[head]="head -25"
+    #COMMANDS[tail]='tail -${lines} %%'
+    COMMANDS[pdftohtml]='vim =(pdftohtml %%)'
+    # pdftohtml -stdout %% | links -stdin
+    #FT_DEFAULT_PDF="pdftohtml"
+    export FT_TEXT FT_ZIP FT_OTHERS COMMANDS COMMAND_HOTKEYS
+}
+function get_command_for_title() {
+    print $COMMANDS[$1]
 }
 zfm_bind_key() {
     # should we check for existing and refuse ?
