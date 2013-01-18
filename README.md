@@ -135,6 +135,14 @@ files to interface with autojump or whatever other utility you use. I'd rather u
 
 A summary of version-wise changes. 
 
+###0.1.0###
+
+    * Putting filetypes in datastructures along with menu options so user can modify or override
+    Similarly, items can be defined to map to a command or set of commands which can take user
+    input through interpolation.
+
+    This is alpha, changes a lot and is being tested out. This was required since users will have different prefs of what executables or commands they like to run with which extensions.
+
 ###0.0.2###
 
     Too many small changes to document. You can see the git log or tags listing for details.
