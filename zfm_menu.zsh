@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-09 18:49
+#  Last update: 2013-01-18 17:28
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -19,6 +19,13 @@ export COLOR_RED="\\033[1;31m"
 export COLOR_GREEN="\\033[1;32m"
 export COLOR_BOLD="\\033[1m"
 export COLOR_BOLDOFF="\\033[22m"
+# edit these or override in ENV
+ZFM_ZIP_COMMAND=${ZFM_ZIP_COMMAND:-tar zcvf}
+ZFM_RM_COMMAND=${ZFM_RM_COMMAND:-rmtrash}
+ZFM_UNZIP_COMMAND=${ZFM_UNZIP_COMMAND:-dtrx}
+# stores autoaction per filetype
+typeset -A ZFM_AUTO_ACTION
+
 #  Print error to stderr so it doesn't mingle with output of method
 perror(){
     print "ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
@@ -54,6 +61,7 @@ print_title() {
     print "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
 }
 
+# check if being used else delete
 array2lines() {
     ZFM_NEWLINE_ARRAY=("${(@f)$(print -rl -- $@)}")
 }
@@ -179,7 +187,129 @@ do
     fi
 done
 }
+# new
 fileopt() {
+    local name="$1"
+    [[ -z $name ]] && return
+    #local type="$(filetype $name)"
+    ## if no extension then do filetype check
+    local -U apps
+    extn=$name:e
+    if [[ -n $extn ]]; then
+        uextn=${(U)extn}
+        apps=$FT_ALL_APPS[$extn]  # check FT_ALL_APPS[pdf]
+        ## if we have not already calculated apps for extension then do so
+        if [[ -z "$apps" ]]; then
+            ## check for specific apps for this file extn
+            local x="FT_$uextn"  # check FT_PDF
+            pdebug "checking $x : ${(P)x}"
+            apps=( ${(P)x} )
+            if [[ -z "$apps" ]]; then
+                oextn=$FT_ALIAS[$extn]  # htm will translate to html or MARKDOWN to md
+                pdebug "checking FT_ALIAS with $extn : got $oextn"
+                [[ -n $oextn ]] && { apps=( ${(P)oextn} ) }
+            fi
+            # repeated below in else
+            ## determine filetype and general apps for it
+            file_type="$(filetype $name)"
+            file_type=${file_type:-other}
+            x="FT_${(U)file_type}"  # check FT_PDF
+            pdebug "checking after filetype $x"
+            apps+=( ${(P)x} ) 
+
+            ## store for that extension so we can quickly reuse
+            ##  It could have been for file type but then we would have to calc that all over
+            FT_ALL_APPS[$extn]=$apps
+            # calculate hotkeys
+            hotkeys=$(get_hotkeys "$apps")
+            FT_ALL_HK[$extn]=$hotkeys
+        else
+            hotkeys=$FT_ALL_HK[$extn]
+        fi
+    else
+        # repeated from above
+        file_type="$(filetype $name)"
+        file_type=${file_type:-other}
+        x="FT_${(U)file_type}"  # check FT_TXT or FT_ZIP etc
+        pdebug "checking after filetype $x"
+        apps+=( ${(P)x} ) 
+        FT_ALL_APPS[$extn]=$apps
+        # calculate hotkeys
+        hotkeys=$(get_hotkeys "$apps")
+        FT_ALL_HK[$extn]=$hotkeys
+    fi
+    [[ -z $file_type ]] && { 
+        # this is only required for checking about auto-actions, can we avoid if none asked for.
+        file_type="$(filetype $name)"
+        file_type=${file_type:-other}
+    }
+    # if user has requested some action to be done automatically on selection of a file of some type
+    uft=${(U)file_type}
+    local act=$ZFM_AUTO_ACTION[$uft]
+    if [[ -n "${act}" ]]; then
+        pinfo "got $act for $_act ($uft)"
+        name=${name:q}
+        eval "${act} $name"
+        [[ $act == $EDITOR ]] && { last_viewed_files=$name }
+        return
+    else
+        pinfo "got no action for $uft"
+        print -rl -- ${(k)ZFM_AUTO_ACTION}
+    fi
+    print_title "File summary for $name:"
+    file $name
+    ls -lh $name
+    [[ -f "$name" ]] || { perror "$name not found."; pause; return }
+    menu_loop "File Operations:" $apps $hotkeys
+    [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
+    [[ "$menu_char" = "!" ]] && menu_text="cmd"
+    eval_menu_text $menu_text $name
+    # we can store def app in a hash so not queried each time
+    #default_app=$(alias -s | grep $extn | cut -f2 -d= )
+    #[[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
+}
+function eval_menu_text () {
+    local menu_text=$1
+    shift
+    local files="$@"
+    files=${files:q}
+    local ret=0
+    case $menu_text in
+        "cmd")
+            zfm_cmd $files
+            ;;
+        "auto")
+            ## Now we meed to factor in file type
+            file_type="$(filetype $files)"
+            file_type=${file_type:-other}
+            x="${(U)file_type}"
+            # added this 2012-12-26 - 01:11 
+            command=${command:-"$EDITOR"}
+            vared -c -p "Enter command to automatically execute for $file_type files: " command
+            ZFM_AUTO_ACTION[$x]="$command"
+            eval "$command $files"
+            [[ $command == $EDITOR ]] && { last_viewed_files=$files }
+            ;;
+        "")
+            [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
+            perror "got nothing in fileopt $menu_char. Coud be programmer error or key needs to be handled"
+            }
+            ;;
+        "mv") 
+            zfm_mv $files
+            ;;
+        "archive") 
+            zfm_zip $files
+            ;;
+        *)
+            # now again this needs to be done for all cases so we can't have such
+            # a long loop repeated everywhere
+            evaluate_command "$menu_text" $files
+            [  $? -eq 0 ] && zfm_refresh
+            ;;
+    esac
+}
+origfileopt() {
     local name="$1"
     [[ -z $name ]] && return
     local type="$(filetype $name)"
@@ -189,7 +319,7 @@ fileopt() {
     [[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
     pdebug "$0 got $type for $name"
     case $type in
-        "text")
+        "text"|"txt")
             #[[ -n "$ZFM_AUTO_TEXT_ACTION" ]] && "$ZFM_AUTO_TEXT_ACTION" $name || textfileopt $name
             if [[ -n "$ZFM_AUTO_TEXT_ACTION" ]]; then
                 "$ZFM_AUTO_TEXT_ACTION" $name
@@ -234,7 +364,7 @@ fileopt_noauto() {
     [[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
     pdebug "$0 got $type for $name"
     case $type in
-        "text")
+        "text"|"txt")
             textfileopt $name $default_app
             ;;
         "zip")
@@ -245,52 +375,51 @@ fileopt_noauto() {
             ;;
     esac
 }
-#  check file type based on output of file command and return a few
+#  check file type based on output of file command and return a filetype or blank
 filetype(){
     local name="$1"
     [[ -z $name ]] && return
     local type=""
     extn=$name:e
+    uextn=${(U)extn}
     pdebug "extn: $extn"
-    case $extn in
-        "txt"|"c"|"rb"|"pl"|"py"|"sh"|"zsh"|"md"|"css"|"html"|"java"|"conf")
-            type="text"
-            ;;
-        "jpg"|"gif"|"png")
-            type="image"
-            ;;
-        "pdf"|"ps"|"doc")
-            # XXX what if user has pdf2html or antiword etc installed
-            type="other"
-            ;;
-        "tgz"|"zip"|"bz2"|"Z"|"z")
-            type="zip"
-            ;;
-    esac
+
+    if [[ -n "$extn" ]]; then
+        ## don't go in if no extension
+        #
+        ## loop through each definition list and search for our extn
+        for ff in ${(k)FT_EXTNS} ; do
+            v=$FT_EXTNS[$ff]
+            pdebug "$ff in ft_extns will search $v"
+            ## we still need to put a spce around extn otherwise small extns like c and a will match wrongly
+            local spextn=" $extn "
+            if [[ $v[(i)$spextn] -le $#v ]]; then
+                ## v is in uppercase
+                type=${ff:l} # lower case
+                pdebug "filetype got $type from array"
+                break
+            fi
+        done
+    fi
     [[ -n "$type" ]] && { print "$type" && return }
     if [[ "$name" =~ "^..*rc$" ]]; then
         pdebug "inside check for rc file" 
         type="text"
+        type="txt"
         print "$type"
         return
     fi
     str="$(file $name)"
-    local ix=$str[(i)zip]
-    if [[ $ix -le $#str ]]; then
-        type="zip"
-    else
-        local ix=$str[(i)text]
+    # string search for zip
+    ftpatts=(zip text video audio image)
+    for _p in $ftpatts ; do
+        ix=$str[(i)$_p]
         if [[ $ix -le $#str ]]; then
-            type="text"
-        else
-            local ix=$str[(i)image]
-            if [[ $ix -le $#str ]]; then
-                type="image"
-            else
-
-            fi
+            type=$_p
+            break
         fi
-    fi
+    done
+    [[ $type == "text" ]] && type="txt"
     print $type
 }
 # WARNING XXX some of these commands will fail is a file has a space in it
@@ -306,42 +435,23 @@ multifileopt() {
     print_title "File summary for $#files files:"
     # eval otherwise files with spaces will cause an error
     eval "ls -lh $files"
-    IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,rmtrash,git add,git com,vim,vimdiff" "zcg!#a vd"
+    IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,${ZFM_RM_COMMAND},git add,git com,vim,vimdiff" "zcg!#a vd"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            #[[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
-            command=${command:-""}
-            postcommand=${postcommand:-""}
-            vared -p "Enter command (first part) : " command
-            vared -p "Enter command (second part): " postcommand
-            print "$command $files $postcommand"
-            eval "$command $files $postcommand"
+            zfm_cmd $files
             ;;
         "")
             [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in fileopt $menu_char. Could be programmer error or key needs to be handled"
+                perror "got nothing in fileopt $menu_char. Could be programmer error or key needs to be handled"
             }
             ;;
         "mv") 
-            target=${target:-$HOME/}
-            vared -p "Enter target: " target
-            [[ -n $target ]] && { 
-                print $menu_text $files $target 
-                eval "$menu_text $files $target"
-                zfm_refresh
-            }
+            zfm_mv $files
             ;;
         "zip") 
-            ddate=$(date +%Y%m%d_%H%M)
-            local arch="archive-${ddate}.tgz"
-            #echo -n "Enter target: [$arch]"
-            #read target
-            vared -p "Enter zip file name: " arch
-            #[[ -z $target ]] && target="$arch"
-            # if you don't check the first file will get overwritten with the tar file
-            [[ -n "$arch" ]] && eval "tar zcvf $arch $files" && zfm_refresh
+            zfm_zip $files
             ;;
         "grep")
             greppatt=${greppatt:-""}
@@ -360,7 +470,7 @@ multifileopt() {
 
             #[[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text $files"
             eval "$menu_text $files"
-            [[ "$menu_text" == "rmtrash" ]] && zfm_refresh
+            [[ "$menu_text" == "${ZFM_RM_COMMAND}" ]] && zfm_refresh
             ;;
     esac
 }
@@ -373,17 +483,22 @@ textfileopt() {
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     files=${files:q}
+    # use ! for command even if not shown since user may replace menu with own commands
     #menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
-    menu_loop "File operations:" "vim cmd less mv rmtrash archive tail head open auto $default_app" "vcl!#zthoa"
+    #menu_loop "File operations:" "vim cmd less mv ${ZFM_RM_COMMAND} archive tail head open auto $default_app" "vcl!#zthoa"
+    #M_MENU_TEXT=${M_MENU_TEXT:-"vim cmd less mv ${ZFM_RM_COMMAND} archive tail head open auto $default_app" 
+    # based on text options we generate the hotkeys, however
+    # this needs to be in all menu_loop calls so it has to be in one place
+    # yet i don;t want to do this each time inside menu_loop. i want to do it once
+    if [[ -z "$M_TEXT_HOTKEYS" ]]; then
+        M_TEXT_HOTKEYS=$(get_hotkeys "$FT_TEXT")
+    fi
+    menu_loop "File operations:" "$FT_TEXT" $M_TEXT_HOTKEYS
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            #[[ -n $ZFM_VERBOSE ]] && perror "PATH is ${PATH}"
-            command=${command:-""}
-            vared -p "Enter command: " command
-            eval "$command $files" && zfm_refresh
-            [[ $command == $EDITOR ]] && { last_viewed_files=$files }
+            zfm_cmd $files
             ;;
         "auto")
             # added this 2012-12-26 - 01:11 
@@ -399,28 +514,57 @@ textfileopt() {
             }
             ;;
         "mv") 
-            target=${target:-$HOME/}
-            vared -p "Enter target: " target
-            [[ -n $target ]] && { 
-            print $menu_text $files $target 
-            eval "$menu_text $files $target" && zfm_refresh
-            }
+            zfm_mv $files
             ;;
         "archive") 
-            ddate=$(date +%Y%m%d)
-            local arch="archive-${ddate}.tgz"
-            print -n "Enter target: [$arch]"
-            read target
-            [[ -z $target ]] && target="$arch"
-            # eval required since strings quoted above
-            eval "tar zcvf $arch $files" && zfm_refresh
+            zfm_zip $files
             ;;
         *)
-
-            [[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text $files"
-            eval "$menu_text $files" && zfm_refresh
+            # now again this needs to be done for all cases so we can't have such
+            # a long loop repeated everywhere
+            evaluate_command "$menu_text" $files
+            [  $? -eq 0 ] && zfm_refresh
             ;;
     esac
+}
+## 
+## refresh should be done in caller if stat is 0
+## need to check for any variables that need to be prompted
+function evaluate_command () {
+    local menu_text=$1
+    shift
+    local files="$@"
+    local ret=0
+
+    _cmd=$(get_command_for_title $menu_text)
+    pdebug "got command $_cmd "
+    if [[ -n $_cmd ]]; then
+        ## check for variables that need to be prompted
+        ##  -- I tried doing this in zsh but did not get too far!
+        vars=( $( print $_cmd | grep -o '${[^}]*}' ) )
+        for var in $vars ; do
+            vv=$(print $var | tr -d '${}' )
+            vared -c -p "Enter $vv:" $vv
+            _cmd=${(S)_cmd//$var/${(P)vv}}
+            pdebug "subst: $_cmd"
+        done
+
+        ## check for file replacement marker
+        if [[ $_cmd = *%%* ]]; then
+            _cmd=${(S)_cmd//\%\%/${files}}
+            pdebug "replaced files command $_cmd "
+            eval "$_cmd" && ret=0 || ret=1
+        else
+            ## no marker just send file names as argument to command
+            pdebug "passing files as args $_cmd "
+            eval "$_cmd $files" && ret=0 || ret=1
+        fi
+    else
+        # no translation just use the title as is
+        [[ -n $ZFM_VERBOSE ]] && pdebug "213: $menu_text $files"
+        eval "$menu_text $files" && ret=0 || ret=1
+    fi
+    return $ret
 }
 zipfileopt() {
     # TODO allow user to add a string in ENV for other executables which we can add here
@@ -429,10 +573,14 @@ zipfileopt() {
     print_title "File summary for $files:"
     file $files
     ls -lh $files
-    [[ -f "$files" ]] || { perror "$files not found."; pause; return }
+    [[ -f "$files" ]] || { perror "$files not found."; pause; return 1 }
     tar -ztvf $files | head -n 20
     files=${files:q} # required for eval
-    menu_loop "Zip operations:" "cmd view zless mv rmtrash dtrx" "cvl!#d"
+    if [[ -z "$M_ZIP_HOTKEYS" ]]; then
+        M_ZIP_HOTKEYS=$(get_hotkeys "$FT_ZIP")
+    fi
+    menu_loop "File operations:" "$FT_ZIP" $M_ZIP_HOTKEYS
+    #menu_loop "Zip operations:" "cmd view zless mv ${ZFM_RM_COMMAND} $ZFM_UNZIP_COMMAND" "cvl!#d"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menutext "
     #[[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
@@ -440,10 +588,7 @@ zipfileopt() {
             eval "tar ztvf $files"
             ;;
         "cmd")
-            [[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
-            command=${command:-""}
-            vared -p "Enter command: " command
-            eval "$command $files"
+            zfm_cmd $files
             ;;
         "")
             [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
@@ -451,17 +596,13 @@ zipfileopt() {
             }
             ;;
         "mv") 
-            target=${target:-$HOME/}
-            vared -p "Enter target: " target
-            [[ -n $target ]] && { 
-                print $menu_text $files $target 
-                eval "$menu_text $files $target" && zfm_refresh
-                psuccess "Please use refresh key to rescan files"
-            }
+            zfm_mv $files
             ;;
         *)
-            eval "$menu_text $files"
-            [[ "$menu_text" == "rmtrash" ]] && zfm_refresh
+            evaluate_command "$menu_text" $files
+            [  $? -eq 0 ] && zfm_refresh
+            #eval "$menu_text $files"
+            #[[ "$menu_text" == "${ZFM_RM_COMMAND}" ]] && zfm_refresh
             ;;
     esac
 }
@@ -477,17 +618,16 @@ otherfileopt() {
     ls -lh $files
     [[ -f "$files" ]] || { perror "$files not found."; pause; return }
     files=${files:q} # required for eval
-    menu_loop "Other operations:" "cmd open mv rmtrash od stat vim $default_app" "co!#dsv"
+    if [[ -z "$M_OTHER_HOTKEYS" ]]; then
+        M_OTHER_HOTKEYS=$(get_hotkeys "$FT_OTHER")
+    fi
+    menu_loop "File operations:" "$FT_OTHER" $M_OTHER_HOTKEYS
+    #menu_loop "Other operations:" "cmd open mv ${ZFM_RM_COMMAND} od stat vim $default_app" "co!#dsv"
     [[ -n $ZFM_VERBOSE ]] && pdebug "returned $menu_char, $menu_text "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
         "cmd")
-            [[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
-            command=${command:-""}
-            vared -p "Enter command: " command
-            print "executing: $command $files"
-            eval "$command $files"
-            [[ $command == $EDITOR ]] && { last_viewed_files=$files }
+            zfm_cmd $files
             ;;
         "")
             [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
@@ -495,20 +635,16 @@ otherfileopt() {
             }
             ;;
         "mv") 
-            target=${target:-$HOME/}
-            vared -p "Enter target: " target
-            [[ -n $target ]] && { 
-                print $menu_text $files $target 
-                eval "$menu_text $files $target" && zfm_refresh
-            }
+            zfm_mv $files
             ;;
         "vim")
-            eval "$EDITOR $files"
-            last_viewed_files=$files
+            zfm_edit $files
             ;;
         *)
-            eval "$menu_text $files"
-            [[ "$menu_text" == "rmtrash" ]] && zfm_refresh
+            evaluate_command "$menu_text" $files
+            [  $? -eq 0 ] && zfm_refresh
+            #eval "$menu_text $files"
+            #[[ "$menu_text" == "${ZFM_RM_COMMAND}" ]] && zfm_refresh
             ;;
     esac
 }
@@ -523,4 +659,60 @@ function print_hash () {
        print -n "${COLOR_BOLD}$h[i]${COLOR_DEFAULT} ${COLOR_GREEN}$h[i+1] ${COLOR_DEFAULT}  "
    done
    print
+}
+function zfm_cmd () {
+    files=($@)
+    #[[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
+    command=${command:-""}
+    postcommand=${postcommand:-""}
+    vared -p "Enter command (first part) : " command
+    [[ -z "$command" ]] && { perror "Command blank. No action taken" ; return }
+    vared -p "Enter command (second part): " postcommand
+    print "$command $files $postcommand"
+    eval "$command $files $postcommand" && zfm_refresh
+    [[ $command == $EDITOR ]] && { last_viewed_files=$files }
+}
+function zfm_zip () {
+    files=($@)
+    ddate=$(date +%Y%m%d_%H%M)
+    local arch="archive-${ddate}.tgz"
+    vared -p "Enter zip file name: " arch
+    # if you don't check the first file will get overwritten with the tar file
+    if [[ -e "$arch" ]]; then
+        perror "$file exists, cannot overwrite"
+        return
+    fi
+    [[ -n "$arch" ]] && eval "${ZFM_ZIP_COMMAND} $arch $files" && zfm_refresh
+}
+function zfm_mv() {
+    files=($@)
+    target=${target:-$HOME/}
+    vared -p "Enter target: " target
+    [[ -n $target ]] && { 
+        print $menu_text $files $target 
+        eval "$menu_text $files $target"
+        zfm_refresh
+    }
+}
+function zfm_edit () {
+    files=($@)
+    eval "$EDITOR $files"
+    last_viewed_files=$files
+}
+## convert menu options or titles to a string of hotkeys formenu_loop
+function get_hotkeys () {
+    local options="$@"
+    local title ii
+    local opts
+    local str=""
+    opts=(${=options})
+    for title in $opts; do
+        ii=$COMMAND_HOTKEYS[$title]
+        if [[ -n "$ii" ]]; then
+            str+=$ii
+        else
+            str+=$title[1]
+        fi
+    done
+    print $str
 }
