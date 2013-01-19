@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-19 00:45
+#  Last update: 2013-01-19 20:43
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -28,37 +28,37 @@ typeset -A ZFM_AUTO_ACTION
 
 #  Print error to stderr so it doesn't mingle with output of method
 perror(){
-    print "ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    print -- "ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
 }
 #  Print debug statement to stderr so it doesn't mingle with output of method
 pdebug(){
-    [[ -n "$ZFM_VERBOSE" ]] && print "DEBUG: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    [[ -n "$ZFM_VERBOSE" ]] && print -- "DEBUG: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
 }
 psuccess(){
-    print "${COLOR_GREEN}$@${COLOR_DEFAULT}" 1>&2
+    print -- "${COLOR_GREEN}$@${COLOR_DEFAULT}" 1>&2
 }
 
 #  Print info statement to stderr so it doesn't mingle with output of method
 pinfo(){
-    print "INFO: $@" 1>&2
+    print -- "INFO: $@" 1>&2
 }
 #  Print something bold to stderr
 pbold() {
-    print "${COLOR_BOLD}$*${COLOR_DEFAULT}" 1>&2
+    print -- "${COLOR_BOLD}$*${COLOR_DEFAULT}" 1>&2
 }
 #  Pause and get a single key
 pause() {
     #local prompt=${1:"Press a key ..."}
     local prompt="Press a key ..."
     local kk
-    print "$prompt"
-    read -k -r kk
+    print -- "$prompt"
+    read -k kk
     print
 }
 #  Print a title in bold
 print_title() {
     local title="$@"
-    print "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
+    print -- "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
 }
 
 # check if being used else delete
@@ -85,14 +85,20 @@ print_menu() {
     do
         sub=$c
         [[ $c -gt 9 ]] && { sub=" " }
-        print "$sub ${mnem[$c]})  $f"
+        desc=
+        if [[ -z "$M_SUPPRESS_PRINT_COMMAND" ]]; then
+            desc="$COMMANDS[$f]"
+            [[ -n "$desc" ]] && desc="==>  $desc"
+        fi
+        # TODO improve by using printf since we are putting the desc
+        print -- "$sub ${mnem[$c]})  $f	    $desc"
         let c++
     done
     # show only a max of 9 in text
     (( c-- ))
     (( c > 9 )) && c=9
     print -n "Enter choice 1-${c} (q=quit): "
-    read -r -k menu_char
+    read -k menu_char
 }
 
 #  Display menu, hotkeys, convert selected char to actual selection
@@ -117,7 +123,8 @@ do
     #perror "key is 1 $menu_char"
     # next line crashes program on ESC
     [[ $menu_char = "" ]] && { perror "Got a ESC XXX"; menu_char="q" }
-    menu_char=$(print "$menu_char" | tr -d '[\n\r\t ]')
+    ## the -- is required else a hyphen entered is swallowed
+    menu_char=$(print -- "$menu_char" | tr -d '[\n\r\t ]')
     pdebug "$0 : key is :: $menu_char"
     #[[ -z $menu_char ]] && menu_char="$default"
     if [[ -z $menu_char ]] ;
@@ -130,6 +137,7 @@ do
         # we can release it. The comma is used as it is the back key
         # hash '#' needs to be escaped to be detected
         [[ "$menu_char" =~ [q,] ]] && { return 1 }
+        [[ "$menu_char" =~ [-+] ]] && { return 0 }
         print ""
         if [[ "$menu_char" == [1-9] ]]; then
             var="${myopts[$menu_char]}" # 2>/dev/null
@@ -173,7 +181,7 @@ do
             read -q hitenter
             print
         elif [[ -z "$var" ]] ; then
-            perror "Wrong option $menu_char, q - quit, ? - options"
+            perror "Wrong option $menu_char. q - quit, ? - options"
         elif [[ -n "$var" ]] ; then
             pdebug "$1 returning $var"
             menu_text=$var
@@ -273,7 +281,9 @@ fileopt() {
     pdebug "$0 before ML : $apps"
     menu_loop "File Operations:" "$apps" $hotkeys
     [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned 270 $menu_char, $menutext "
-    [[ "$menu_char" = "!" ]] && menu_text="cmd"
+    [[ "$menu_char" =~ [!:] ]] && menu_text="cmd"   # XXX we've moved to ':'
+    [[ "$menu_char" = '+' ]] && { zfm_add_option "$name" "$extn" }
+    [[ "$menu_char" = '-' ]] && { zfm_rem_option "$name" "$extn" }
     [[ -z "$menu_text" ]] && { return 1; } # q pressed
     eval_menu_text "$menu_text" $name
     pause
@@ -322,6 +332,72 @@ function eval_menu_text () {
             [  $? -eq 0 ] && zfm_refresh
             ;;
     esac
+}
+## add an option to menu for existing extension
+#
+function zfm_add_option () {
+    local file="$1"
+    local extn="$2"
+    vared -c -p "New option to add: " newoption
+    [[ -z "$newoption" ]] && { return 1 }
+    print "Current hotkeys are: $FT_ALL_HK[$extn]"
+    print "Enter hotkey for this command: "
+    read -k hk
+    COMMAND_HOTKEYS[$newoption]=$hk
+    print
+    vared -c -p "Command to execute for above: " newcommand
+    #FT_ALL_APPS[$extn]+=(newoption)
+    local apps=$FT_ALL_APPS[$extn]
+    apps+=($newoption)
+    FT_ALL_APPS[$extn]=$apps
+    # TODO XXX hotkeys needs to be regen
+    # need to ask for a hotkey if user wants
+    hotkeys=$(get_hotkeys "$apps")
+    FT_ALL_HK[$extn]=$hotkeys
+
+    [[ -n "$newcommand" ]] && { COMMANDS[$newoption]=$newcommand }
+}
+## remove an option from menu for existing extension
+#
+function zfm_rem_option () {
+    local file="$1"
+    local extn="$2"
+    vared -c -p "Option to delete: " newoption
+    [[ -z "$newoption" ]] && { return 1 }
+    local apps
+    apps=$FT_ALL_APPS[$extn]
+    apps=("${(s/ /)apps}")  # convert to array
+    index=$apps[(i)$newoption]
+    if [[ $index -gt $#apps ]]; then
+        perror "$newoption not found"
+        pdebug "Options are $apps"
+        pdebug "Index is $index, $#apps"
+    else
+        apps[$index]=()
+        pdebug "Options are now $apps"
+        FT_ALL_APPS[$extn]=$apps
+        hotkeys=$(get_hotkeys "$apps")
+        FT_ALL_HK[$extn]=$hotkeys
+    fi
+}
+## add or change an existing command 
+#
+function zfm_change_command () {
+    clear
+    print
+    pbold "File related commands are : "
+    print
+    for key in ${(k)COMMANDS}; do
+        print "$key : ${COMMANDS[$key]}"
+    done
+    print
+    print "Enter key to change (or add): "
+    read key
+    [[ -z $key ]] && return 1
+    command=$COMMANDS[$key]
+    vared -p "Edit command: " command
+    COMMANDS[$key]=$command
+    pbold "$key is ${COMMANDS[$key]}"
 }
 origfileopt() {
     local name="$1"
