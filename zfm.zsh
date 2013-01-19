@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-18 23:49
+#  Last update: 2013-01-20 01:02
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -537,8 +537,8 @@ EndHelp
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.0-alpha"
-print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/18"
+ZFM_VERSION="0.1.0-b"
+print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/19"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -1022,6 +1022,9 @@ init_key_function_map() {
                     )
     zfm_bind_key "M-x" "zfm_views"
     zfm_bind_key "C-x" "zfm_views"
+    zfm_bind_key "M-o" "settingsmenu"
+    zfm_bind_key "M-s" "sortoptions"
+    zfm_bind_key "M-f" "filteroptions"
 }
 function init_file_menus() {
     # edit these or override in ENV
@@ -1060,7 +1063,8 @@ function init_file_menus() {
     # These were variables like FT_TXT which allowded me to use an array inside if
     # i wanted but complicated programs since i need to derive the name. Since I am
     # using a string, might as well just use a hash, we can loop it then. 2013-01-18 - 19:27 
-    FT_OPTIONS[TXT]="vim less archive tail head ${FT_COMMON}"
+    PAGER=${PAGER:-less}
+    FT_OPTIONS[TXT]="vim $PAGER archive tail head ${FT_COMMON}"
     FT_OPTIONS[OTHER]="$FT_COMMON od stat vim"
     FT_OPTIONS[IMAGE]="${FT_COMMON}"
     FT_OPTIONS[ZIP]="view zless unzip zipgrep $FT_COMMON"
