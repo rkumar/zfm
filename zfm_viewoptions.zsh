@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-19 00:11
+# Last update: 2013-01-20 01:01
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -592,7 +592,7 @@ color_toggle() {
 }
 settingsmenu(){
     settings_menu_options=("i) Full Indexing toggle" "c) Case toggle" "h) Hidden files toggle" "p) Paging key" "4) Dupe check" \
-        "a) Auto select action" "A) Toggle Auto Action" "x) Approximate match toggle" "C) Color toggle")
+        "a) Auto select action" "A) Toggle Auto Action" "x) Approximate match toggle" "C) Color toggle" "_) Redefine command")
     typeset -A settings_menu_command_hash
     settings_menu_command_hash=(
         i full_indexing_toggle
@@ -604,6 +604,7 @@ settingsmenu(){
         a define_auto_action
         A toggle_auto_view
         C color_toggle
+        _ zfm_change_command
         )
     select_menu "Options" settings_menu_options settings_menu_command_hash
     if [  $? -ne 0 ]; then
@@ -793,7 +794,8 @@ zfm_views() {
 m_dirstack() {
     if [[ -x "${ZFM_DIR}/zfmdirs" ]]; then
         #files=$(listdir.pl $(${ZFM_DIR}/zfmdirs) | nl)
-        files=$(print -rl -- $(${ZFM_DIR}/zfmdirs))
+        #files=$(print -rl -- $(${ZFM_DIR}/zfmdirs))
+        files=("${(@f)$(${ZFM_DIR}/zfmdirs )}")  # reqd to prevent wrapping on spaces - ugh
     else
         # this only works when this file is sourced, otherwise relies on current session
         # not what is in your zshrc
@@ -813,6 +815,7 @@ m_child_dirs() {
     [[ $ff -eq 0 ]] && { perror "No child dirs." ; return }
     if [[ $ff -gt 0 ]]; then
         # only send dir name, not details.
+        # as of 2013-01-20 - 00:29 this works fine if dirs has spaces in them
         files=$(eval "print -rl -- ${M_REC_STRING}*(/)" )
     #else
         #files=$(eval "listdir.pl --file-type ${M_REC_STRING}*(/)" | nl)
@@ -957,7 +960,11 @@ numbernine() {
             #print -r -- "$sub)${tabd}$line"
         fi
         if [[ $selct -gt 0 ]]; then
-            if [[ $deleted[(i)$line] -gt $selct ]]; then
+            # how was this working earlier ? line contains full text wherease deleted only 
+            # has file name XXX added split of line 2013-01-20 - 01:01 
+            selected_row=("${(s/	/)line}")
+            selected_file=$selected_row[-1]
+            if [[ $deleted[(i)$selected_file] -gt $selct ]]; then
                 #print -r -- "$sub) $line"
                 csel=
                 cres=
