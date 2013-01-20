@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-20 21:02
+#  Last update: 2013-01-20 22:17
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -114,7 +114,7 @@ list_printer() {
         [[ $fin -gt $tot ]] && fin=$tot
         local sortorder=""
         [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
-        (( cursor == -1 )) && cursor=$tot
+        (( cursor == -1 || cursor > $tot )) && cursor=$tot
         print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}  "
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " " ""  ) | tr -s "" |  tr "" " " 
@@ -1213,6 +1213,10 @@ function goto_dir() {
     selection=${(Q)ppath}  # in case space got quoted, -d etc will all give errors
     patt="" # 2012-12-26 - 00:54 
 }
+
+# -- trying out on 2013-01-20 - 22:15 
+## we simulate a cursor or current line with arrow keys
+##  so that user can press ENTER and get the fileopt menu for that file
 function cursor_down () {
     let cursor++
 }
