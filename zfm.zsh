@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-20 01:02
+#  Last update: 2013-01-20 17:34
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -289,12 +289,15 @@ list_printer() {
                 # are too many options)
                 print "Siblings of this dir:"
                 menu_loop "Siblings" "$(print ${PWD:h}/*(/) )"
+                [[ -z "$menu_text" ]] && break
                 print "selected $menu_text"
                 $ZFM_CD_COMMAND $menu_text
                 post_cd
                 #patt="" # 2012-12-26 - 00:54 
                 #filterstr=${filterstr:-M}
                 #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+                #
+                ## break means you will have an unhandled key in error raised.
                 break
                 ;;
             $ZFM_CD_OLD_NEW_KEY)
@@ -305,6 +308,7 @@ list_printer() {
                 print "Part to change :"
                 parts=(${(s:/:)PWD})
                 menu_loop "Parts" "$(print $parts )"
+                [[ -z "$menu_text" ]] && break
                 pbold "Replace $menu_text"
                 parts[$menu_index]='*'
                 local newpath pp
@@ -528,7 +532,13 @@ print_help_keys() {
     Most keys are likely to change after getting feedback, the ** ones definitely will
 
 EndHelp
-    pause
+pause
+for key in ${(k)zfm_keymap} ; do
+    print $key  : $zfm_keymap[$key]
+done
+#pbold "Key mappings"
+print
+pause
 }
 
 # utility }
@@ -621,11 +631,16 @@ param=$(print -rl -- *(M))
                 $ZFM_FFIND_KEY)
                     # find files with string in filename, uses zsh (ffind)
                         searchpattern=${searchpattern:-""}
-                        vared -p "Filename to search for (enter 3 characters): " searchpattern
+                        vared -p "Filename to search for (enter > 2 characters): " searchpattern
                         # recurse and match filename only
                         #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
                         # find is more optimized acco to zsh users guide
+                        # this won't work if user puts * in pattern.
                         files=$( print -rl -- **/*$searchpattern*(.) )
+                        if [[ $#files -eq 0 ]]; then
+                            perror "trying with find"
+                            files=$( find . -iname $searchpattern )
+                        fi
                         if [[ $#files -gt 0 ]]; then
                             files=$( print $files | xargs ls -t )
                             ZFM_FUZZY_MATCH_DIR="1" fuzzyselectrow $files
@@ -1021,7 +1036,7 @@ init_key_function_map() {
                     toggle_options_menu
                     )
     zfm_bind_key "M-x" "zfm_views"
-    zfm_bind_key "C-x" "zfm_views"
+    #zfm_bind_key "C-x" "zfm_views"
     zfm_bind_key "M-o" "settingsmenu"
     zfm_bind_key "M-s" "sortoptions"
     zfm_bind_key "M-f" "filteroptions"
@@ -1053,7 +1068,7 @@ function init_file_menus() {
     FT_EXTNS[SWAP]=" ~ swp "    # ends with ~ not an extension
     FT_EXTNS[IMAGE]=" png jpg jpeg gif "    # ends with ~ not an extension
     FT_EXTNS[VIDEO]=" flv mp4 "    # ends with ~ not an extension
-    FT_EXTNS[AUDIO]=" mp3 aiff aac ogg "    # ends with ~ not an extension
+    FT_EXTNS[AUDIO]=" mp3 m4a aiff aac ogg "    # ends with ~ not an extension
     FT_COMMON="open cmd mv trash auto"
     
     ## options displayed when you select multiple files
@@ -1071,7 +1086,7 @@ function init_file_menus() {
     FT_OPTIONS[SWAP]="vim cmd"
     ## in addiition to other commands for pdf's
     FT_OPTIONS[PDF]="pdftohtml pdfgrep"
-    FT_OPTIONS[VIDEO]="open vlc mplayer ${FT_COMMON}"
+    FT_OPTIONS[VIDEO]="open vlc mplayer ffmp ${FT_COMMON}"
     FT_OPTIONS[AUDIO]="open mpg321 afplay ${FT_COMMON}"
     FT_OPTIONS[HTML]="html2text w3m elvis sgrep"
     # now we need to define what constitutes markdown files such as MD besides MARKDOWN extension
@@ -1096,6 +1111,8 @@ function init_file_menus() {
     COMMANDS[w3m1]='w3m -T text/html =(Markdown.pl %%)'
     COMMANDS[gitadd]='git add'
     COMMANDS[gitcom]='git commit'
+    ## convert selected flv file to m4a using ffmpeg
+    COMMANDS[ffmp]='ffmpeg -i %% -vn ${${:-%%}:r}.m4a'
     # pdftohtml -stdout %% | links -stdin
     #FT_DEFAULT_PDF="pdftohtml"
     #export FT_TXT FT_ZIP FT_OTHERS COMMANDS COMMAND_HOTKEYS
