@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-20 17:34
+#  Last update: 2013-01-20 21:02
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -114,6 +114,7 @@ list_printer() {
         [[ $fin -gt $tot ]] && fin=$tot
         local sortorder=""
         [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
+        (( cursor == -1 )) && cursor=$tot
         print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}  "
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
         #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " " ""  ) | tr -s "" |  tr "" " " 
@@ -547,8 +548,8 @@ pause
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.0-b"
-print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/19"
+ZFM_VERSION="0.1.0-c"
+print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/20"
 #  Array to place selected files
 typeset -U selectedfiles
 selectedfiles=()
@@ -768,13 +769,17 @@ numberlines() {
     # matching
     patt=${patt:s/^//}
     local w=$#patt
+    local cursor_mark='*'
     #let w++
     nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     while IFS= read -r line; do
+        cc=' '
+        (( c == cursor )) && cc=$cursor_mark
         if [[ -n "$M_FULL_INDEXING" ]]; then
             sub=$nlidx[$c]
         else
             sub=$c
+
             [[ $c -gt 9 ]] && {
             #sub=$line[$w,$w] ;  
             # in the beginning since the patter is . we show first char
@@ -837,7 +842,7 @@ numberlines() {
     else
         #_line="$sub) $_detail $line $link"
     fi
-    _line="$sub) $_detail $line $link"
+    _line="$sub)$cc $_detail $line $link"
     (( $#_line > width )) && _line=$_line[1,$width] # cut here itself so ANSI not truncated
     (( boldflag == 1 )) && _line="${BOLD}$_line${BOLD_OFF}"
     print -l -- $_line
@@ -1040,6 +1045,11 @@ init_key_function_map() {
     zfm_bind_key "M-o" "settingsmenu"
     zfm_bind_key "M-s" "sortoptions"
     zfm_bind_key "M-f" "filteroptions"
+    zfm_bind_key "DOWN" "cursor_down"
+    zfm_bind_key "UP" "cursor_up"
+    zfm_bind_key "PgDn" "cursor_bottom"
+    zfm_bind_key "PgUp" "cursor_top"
+    zfm_bind_key "C-j" "select_current_line"
 }
 function init_file_menus() {
     # edit these or override in ENV
@@ -1202,6 +1212,26 @@ function goto_dir() {
     vared -h -p "Enter path: " ppath
     selection=${(Q)ppath}  # in case space got quoted, -d etc will all give errors
     patt="" # 2012-12-26 - 00:54 
+}
+function cursor_down () {
+    let cursor++
+}
+function cursor_up () {
+    let cursor--
+    (( cursor < 1 )) && cursor=1
+}
+function cursor_top () {
+    cursor=1
+}
+function cursor_bottom () {
+    cursor=-1
+}
+function select_current_line () {
+    [[ -z "$cursor" ]] && { perror "Cursor not on a row." 1>&2; return 1; }
+    local selected
+    M_NO_AUTO=1
+    selected=$vpa[$cursor]
+    fileopt $selected
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
