@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-20 22:17
+#  Last update: 2013-01-21 01:30
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -26,7 +26,7 @@ export EDITOR=$VISUAL
 source ${ZFM_DIR}/zfm_menu.zsh
 source $ZFM_DIR/zfm_viewoptions.zsh
 setopt MARK_DIRS
-ZFM_VERBOSE=1
+ZFM_VERBOSE=
 export M_FULL_INDEXING=
 export TAB=$'\t'
 set_auto_view
@@ -51,7 +51,9 @@ list_printer() {
     shift
     #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
-    local cols=3
+    #local cols=3
+    # using cols to calculate cursor movement right
+    cols=3
     local tot=$#myopts
     local sta=1
     #local patt="."
@@ -65,72 +67,69 @@ list_printer() {
     approx=
     while (true)
     do
-        (( fin = sta + $PAGESZ )) # 60
-        #  We are now using grep to filter based on what user types
-        #  However, this means that our index is wrong since we don't save this new array
-        #  Saving this array doesn't make sense since we truncate file name and add numbers and mnem
-        #  to it - maybe caller should do this
-        # THIS WORKS FINE but trying to avoid external commands
-        #viewport=$(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d')
-        # this line replace grep and searches from start. if we plae a * after
-        # the '#' then the match works throughout filename
-        ic=${ZFM_IGNORE_CASE+i}
-        approx=${ZFM_APPROX_MATCH+a1}
-        # in case other programs need to display or account for, put in round bracks
-        globflags="$ic$approx"
-        # we keep filtering, not refreshing so deleted moved files still show up
-        # the caller queries, and that sucks
-        if [[ -z $M_MATCH_ANYWHERE ]]; then
-            viewport=(${(M)myopts:#(#${ic}${approx})$patt*})
-            mark="^"
-        else
-            viewport=(${(M)myopts:#(${ic}${approx})*$patt*})
-            mark="*"
-        fi
-        let tot=$#viewport  # store the size of matching rows prior to paging it. 2013-01-09 - 01:37 
-        [[ $fin -gt $tot ]] && fin=$tot
-        # this line replaces the sed filter
-        viewport=(${viewport[$sta, $fin]})
-        vpa=("${(@f)$(print -rl -- $viewport)}")
-        #vpa=("${(f)=viewport}")
-        local ttcount=$#vpa
-        ZFM_LS_L=
-        if (( $ttcount <  (ZFM_LINES -1 ) )); then
-            # need to account for title and read lines at least
-            cols=1
-            # this could have the entire listing which contains TABS !!!
-            (( width= ZFM_COLS - 2 ))
-            ZFM_LS_L=1
-        elif [[ $ttcount -lt 40 ]]; then
-            cols=2
-            (( width = (ZFM_COLS / cols) - 2 ))
-        else
-            cols=3
-            # i can use 1 instead of 2, it touches the end, 2 to be safe for other widths
-            (( width = (ZFM_COLS / cols) - 2 ))
-        fi
-        # NO, vpa is not entire thing, its grepped and filtered, so it can't be more than page size=
-        #let tot=$#vpa
-        [[ $fin -gt $tot ]] && fin=$tot
-        local sortorder=""
-        [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
-        (( cursor == -1 || cursor > $tot )) && cursor=$tot
-        print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}  "
-        #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr "[ \t]" "?"  ) | tr -s "" |  tr "" " " 
-        #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " " ""  ) | tr -s "" |  tr "" " " 
-        #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" | cut -c-$width | tr " \t" ""  ) | tr -s "" |  tr "" " \t" 
-        # C-a C-b are non-printing and so print columnates without allocating a space for them, then i put the space back so the next column
-        # gets pushed ahead by those many spaces. therefore i use a slash for a space -- slash is not allowed in a filename
-        #print -rC3 $(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d' | nl.sh | cut -c-30 | tr "[ \t]" ""  ) | tr -s "" |  tr "" " " 
-        #  2013-01-08 - 17:33 the extended output does have slashes (datetime) and links too
-        #print -rC$cols $(print -rl -- $viewport | numberlines -p "$patt" -w $width | tr " \t" "þ"  ) |  tr "þ" "  " 
+        if [[ -z $M_NO_REPRINT ]]; then
+            clear
+            (( fin = sta + $PAGESZ )) # 60
+            #  We are now using grep to filter based on what user types
+            #  However, this means that our index is wrong since we don't save this new array
+            #  Saving this array doesn't make sense since we truncate file name and add numbers and mnem
+            #  to it - maybe caller should do this
+            # THIS WORKS FINE but trying to avoid external commands
+            #viewport=$(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d')
+            # this line replace grep and searches from start. if we plae a * after
+            # the '#' then the match works throughout filename
+            ic=${ZFM_IGNORE_CASE+i}
+            approx=${ZFM_APPROX_MATCH+a1}
+            # in case other programs need to display or account for, put in round bracks
+            globflags="$ic$approx"
+            # we keep filtering, not refreshing so deleted moved files still show up
+            # the caller queries, and that sucks
+            if [[ -z $M_MATCH_ANYWHERE ]]; then
+                viewport=(${(M)myopts:#(#${ic}${approx})$patt*})
+                mark="^"
+            else
+                viewport=(${(M)myopts:#(${ic}${approx})*$patt*})
+                mark="*"
+            fi
+            let tot=$#viewport  # store the size of matching rows prior to paging it. 2013-01-09 - 01:37 
+            [[ $fin -gt $tot ]] && fin=$tot
+            # this line replaces the sed filter
+            viewport=(${viewport[$sta, $fin]})
+            vpa=("${(@f)$(print -rl -- $viewport)}")
+            #vpa=("${(f)=viewport}")
+            local ttcount=$#vpa
+            ZFM_LS_L=
+            if (( $ttcount <  (ZFM_LINES -1 ) )); then
+                # need to account for title and read lines at least
+                cols=1
+                # this could have the entire listing which contains TABS !!!
+                (( width= ZFM_COLS - 2 ))
+                ZFM_LS_L=1
+            elif [[ $ttcount -lt 40 ]]; then
+                cols=2
+                (( width = (ZFM_COLS / cols) - 2 ))
+            else
+                cols=3
+                # i can use 1 instead of 2, it touches the end, 2 to be safe for other widths
+                (( width = (ZFM_COLS / cols) - 2 ))
+            fi
+            # NO, vpa is not entire thing, its grepped and filtered, so it can't be more than page size=
+            #let tot=$#vpa
+            [[ $fin -gt $tot ]] && fin=$tot
+            local sortorder=""
+            [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
+            (( cursor == -1 || cursor > $tot )) && cursor=$tot
+            print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}  "
 
-        print -rC$cols "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
+            print -rC$cols "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
 
-        #print -n "> $patt"
-        mode=
-        [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
-        print -n "$mode${mark}$patt > "
+            #print -n "> $patt"
+            mode=
+            [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
+        fi # M_NO_REPRINT
+        M_NO_REPRINT=
+        #print -n "$mode${mark}$patt > "
+        print -n "\r$mode${mark}$patt > "
         # left arrow
         #bindkey -s "[D" ","
         # up arrow
@@ -140,7 +139,7 @@ list_printer() {
         _read_keys
         if [[ $? != 0 ]]; then
             # maybe ^C
-            print "Got C-c ? $reply, $key"
+            pdebug "Got C-c ? $reply, $key"
             key=''
             ans=''
             #break
@@ -149,8 +148,8 @@ list_printer() {
             ans="${reply}"
             #pdebug "Got ($reply)"
         fi
-        print
-        clear # trying this out
+        #print 2013-01-21 - 00:09 due to \r in print
+        #clear # trying this out # commenting out, if we don't reprint then clearing was wrong
         [[ $ans = $'\t' ]] && pdebug "Got a TAB XXX"
         [[ $ans = "C-i" ]] && ans=$'\t'
         [[ $ans = "" ]] && pdebug "Got a ESC XXX"
@@ -349,14 +348,15 @@ list_printer() {
                 ;;
 
 
-            *) print "default got :$ans:"
+            *) pdebug "default got :$ans:"
                 (( sta = 1 ))
                 ## a case within a case for the same var -- how silly
                 case $ans in
                     "")
-                        # backspace if we are filtering, if blank and still backspace then put start of line char
+                        # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
                         if [[ $patt = "" ]]; then
                             patt=""
+                            M_NO_REPRINT=1
                         else
                             # backspace if we are filtering, remove last char from pattern
                             patt=${patt[1,${#patt}-1]}
@@ -373,12 +373,16 @@ list_printer() {
                         if [[ -n $binding ]]; then
                             $binding
                         else
-                            [[ "$ans" == "[" ]] && print "got ["
-                            [[ "$ans" == "{" ]] && print "got {"
+                            #[[ "$ans" == "[" ]] && pdebug "got ["
+                            #[[ "$ans" == "{" ]] && pdebug "got {"
                             pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
-                            pinfo "? for key help"
+                            #pinfo "? for key help"
                             #  put key in SWALLOW section to pass to caller
-                            patt=""
+                            if [[ -n $patt ]]; then
+                                patt=""
+                            else
+                                M_NO_REPRINT=1
+                            fi
                         fi
                         ;;
                 esac
@@ -500,6 +504,7 @@ post_cd() {
     patt="" # 2012-12-26 - 00:54 
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
+    cursor=0
 }
 zfm_refresh() {
     filterstr=${filterstr:-M}
@@ -690,7 +695,9 @@ param=$(print -rl -- *(M))
                     if [[ -n $binding ]]; then
                         $binding
                     else
-                        perror "unhandled key $ans, type ? for key help"
+                        # this sometimes is triggered even when a key has been
+                        # used such as BACKSPACE
+                        pdebug "unhandled key $ans, type ? for key help"
                     fi
                     ;;
             }
@@ -934,20 +941,21 @@ function _read_keys() {
     integer ret
     ckey=
 
-    read -k key
+    ## 2013-01-21 - 00:19 trying out -s with M_NO_REPRINT
+    read -k -s key
     ret=$?
     reply="${key}"
     if [[ '#key' -eq '#\\e' ]]; then
         # M-...
-        read -t $(( KEYTIMEOUT / 1000 )) -k key2
+        read -t $(( KEYTIMEOUT / 1000 )) -k -s key2
         ret=$?
         if [[ "${key2}" == '[' ]]; then
             # cursor keys
-            read -k key3
+            read -k -s key3
             ret=$?
             if [[ "${key3}" == [0-9] ]]; then
                 # Home, End, PgUp, PgDn ...
-                read -k key4
+                read -k -s key4
                 ret=$?
                 reply="${key}${key2}${key3}${key4}"
             else
@@ -1047,6 +1055,8 @@ init_key_function_map() {
     zfm_bind_key "M-f" "filteroptions"
     zfm_bind_key "DOWN" "cursor_down"
     zfm_bind_key "UP" "cursor_up"
+    zfm_bind_key "RIGHT" "cursor_right"
+    zfm_bind_key "LEFT" "cursor_left"
     zfm_bind_key "PgDn" "cursor_bottom"
     zfm_bind_key "PgUp" "cursor_top"
     zfm_bind_key "C-j" "select_current_line"
@@ -1197,7 +1207,8 @@ zfm_show_menu() {
     fi
 }
 function goto_parent_dir() {
-    cd ..
+    #cd ..
+    $ZFM_CD_COMMAND ..
     post_cd
     #patt="" # 2012-12-26 - 00:54 
     #filterstr=${filterstr:-M}
@@ -1223,6 +1234,25 @@ function cursor_down () {
 function cursor_up () {
     let cursor--
     (( cursor < 1 )) && cursor=1
+}
+function cursor_right () {
+    #(( _rows = $#vpa / cols ))
+    _rows=$(ceiling_divide $#vpa $cols)
+    (( cursor += _rows ))
+    (( cursor < 1 )) && cursor=1
+    (( cursor > $#vpa )) && cursor=$#vpa
+}
+function cursor_left () {
+    #(( _rows = $#vpa / cols ))
+    _rows=$(ceiling_divide $#vpa $cols)
+    (( cursor -= _rows ))
+    (( cursor < 1 )) && cursor=1
+    (( cursor > $#vpa )) && cursor=$#vpa
+}
+ceiling_divide() {
+    integer ceiling_result
+    ceiling_result=$(($1/$2))
+    print $((ceiling_result+1))
 }
 function cursor_top () {
     cursor=1
