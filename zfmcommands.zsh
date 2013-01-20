@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-12 00:46
+#  Last update: 2013-01-20 15:37
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -80,6 +80,10 @@ ZFM_ffind() {
     # recurse and match filename only
     #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
     files=$( print -rl -- **/*$searchpattern*(.) )
+    if [[ $#files -eq 0 ]]; then
+        perror "Trying with find: $searchpattern"
+        files=$( find . -iname $searchpattern )
+    fi
     #   print ~/**/*.txt
     if [[ $#files -gt 0 ]]; then
         files=$( echo $files | xargs ls -t )
