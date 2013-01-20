@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-20 01:01
+# Last update: 2013-01-20 14:04
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -612,7 +612,7 @@ settingsmenu(){
     fi
 }
 change_paging_key() {
-    print  "Page key is (default <ENTER>: [$M_PAGE_KEY]"
+    print  "Page key is (default <SPACE>: [$M_PAGE_KEY]"
     print  -n "Enter key to use for paging (should preferable not exist in filenames): "
     read -k cha
     M_PAGE_KEY=cha
