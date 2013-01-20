@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-20 15:41
+#  Last update: 2013-01-20 21:03
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -263,6 +263,7 @@ fileopt() {
     # if user has requested some action to be done automatically on selection of a file of some type
     uft=${(U)file_type}
     local act=$ZFM_AUTO_ACTION[$uft]
+    [[ -n "$M_NO_AUTO" ]] && { unset M_NO_AUTO; act= }
     if [[ -n "${act}" ]]; then
         pinfo "got $act for $_act ($uft)"
         name=${name:q}
