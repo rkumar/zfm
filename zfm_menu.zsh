@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-19 20:43
+#  Last update: 2013-01-20 15:41
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -501,7 +501,7 @@ filetype(){
     fi
     str="$(file $name)"
     # string search for zip
-    ftpatts=(zip text video audio image)
+    ftpatts=(zip text video audio image SQLite)
     for _p in $ftpatts ; do
         ix=$str[(i)$_p]
         if [[ $ix -le $#str ]]; then
