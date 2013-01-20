@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-20 21:03
+#  Last update: 2013-01-21 00:06
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -40,7 +40,7 @@ psuccess(){
 
 #  Print info statement to stderr so it doesn't mingle with output of method
 pinfo(){
-    print -- "INFO: $@" 1>&2
+    print -- "$@" 1>&2
 }
 #  Print something bold to stderr
 pbold() {
