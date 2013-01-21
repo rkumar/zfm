@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-21 00:44
+# Last update: 2013-01-21 15:52
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -81,7 +81,7 @@ fuzzyselectrow() {
 
             }
         fi
-        echo
+        print
 
     #
     #  pressing ENTER selects first item by default
@@ -494,7 +494,7 @@ handle_selection() {
     shift
     selected_files=($@:q)
     #selected_files=${selected_files:q}
-    #pdebug "handle_selection with $reply $#selected_files"
+    pdebug "handle_selection with $reply $#selected_files"
 
     case $reply in
         "q")
@@ -860,7 +860,7 @@ m_recentfiles() {
             ZFM_FUZZY_MATCH_DIR="1"
             $ZFM_FILE_SELECT_FUNCTION $files
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
-            #perror "XXX $#selected_files ,, $selected_file"
+            #perror "XXX $#selected_files ,, $selected_file,, $selected_files"
             if [[ $#selected_files -eq 1 ]]; then
                 fileopt "$selected_file"
             elif [[ $#selected_files -gt 1 ]]; then
@@ -948,6 +948,7 @@ numbernine() {
     let c=1
     local tabd=$'\t'
     local selct=$#deleted
+    local crow cfile
     local csel cres
     integer maxct=99
 
@@ -962,9 +963,9 @@ numbernine() {
         if [[ $selct -gt 0 ]]; then
             # how was this working earlier ? line contains full text wherease deleted only 
             # has file name XXX added split of line 2013-01-20 - 01:01 
-            selected_row=("${(s/	/)line}")
-            selected_file=$selected_row[-1]
-            if [[ $deleted[(i)$selected_file] -gt $selct ]]; then
+            crow=("${(s/	/)line}")
+            cfile=$crow[-1]
+            if [[ $deleted[(i)$cfile] -gt $selct ]]; then
                 #print -r -- "$sub) $line"
                 csel=
                 cres=
