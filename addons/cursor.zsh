@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-21 13:24
+#  Last update: 2013-01-22 00:56
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -30,27 +30,45 @@ function cursor_down () {
     let CURSOR++
 }
 function cursor_up () {
+    ## -le required for empty dirs
+    [[ $CURSOR -le 1 ]] && { goto_parent_dir ; return }
     let CURSOR--
     (( CURSOR < 1 )) && CURSOR=1
 }
+## goes to files in next column
+# if no files on right, and on a dir, then goes into dir
 function cursor_right () {
     #(( _rows = $#vpa / cols ))
     _rows=$(ceiling_divide $#vpa $cols)
+    local old=$CURSOR
     (( CURSOR += _rows ))
     (( CURSOR < 1 )) && CURSOR=1
-    (( CURSOR > $#vpa )) && CURSOR=$#vpa
+    ## slightly dicey or clever if right pressed on a dir
+    # and you can't go anymore right then traverse into the dir.
+    # Should we do this always on a dir, or only if there's one row ?
+    #
+    (( CURSOR > $#vpa )) && { 
+        CURSOR=$#vpa
+        selected=$vpa[$old]
+        if [[ -d "$selected" ]]; then
+            selection=$selected
+        fi
+    }
 }
+## moves to files in left column
+# if pressed on first file, pops dir stack
 function cursor_left () {
-    #(( _rows = $#vpa / cols ))
+    ## -le required for empty dirs
+    [[ $CURSOR -le 1 ]] && { zfm_popd ; return }
     _rows=$(ceiling_divide $#vpa $cols)
     (( CURSOR -= _rows ))
     (( CURSOR < 1 )) && CURSOR=1
     (( CURSOR > $#vpa )) && CURSOR=$#vpa
 }
+# http://stackoverflow.com/questions/2394988/get-ceiling-integer-from-number-in-linux-bash
 ceiling_divide() {
-    integer ceiling_result
-    ceiling_result=$(($1/$2))
-    print $((ceiling_result+1))
+  ceiling_result=$((($1+$2-1)/$2))
+  print $ceiling_result
 }
 function cursor_top () {
     CURSOR=1
@@ -63,5 +81,13 @@ function select_current_line () {
     local selected
     M_NO_AUTO=1
     selected=$vpa[$CURSOR]
-    fileopt $selected
+    if [[ -d "$selected" ]]; then
+        ## or should we have some options for directories ? we should
+        #FT_DIRS
+        # this falls through into caller of list_printer which changes
+        # dirctory.
+        selection=$selected
+    else
+        fileopt $selected
+    fi
 }
