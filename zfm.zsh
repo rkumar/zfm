@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-21 18:09
+#  Last update: 2013-01-22 01:07
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -121,7 +121,9 @@ list_printer() {
             (( CURSOR == -1 || CURSOR > $tot )) && CURSOR=$tot
             print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}  "
 
-            print -rC$cols "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
+            #print -rC$cols "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
+            numberlines -p "$patt" -w $width $viewport
+            print -rC$cols "${(@f)$(print -l -- $OUTPUT)}"
 
             #print -n "> $patt"
             mode=
@@ -129,11 +131,8 @@ list_printer() {
         fi # M_NO_REPRINT
         M_NO_REPRINT=
         #print -n "$mode${mark}$patt > "
+        print -l -- $M_MESSAGE
         print -n "\r$mode${mark}$patt > "
-        # left arrow
-        #bindkey -s "[D" ","
-        # up arrow
-        #bindkey -s "[A" "<"
         # prompt for key PROMPT
         #read -k -r ans
         _read_keys
@@ -373,6 +372,7 @@ list_printer() {
                         if [[ -n $binding ]]; then
                             $binding
                             ans=
+                            break
                         else
                             #[[ "$ans" == "[" ]] && pdebug "got ["
                             #[[ "$ans" == "{" ]] && pdebug "got {"
@@ -506,6 +506,8 @@ post_cd() {
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
     CURSOR=1
+    # clear hash of file details to avoid recomp
+    FILES_HASH=()
 }
 zfm_refresh() {
     filterstr=${filterstr:-M}
@@ -558,6 +560,9 @@ ZFM_VERSION="0.1.1"
 print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/21"
 #  Array to place selected files
 typeset -U selectedfiles
+# hash of file details to avoid recomp each time while inside a dir
+typeset -Ag FILES_HASH
+#export FILES_HASH
 selectedfiles=()
 #export selectedfiles  # for nl.sh
 #  directory stack for jumping back
@@ -759,6 +764,12 @@ param=$(print -rl -- *(M))
         print "$PWD" | pbcopy
     }
 } # myzfm
+
+## line numbering function, also takes care of widths and coloring since these are interdependent
+#  and can clobber one another.
+## Earlier this acted as a filter and read lines and printed back output, But now we cache
+# file details to avoid screen flicker, so the hash must be in the same shell/process, thus 
+# it stored details in OUTPUT string. And reads from viewport.
 numberlines() {
     let c=1
     local patt='.'
@@ -769,6 +780,7 @@ numberlines() {
         BOLD=$COLOR_BOLD
         BOLD_OFF=$COLOR_DEFAULT
     fi
+    OUTPUT=""
     ##local defpatt='.'
     local defpatt=""
     local selct=$#selectedfiles
@@ -778,11 +790,14 @@ numberlines() {
     # i am taking width of match after removing ^ and using next char as next shortcut
     # # no longer required as i don't use grep, but i wish i still were since it allows better
     # matching
-    patt=${patt:s/^//}
+    #patt=${patt:s/^//}
     local w=$#patt
     #let w++
     nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    while IFS= read -r line; do
+    #while IFS= read -r line; do
+    #for line in $viewport; do
+    for line in $*; do
+        # read from viewport now TODO
         cc=' '
         (( c == CURSOR )) && cc=$CURSOR_MARK
         if [[ -n "$M_FULL_INDEXING" ]]; then
@@ -791,74 +806,86 @@ numberlines() {
             sub=$c
 
             [[ $c -gt 9 ]] && {
-            #sub=$line[$w,$w] ;  
-            # in the beginning since the patter is . we show first char
-            # otherwise this will match the dot
-            if [[ $patt = "$defpatt" ]]; then
-                sub=$line[1,1]
-            else
-                # after removing the ^ we find match and get the character after the pattern
-                # NOTE: that if the match is at end of filename there is no next character i can show.
-                ix=$line[(i)$patt]
-                (( ix += w ))
-                sub=$line[$ix,$ix] ;  
-            fi
-        }
-    fi
-    link=
-    _detail=
-    if [[ -n "$ZFM_LS_L" ]]; then
-        if [[ -n "$line" ]]; then
-            if [[ -e "$line" ]]; then
-                mtime=$(zstat -L -F "%Y-%m-%d %H:%M" +mtime $line)
-                zstat -L -H hash $line
-                sz=$hash[size]
-                if [[ $sz -gt 1048576 ]]; then
-                    (( sz = sz / 1048576 )) ; sz="${sz}M" 
-                    # statements
-                elif [[ $sz -gt 9999 ]]; then
-                    (( sz = sz / 1024 )) ; sz="${sz}k" 
+                #sub=$line[$w,$w] ;  
+                # in the beginning since the patter is . we show first char
+                # otherwise this will match the dot
+                if [[ $patt = "$defpatt" ]]; then
+                    sub=$line[1,1]
+                else
+                    # after removing the ^ we find match and get the character after the pattern
+                    # NOTE: that if the match is at end of filename there is no next character i can show.
+                    ix=$line[(i)$patt]
+                    (( ix += w ))
+                    sub=$line[$ix,$ix] ;  
                 fi
-                sz=$( print ${(l:6:)sz} )
-                    #[[ $sz -gt 9999 ]] && {  (( sz = sz / 1024 )) ; sz="${sz}k" }
-                link=$hash[link]
-                [[ -n $link ]] && link=" -> $link"
-                _detail="${TAB}$sz${TAB}$mtime${TAB}"
-            else
-                _detail="(deleted?)"
-                # file does not exist so it could be deleted ?
+            }
+        fi
+        link=
+        _detail=
+        if [[ -n "$ZFM_LS_L" ]]; then
+            if [[ -n "$line" ]]; then
+                if [[ -e "$line" ]]; then
+                    # check cache for file details
+                    _detail=$FILES_HASH[$line]
+                    if [[ -z $_detail ]]; then
+                        mtime=$(zstat -L -F "%Y-%m-%d %H:%M" +mtime $line)
+                        zstat -L -H hash $line
+                        sz=$hash[size]
+                        if [[ $sz -gt 1048576 ]]; then
+                            (( sz = sz / 1048576 )) ; sz="${sz}M" 
+                            # statements
+                        elif [[ $sz -gt 9999 ]]; then
+                            (( sz = sz / 1024 )) ; sz="${sz}k" 
+                        fi
+                        sz=$( print ${(l:6:)sz} )
+                        #[[ $sz -gt 9999 ]] && {  (( sz = sz / 1024 )) ; sz="${sz}k" }
+                        link=$hash[link]
+                        [[ -n $link ]] && link=" -> $link"
+                        _detail="${TAB}$sz${TAB}$mtime${TAB}"
+                        # cache details of file
+                        FILES_HASH[$line]=$_detail
+                    else
+                        #_detail="$_detail +"
+                    fi
+                else
+                    _detail="(deleted?)"
+                    # file does not exist so it could be deleted ?
+                fi
             fi
         fi
-    fi
-    # only if there are selections we check against the array and color
-    # otherwise no check, remember that the cut that comes later can cut the 
-    # escape chars
-    _line=
-    boldflag=0
-    # 2013-01-09 - 19:33 I am trying out only highlighting the number or else
-    # its becoming too confusing, and even now the trunc is taking size of 
-    # ANSI codes which are not displayed, so a little less is shown that cold be
-    if [[ $selct -gt 0 ]]; then
-        ##perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
-        # quoted spaces causing failure in matching,
-        # however if i don't quote then other programs fail such as ls and tar
-        if [[ $selectedfiles[(ie)$PWD/${line}] -gt $selct ]]; then
-            #_line="$sub) $_detail $line $link"
+        # only if there are selections we check against the array and color
+        # otherwise no check, remember that the cut that comes later can cut the 
+        # escape chars
+        _line=
+        boldflag=0
+        # 2013-01-09 - 19:33 I am trying out only highlighting the number or else
+        # its becoming too confusing, and even now the trunc is taking size of 
+        # ANSI codes which are not displayed, so a little less is shown that cold be
+        if [[ $selct -gt 0 ]]; then
+            ##perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
+            # quoted spaces causing failure in matching,
+            # however if i don't quote then other programs fail such as ls and tar
+            if [[ $selectedfiles[(ie)$PWD/${line}] -gt $selct ]]; then
+                #_line="$sub) $_detail $line $link"
+            else
+                #_line="$sub) $_detail ${BOLD}$line${BOLD_OFF}"
+                #sub="${BOLD}$sub${BOLD_OFF}"
+                boldflag=1
+            fi
         else
-            #_line="$sub) $_detail ${BOLD}$line${BOLD_OFF}"
-            #sub="${BOLD}$sub${BOLD_OFF}"
-            boldflag=1
+            #_line="$sub) $_detail $line $link"
         fi
-    else
-        #_line="$sub) $_detail $line $link"
-    fi
-    _line="$sub)$cc $_detail $line $link"
-    (( $#_line > width )) && _line=$_line[1,$width] # cut here itself so ANSI not truncated
-    (( boldflag == 1 )) && _line="${BOLD}$_line${BOLD_OFF}"
-    print -l -- $_line
-    let c++
-done
+        _line="$sub)$cc $_detail $line $link"
+        (( $#_line > width )) && _line=$_line[1,$width] # cut here itself so ANSI not truncated
+        (( boldflag == 1 )) && _line="${BOLD}$_line${BOLD_OFF}"
+        ### 2013-01-21 - 21:09 trying to do this in same process so hash be updated
+        #print -l -- $_line
+        OUTPUT+="$_line\n"
+        let c++
+    done
+    #print -l -- $OUTPUT
 } # numberlines
+
 selection_menu() {
     local mode="remove_mode"
     local mmode="Selection"
@@ -1085,7 +1112,7 @@ function init_file_menus() {
     FT_EXTNS[IMAGE]=" png jpg jpeg gif "    # ends with ~ not an extension
     FT_EXTNS[VIDEO]=" flv mp4 "    # ends with ~ not an extension
     FT_EXTNS[AUDIO]=" mp3 m4a aiff aac ogg "    # ends with ~ not an extension
-    FT_COMMON="open cmd mv trash auto"
+    FT_COMMON="open cmd mv trash auto clip"
     
     ## options displayed when you select multiple files
     ##  Sadly, this is not taking into account filetypes selected, thatcould be helpful
@@ -1111,7 +1138,7 @@ function init_file_menus() {
     ## -- how to specify a space, no mnemonic?
     #FT_TEXT=(v vim : cmd l less # mv D ${ZFM_RM_COMMAND} z archive t tail h head o open a auto)
     typeset -Ag COMMAND_HOTKEYS
-    COMMAND_HOTKEYS=(vim v cmd : mv \# trash D archive z zless l)
+    COMMAND_HOTKEYS=(vim v cmd : mv \# trash D archive z zless l clip Y)
 
     typeset -Ag COMMANDS
     # remember that in such cases we have to check for file existing, overwriting etc
@@ -1129,6 +1156,7 @@ function init_file_menus() {
     COMMANDS[gitcom]='git commit'
     ## convert selected flv file to m4a using ffmpeg
     COMMANDS[ffmp]='ffmpeg -i %% -vn ${${:-%%}:r}.m4a'
+    COMMANDS[clip]='print %% | pbcopy && print "Copied filename to clipboard"'
     # pdftohtml -stdout %% | links -stdin
     #FT_DEFAULT_PDF="pdftohtml"
     #export FT_TXT FT_ZIP FT_OTHERS COMMANDS COMMAND_HOTKEYS
