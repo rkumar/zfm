@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-21 16:48
+#  Last update: 2013-01-22 01:08
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -28,11 +28,15 @@ typeset -A ZFM_AUTO_ACTION
 
 #  Print error to stderr so it doesn't mingle with output of method
 perror(){
-    print -- "ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    M_MESSAGE="ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}"
+    print -- "$M_MESSAGE" 1>&2
 }
 #  Print debug statement to stderr so it doesn't mingle with output of method
 pdebug(){
-    [[ -n "$ZFM_VERBOSE" ]] && print -- "DEBUG: ${COLOR_RED}$@${COLOR_DEFAULT}" 1>&2
+    [[ -n "$ZFM_VERBOSE" ]] && {
+        M_MESSAGE="DEBUG: ${COLOR_RED}$@${COLOR_DEFAULT}"
+        print -- "$M_MESSAGE" 1>&2
+    }
 }
 psuccess(){
     print -- "${COLOR_GREEN}$@${COLOR_DEFAULT}" 1>&2
@@ -40,6 +44,7 @@ psuccess(){
 
 #  Print info statement to stderr so it doesn't mingle with output of method
 pinfo(){
+    M_MESSAGE="$@"
     print -- "$@" 1>&2
 }
 #  Print something bold to stderr
@@ -203,6 +208,8 @@ fileopt() {
     ## if no extension then do filetype check
     local -U apps
     extn=$name:e
+
+    extn=${extn:-NIL}
     if [[ -n $extn ]]; then
         uextn=${(U)extn}
         apps=$FT_ALL_APPS[$extn]  # check cache FT_ALL_APPS[pdf]
@@ -243,17 +250,19 @@ fileopt() {
         fi
     else
         # repeated from above
+        ## this is for files with no extension, so cannot use extn as a key
+        local ext=NIL
         file_type="$(filetype $name)"
         file_type=${file_type:-other}
         #x="FT_${(U)file_type}"  # check FT_TXT or FT_ZIP etc
         pdebug "checking after filetype $file_type"
         #apps+=( ${(P)x} ) 
-            uft="${(U)file_type}"  # check FT_PDF
-            apps+=( $FT_OPTIONS[$uft] )
-        FT_ALL_APPS[$extn]=$apps
+        uft="${(U)file_type}"  # check FT_PDF
+        apps+=( $FT_OPTIONS[$uft] )
+        FT_ALL_APPS[$ext]=$apps
         # calculate hotkeys
         hotkeys=$(get_hotkeys "$apps")
-        FT_ALL_HK[$extn]=$hotkeys
+        FT_ALL_HK[$ext]=$hotkeys
     fi
     [[ -z $file_type ]] && { 
         # this is only required for checking about auto-actions, can we avoid if none asked for.
@@ -275,6 +284,7 @@ fileopt() {
         pdebug "$0 got no auto action for $uft"
         #print -rl -- ${(k)ZFM_AUTO_ACTION}
     fi
+    print
     print_title "File summary for $name:"
     file $name
     ls -lh $name
@@ -339,9 +349,10 @@ function eval_menu_text () {
 function zfm_add_option () {
     local file="$1"
     local extn="$2"
+    extn=${extn:-NIL}
     vared -c -p "New option to add: " newoption
     [[ -z "$newoption" ]] && { return 1 }
-    print "Current hotkeys are: $FT_ALL_HK[$extn]"
+    print "Current hotkeys for $extn are: $FT_ALL_HK[$extn]"
     print "Enter hotkey for this command: "
     read -k hk
     COMMAND_HOTKEYS[$newoption]=$hk
@@ -363,6 +374,7 @@ function zfm_add_option () {
 function zfm_rem_option () {
     local file="$1"
     local extn="$2"
+    extn=${extn:-NIL}
     vared -c -p "Option to delete: " newoption
     [[ -z "$newoption" ]] && { return 1 }
     local apps
