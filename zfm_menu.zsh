@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-21 00:06
+#  Last update: 2013-01-21 16:48
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -273,7 +273,7 @@ fileopt() {
         return
     else
         pdebug "$0 got no auto action for $uft"
-        print -rl -- ${(k)ZFM_AUTO_ACTION}
+        #print -rl -- ${(k)ZFM_AUTO_ACTION}
     fi
     print_title "File summary for $name:"
     file $name
@@ -474,6 +474,7 @@ filetype(){
     extn=$name:e
     uextn=${(U)extn}
     pdebug "$0 extn: $extn"
+    local spextn
 
     if [[ -n "$extn" ]]; then
         ## don't go in if no extension
@@ -483,7 +484,7 @@ filetype(){
             v=$FT_EXTNS[$ff]
             pdebug "$0 $ff in ft_extns will search $v"
             ## we still need to put a spce around extn otherwise small extns like c and a will match wrongly
-            local spextn=" $extn "
+            spextn=" $extn "
             if [[ $v[(i)$spextn] -le $#v ]]; then
                 ## v is in uppercase
                 type=${ff:l} # lower case
@@ -791,6 +792,8 @@ function zfm_mv() {
         [[ -d $target ]] || perror "$target not a directory, mv likely to fail"
         print "[$menu_text] [$files] $target"
         eval "$menu_text $files $target"
+        # user may want to cd to that target using GOTO_DIR
+        GOTO_PATH=$target
         zfm_refresh
     }
 }
