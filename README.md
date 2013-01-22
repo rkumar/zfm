@@ -135,6 +135,18 @@ files to interface with autojump or whatever other utility you use. I'd rather u
 
 A summary of version-wise changes. 
 
+###0.1.1###
+
+	*  Trying to not print if no change, like an unused key -- actually that's 
+    not a big deal for the change. However, it has resulted in changing when screen
+    clearng happens, so that the read is always in one place. This may actually be neater
+    but debug statements and errors get cleared. User will have to scroll up to check.
+
+	*  More importantly, I've broken arrow key stuff into an addon, and i am
+    sourcing addons. You can use arrow keys go up dirs, or pop back, or go into dirs
+    and of course to traverse the displayed list.
+    Pressing ENTER on a file will bring up the options for the file.
+
 ###0.1.0###
 
     * Putting filetypes in datastructures along with menu options so user can modify or override
