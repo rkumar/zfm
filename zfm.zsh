@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-22 01:07
+#  Last update: 2013-01-22 19:43
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -69,6 +69,7 @@ list_printer() {
     do
         if [[ -z $M_NO_REPRINT ]]; then
             clear
+            print -l -- ${M_MESSAGE:-"$M_TITLE     $M_HELP"}
             (( fin = sta + $PAGESZ )) # 60
             #  We are now using grep to filter based on what user types
             #  However, this means that our index is wrong since we don't save this new array
@@ -131,11 +132,11 @@ list_printer() {
         fi # M_NO_REPRINT
         M_NO_REPRINT=
         #print -n "$mode${mark}$patt > "
-        print -l -- $M_MESSAGE
         print -n "\r$mode${mark}$patt > "
         # prompt for key PROMPT
         #read -k -r ans
         _read_keys
+        M_MESSAGE=
         if [[ $? != 0 ]]; then
             # maybe ^C
             pdebug "Got C-c ? $reply, $key"
@@ -173,20 +174,16 @@ list_printer() {
                     pinfo "selection was $selection"
                 else
 
-                # FIXME XXX actix needs to be consistent in 2 cases:
+                # actix needs to be consistent in 2 cases:
                 #   - when paging - correct is from myopts
                 #   - when filtering. (in this case the correct is from viewport/vpa
                 #   - there is a third case of paging after filtering GAAH
                 (( ix = sta + $ans - 1))
-                #[[ -n $ZFM_VERBOSE ]] && print "actual ix $ix"
-                #[[ -n $ZFM_VERBOSE ]] && print "OLD selected $myopts[$ix] "
-                #perror " vpa $ans : $vpa[$ans]  "
-                #perror " vpa $ix : $vpa[$ix]  "
                 #
                 # NEW now check if 2 files satisfy this key (edge case but
-                # could happen alot of you keep numbered files)
+                # could happen alot if you keep numbered files)
+
                 selection=""
-                #vpa=( $(print -rl -- $viewport) )
                 [[ -n $ZFM_VERBOSE ]] && pdebug "files shown $#vpa "
                 if [[ $ttcount -gt 9 ]]; then
                     if [[ $patt = "" ]]; then
@@ -272,59 +269,11 @@ list_printer() {
                 fi # M_FULL
                 ;;
             $ZFM_REFRESH_KEY)
-                pbold "refreshing rescanning"
+                pdebug "refreshing rescanning"
                 zfm_refresh
                 # why is next line not in post_cd 
                 #myopts=("${(@f)$(print -rl -- $param)}")
                 #break
-                ;;
-            $ZFM_SIBLING_DIR_KEY)
-                # XXX FIXME TODO sibling and next should move to caller
-                # This should only have search and drill down functionality
-                # so it can be reused by other parts such as viewoptions
-                # to drill down, should be minimal and keep local stuff
-                #
-                # siblings (find a better place to put this, and what if there
-                # are too many options)
-                print "Siblings of this dir:"
-                menu_loop "Siblings" "$(print ${PWD:h}/*(/) )"
-                [[ -z "$menu_text" ]] && break
-                print "selected $menu_text"
-                $ZFM_CD_COMMAND $menu_text
-                post_cd
-                #patt="" # 2012-12-26 - 00:54 
-                #filterstr=${filterstr:-M}
-                #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
-                #
-                ## break means you will have an unhandled key in error raised.
-                break
-                ;;
-            $ZFM_CD_OLD_NEW_KEY)
-                # XXX FIXME TODO this and next should move to caller
-                # siblings (find a better place to put this, and what if there
-                # are too many options)
-                pbold "This implements the: cd OLD NEW metaphor"
-                print "Part to change :"
-                parts=(${(s:/:)PWD})
-                menu_loop "Parts" "$(print $parts )"
-                [[ -z "$menu_text" ]] && break
-                pbold "Replace $menu_text"
-                parts[$menu_index]='*'
-                local newpath pp
-                newpath=""
-                for pp in $parts
-                do
-                    newpath="${newpath}/${pp}"
-                done
-                menu_loop "Select target" "$(eval print  $newpath)"
-                [[ -n "$menu_text" ]] && { 
-                    $ZFM_CD_COMMAND $menu_text
-                    post_cd
-                    #patt="" # 2012-12-26 - 00:54 
-                    #filterstr=${filterstr:-M}
-                    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
-                }
-                break
                 ;;
             "$ZFM_RESET_PATTERN_KEY")
                 patt=""
@@ -338,13 +287,16 @@ list_printer() {
                 selection=$vpa[1]
                 [[ -n "$selection" ]] && break
                 ;; 
-            ","|"+"|"~"|":"|"\`"|"/"|"@"|"%"|"#"|"?"|'*'|$'\t')
+                # commenting out this on 2013-01-22 - 15:57 as it required
+                # checking bindings here and in caller
+            #","|"+"|"~"|":"|"\`"|"/"|"@"|"%"|"#"|"?"|'*'|$'\t')
+            #","|"+"|"~"|":"|"/"|"@"|"%"|"#"|"?"|'*'|$'\t')
                 # we break these keys so caller can handle them, other wise they
                 # get unhandled PLACE SWALLOWED keys here to handle
                 # go down to MARK1 section to put in handling code
-                [[ -n $ZFM_VERBOSE ]] && pdebug "breaking here with $ans , sel: $selection"
-                break
-                ;;
+                #[[ -n $ZFM_VERBOSE ]] && pdebug "breaking here with $ans , sel: $selection"
+                #break
+                #;;
 
 
             *) pdebug "default got :$ans:"
@@ -354,7 +306,7 @@ list_printer() {
                     "")
                         # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
                         if [[ $patt = "" ]]; then
-                            patt=""
+                            #patt=""
                             M_NO_REPRINT=1
                         else
                             # backspace if we are filtering, remove last char from pattern
@@ -377,13 +329,15 @@ list_printer() {
                             #[[ "$ans" == "[" ]] && pdebug "got ["
                             #[[ "$ans" == "{" ]] && pdebug "got {"
                             pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
-                            #pinfo "? for key help"
+                           #pinfo "? for key help"
                             #  put key in SWALLOW section to pass to caller
                             if [[ -n $patt ]]; then
                                 patt=""
                             else
                                 M_NO_REPRINT=1
                             fi
+                            ## added on 2013-01-22 - 16:33 so caller can capture
+                            break
                         fi
                         ;;
                 esac
@@ -557,7 +511,8 @@ myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
 ZFM_VERSION="0.1.1"
-print "$ZFM_APP_NAME $ZFM_VERSION 2013/01/21"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/22"
+print $M_TITLE
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -612,7 +567,8 @@ source_addons
 # at this point read up users bindings
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
 aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
-print_hash $aa
+M_HELP=$( print_hash $aa )
+print $M_HELP
 param=$(print -rl -- *(M))
     while (true)
     do
@@ -698,16 +654,19 @@ param=$(print -rl -- *(M))
                     ;;
                 *)
                     [[ "$ans" == $ZFM_REFRESH_KEY ]] && { perror "breaking";  break }
+                    #M_MESSAGE=
+                    [[ -n $ans ]] && M_MESSAGE="$ans unused. $M_HELP"
                     # why repeat it here too, just do this once in top level
-                    zfm_get_key_binding $ans
-                    if [[ -n $binding ]]; then
-                        perror "2 calling binding for $ans"
-                        $binding
-                    else
+                    #  2013-01-22 - 16:04 removing second get_key
+                    #zfm_get_key_binding $ans
+                    #if [[ -n $binding ]]; then
+                        ##perror "2 calling binding for $ans"
+                        ##$binding
+                    #else
                         # this sometimes is triggered even when a key has been
                         # used such as BACKSPACE
-                        pdebug "unhandled key $ans, type ? for key help"
-                    fi
+                        #pdebug "unhandled key $ans, type ? for key help"
+                    #fi
                     ;;
             }
 
@@ -1077,6 +1036,10 @@ init_key_function_map() {
                     toggle_match_from_start
                 $ZFM_TOGGLE_MENU_KEY
                     toggle_options_menu
+                $ZFM_SIBLING_DIR_KEY
+                    sibling_dir
+                $ZFM_CD_OLD_NEW_KEY
+                    cd_old_new
                     )
     zfm_bind_key "M-x" "zfm_views"
     #zfm_bind_key "C-x" "zfm_views"
@@ -1247,6 +1210,47 @@ function goto_dir() {
     vared -h -p "Enter path: " GOTO_PATH
     selection=${(Q)GOTO_PATH}  # in case space got quoted, -d etc will all give errors
     patt="" # 2012-12-26 - 00:54 
+}
+function cd_old_new() {
+    #$ZFM_CD_OLD_NEW_KEY)
+    pbold "This implements the: cd OLD NEW metaphor"
+    print "Part to change :"
+    parts=(${(s:/:)PWD})
+    menu_loop "Parts" "$(print $parts )"
+    [[ -z "$menu_text" ]] && return 1
+    pbold "Replace $menu_text"
+    parts[$menu_index]='*'
+    local newpath pp
+    newpath=""
+    ## join path with * in appropriate place
+    for pp in $parts
+    do
+        newpath="${newpath}/${pp}"
+    done
+    newpath+="(/)"
+    menu_loop "Select target ($newpath): " "$(eval print  $newpath)"
+    [[ -n "$menu_text" ]] && { 
+        $ZFM_CD_COMMAND $menu_text
+        post_cd
+    }
+}
+function sibling_dir() {
+    # This should only have search and drill down functionality
+    # so it can be reused by other parts such as viewoptions
+    # to drill down, should be minimal and keep local stuff
+    #
+    # siblings (find a better place to put this, and what if there
+    # are too many options)
+    print "Siblings of this dir:"
+    menu_loop "Siblings" "$(print ${PWD:h}/*(/) )"
+    [[ -z "$menu_text" ]] && return 1
+    [[ -d "$menu_text" ]] || {
+        perror "$menu_text not a directory"
+        return 1
+    }
+    print "selected $menu_text"
+    $ZFM_CD_COMMAND $menu_text
+    post_cd
 }
 
 ## load any addons that might be present in addons folder
