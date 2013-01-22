@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-20 15:37
+#  Last update: 2013-01-22 13:36
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -29,7 +29,7 @@ ZFM_MY_MNEM="a tfiglse%d"
 ZFM_ack() {
     # check for whether you have ack installed
     cpattern=${cpattern:-""}
-    vared -p "Pattern to ack for:" cpattern
+    vared -p "Pattern to ack for: " cpattern
     ack "$cpattern"
     pause
     files=$( ack -l "$cpattern" )
@@ -40,7 +40,7 @@ ZFM_ack() {
 ZFM_ag() {
     # check for whether you have ag installed (the_silver_searcher)
     cpattern=${cpattern:-""}
-    vared -p "Pattern to ag for:" cpattern
+    vared -p "Pattern to ag for: " cpattern
     ag "$cpattern"
     pause
     files=$( ag -l "$cpattern" )
