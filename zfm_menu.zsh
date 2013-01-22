@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-22 01:08
+#  Last update: 2013-01-22 19:08
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -70,9 +70,6 @@ print_title() {
 array2lines() {
     ZFM_NEWLINE_ARRAY=("${(@f)$(print -rl -- $@)}")
 }
-#typeset -A myhash
-#myhash=( v v r ranger m mc n ncdu l list s sl)
-#myopts=(v vifm ranger vshnu mc ncdu list sl)
 default="1"
 
 #  Display a menu using numbering and hotkeys if provided
@@ -80,8 +77,8 @@ default="1"
 print_menu() {
     print_title "$1"
     local mnem="$3"
-    # trying out, if you are generating some data i could give you more hotkeys
-    [[ -z "$mnem" ]] && mnem="         abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    ## earlier this was here , but now moved down so caller can translate
+    #[[ -z "$mnem" ]] && mnem="         abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     local myopts
     read -A myopts <<< "$2"
@@ -117,13 +114,17 @@ menu_loop () {
     menu_index=0 # this contain index numeric
 
     mnem="$3"
+    ## earlier this was in print_menu, but now moved here since we don't have offsets
+    [[ -z "$mnem" ]] && mnem="         abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    ## XXX updating this does not send it to print menu since we pass args straight !
     # we read only one char, so if the options go beyond 9 then we are royally screwed, take off -1
     local myopts var
 while (true) 
 do
     local options="$2"
     read -A myopts <<< "$2"
-    print_menu "$@"
+    #print_menu "$@"
+    print_menu "$1" "$options" "$mnem"
     print
     #perror "key is 1 $menu_char"
     # next line crashes program on ESC
@@ -274,7 +275,7 @@ fileopt() {
     local act=$ZFM_AUTO_ACTION[$uft]
     [[ -n "$M_NO_AUTO" ]] && { unset M_NO_AUTO; act= }
     if [[ -n "${act}" ]]; then
-        pinfo "got $act for $_act ($uft)"
+        pdebug "got $act for $_act ($uft)"
         name=${name:q}
         eval "${act} $name"
         [[ $act == $EDITOR ]] && { last_viewed_files=$name }
