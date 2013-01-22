@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-21 15:52
+# Last update: 2013-01-22 13:08
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -940,6 +940,7 @@ mycommands() {
             [[ -n $command ]] && eval "$command"
         fi
     fi
+    pause
 }
 
 # numbers the first nine rows only since these are hotkeys
