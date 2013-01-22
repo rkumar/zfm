@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-22 19:08
+#  Last update: 2013-01-23 00:58
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -76,13 +76,24 @@ default="1"
 #  Returns selected char in "menu_char"
 print_menu() {
     print_title "$1"
+
+    # chars to use as hotkeys
     local mnem="$3"
     ## earlier this was here , but now moved down so caller can translate
     #[[ -z "$mnem" ]] && mnem="         abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+    ## menu options, parse using IFS, this can be specified by caller
     local myopts
     read -A myopts <<< "$2"
     local c=1
+
+    ## buffer to concat each row so we can print in 2 cols if required
+    local _str
+    _str=()
+    ML_COLS=${ML_COLS:-1}
+    # trying out ML_COLS so called can specify if he wants more than one column
+    ## value is always reset to 1 afte printing so be sure to call each time
+    #ML_COLS=${ML_COLS:-1}
     for f in $myopts
     do
         sub=$c
@@ -93,9 +104,15 @@ print_menu() {
             [[ -n "$desc" ]] && desc="==>  $desc"
         fi
         # TODO improve by using printf since we are putting the desc
-        print -- "$sub ${mnem[$c]})  $f	    $desc"
+        #print -- "$sub ${mnem[$c]})  $f	    $desc"
+        _str+=("$sub ${mnem[$c]})  $f	    $desc")
         let c++
     done
+    print -C$ML_COLS -- $_str
+    _str=
+    #print $str
+    ## called must always specify if more than one
+    ML_COLS=1
     # show only a max of 9 in text
     (( c-- ))
     (( c > 9 )) && c=9
@@ -160,6 +177,8 @@ do
                 menu_index=$index
                 # this is a clever loophole for an extra mnemonic that is beyond the 
                 # menu options NOTE XXX
+                ## This is used so the menu key that called this can be reused
+                ## and hit twice to re-exec the last option. e.g. toggle key will re-toggle
                 [[ -z "$var" ]] && {  menu_text=$menu_char; break }
                 
             fi
