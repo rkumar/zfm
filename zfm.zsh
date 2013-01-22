@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-22 19:43
+#  Last update: 2013-01-23 01:07
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -69,7 +69,7 @@ list_printer() {
     do
         if [[ -z $M_NO_REPRINT ]]; then
             clear
-            print -l -- ${M_MESSAGE:-"$M_TITLE     $M_HELP"}
+            print -l -- ${M_MESSAGE:-"  $M_HELP"}
             (( fin = sta + $PAGESZ )) # 60
             #  We are now using grep to filter based on what user types
             #  However, this means that our index is wrong since we don't save this new array
@@ -100,8 +100,8 @@ list_printer() {
             #vpa=("${(f)=viewport}")
             local ttcount=$#vpa
             ZFM_LS_L=
-            if (( $ttcount <  (ZFM_LINES -1 ) )); then
-                # need to account for title and read lines at least
+            if (( $ttcount <  (ZFM_LINES -2 ) )); then
+                # need to account for title and read lines at least and message line
                 cols=1
                 # this could have the entire listing which contains TABS !!!
                 (( width= ZFM_COLS - 2 ))
@@ -136,7 +136,7 @@ list_printer() {
         # prompt for key PROMPT
         #read -k -r ans
         _read_keys
-        M_MESSAGE=
+        #M_MESSAGE=
         if [[ $? != 0 ]]; then
             # maybe ^C
             pdebug "Got C-c ? $reply, $key"
@@ -231,9 +231,9 @@ list_printer() {
 
                 if [[ -n "$M_FULL_INDEXING" ]]; then
                     iix=$MFM_NLIDX[(i)$ans]
-                    pinfo "iix was $iix for $ans"
+                    pdebug "iix was $iix for $ans"
                     [[ -n "$iix" ]] && { selection=$vpa[$iix]; break }
-                    pinfo "selection was $selection"
+                    pdebug "selection was $selection"
 
                 else
 
@@ -456,9 +456,12 @@ pop_pwd() {
 }
 #  executed when dir changed
 post_cd() {
-    patt="" # 2012-12-26 - 00:54 
+    patt=""
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
+    [[ $#param -eq 0 ]] && {
+        M_MESSAGE="$#param files, use UP or ZFM_GOTO_PARENT_KEY to go to parent folder, LEFT to popd"
+    }
     CURSOR=1
     # clear hash of file details to avoid recomp
     FILES_HASH=()
@@ -510,9 +513,9 @@ pause
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.1"
+ZFM_VERSION="0.1.2"
 M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/22"
-print $M_TITLE
+#print $M_TITLE
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -568,7 +571,8 @@ source_addons
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
 aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
 M_HELP=$( print_hash $aa )
-print $M_HELP
+#print $M_HELP
+M_MESSAGE="$M_HELP    $M_TITLE"
 param=$(print -rl -- *(M))
     while (true)
     do
@@ -654,8 +658,13 @@ param=$(print -rl -- *(M))
                     ;;
                 *)
                     [[ "$ans" == $ZFM_REFRESH_KEY ]] && { perror "breaking";  break }
-                    #M_MESSAGE=
+                    M_MESSAGE=
                     [[ -n $ans ]] && M_MESSAGE="$ans unused. $M_HELP"
+                    ## NOTE messages will only be refreshed if key had some
+                    #  effect, else unused key warning won't do anything since we dont
+                    #  redraw.
+                    #
+                    #
                     # why repeat it here too, just do this once in top level
                     #  2013-01-22 - 16:04 removing second get_key
                     #zfm_get_key_binding $ans
@@ -944,9 +953,19 @@ function _read_keys() {
             ret=$?
             if [[ "${key3}" == [0-9] ]]; then
                 # Home, End, PgUp, PgDn ...
-                read -k -s key4
-                ret=$?
-                reply="${key}${key2}${key3}${key4}"
+                # F5 etc take a fifth key, so a loop
+                #read -k -s key4
+                #ret=$?
+                #reply="${key}${key2}${key3}${key4}"
+                reply="${key}${key2}${key3}"
+                while (true); do
+                    read -t $(( KEYTIMEOUT / 1000 )) -k -s key4
+                    if [[ $? -eq 0 ]]; then
+                        reply+="$key4"
+                    else
+                        break
+                    fi
+                done
             else
                 # arrow keys
                 reply="${key}${key2}${key3}"
@@ -955,6 +974,12 @@ function _read_keys() {
         elif [[ $ret == "1" ]]; then
             # we have an escape
             ret=0
+        elif [[ "${key2}" == 'O' ]]; then
+            read -t $(( KEYTIMEOUT / 1000 )) -k -s key3
+            if [[ $? -eq 0 ]]; then
+                reply="${key}${key2}${key3}"
+                resolve_key_codes
+            fi
         else
             # alt keys
             reply="${key}${key2}"
@@ -982,6 +1007,16 @@ resolve_key_codes() {
     kh[(27 91 67)]="RIGHT"
     kh[(27 91 68)]="LEFT"
     kh[(27 91 70)]="End"
+    kh[(27 79 80)]="F1"
+    kh[(27 79 81)]="F2"
+    kh[(27 79 82)]="F3"
+    kh[(27 79 83)]="F4"
+    kh[(27 91 49 53 126)]="F5"
+    kh[(27 91 49 55 126)]="F6"
+    kh[(27 91 49 56 126)]="F7"
+    kh[(27 91 49 57 126)]="F8"
+    kh[(27 91 50 48 126)]="F9"
+    kh[(27 91 50 49 126)]="F10"
 
     keyarr=()
     for (( i = 1; i <= $#reply; i++ )); do
@@ -1046,6 +1081,8 @@ init_key_function_map() {
     zfm_bind_key "M-o" "settingsmenu"
     zfm_bind_key "M-s" "sortoptions"
     zfm_bind_key "M-f" "filteroptions"
+    zfm_bind_key "F1" "print_help_keys"
+    zfm_bind_key "F2" "goto_dir"
 }
 function init_file_menus() {
     # edit these or override in ENV
@@ -1141,7 +1178,8 @@ zfm_get_key_binding() {
     return $ret
 }
 toggle_options_menu() {
-    menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
+    toggle_menu_last_choice=FullIndexing
+    ML_COLS=2 menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
     [[ $menu_text == $ZFM_TOGGLE_MENU_KEY ]] && { menu_text=$toggle_menu_last_choice }
     case "$menu_text" in
         "FullIndexing")
@@ -1169,7 +1207,9 @@ toggle_options_menu() {
             fi
             ;;
         *)
-        perror "Wrong option $menu_text"
+            [[ -n $menu_text ]] && {
+                perror "Wrong option [$menu_text]"
+            }
     esac
     toggle_menu_last_choice=$menu_text
 }
