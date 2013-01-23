@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-23 22:13
+#  Last update: 2013-01-24 01:31
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -50,7 +50,8 @@ function cursor_up () {
     $cursor_up_action
     [[ $? -eq 1 ]] && return
     let CURSOR--
-    (( CURSOR == 1 )) && { M_MESSAGE="=>  Up arrow = parent, Left Arrow = popd" }
+    M_MESSAGE=
+    (( CURSOR == 1 )) && { M_MESSAGE="=>  <UP>:parent, <LEFT>:popd" }
     (( CURSOR < 1 )) && CURSOR=1
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
@@ -60,6 +61,7 @@ function _my_goto_parent() {
 }
 ## goes to files in next column
 # if no files on right, and on a dir, then goes into dir
+# XXX if we are not displayig entire list shouldnot right pan to other rows basically paging
 function cursor_right () {
     PREV_CURSOR=$CURSOR
     $cursor_right_action
@@ -67,10 +69,15 @@ function cursor_right () {
 
     local old=$CURSOR
 
-    _rows=$(ceiling_divide $#vpa $cols)
+    _rows=$(ceiling_divide $#vpa $LIST_COLS)
     (( CURSOR += _rows ))
     (( CURSOR < 1 )) && CURSOR=1
-    (( CURSOR > $#vpa )) && { CURSOR=$#vpa }
+    (( CURSOR > $#vpa )) && { 
+        CURSOR=$PREV_CURSOR
+        (( rem = CURSOR / _rows ))
+        (( CURSOR = ( CURSOR - ( _rows * rem )) + 1 ))
+
+    }
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 function _my_cd() {
@@ -80,10 +87,12 @@ function _my_cd() {
     #
     #(( CURSOR >= $#vpa )) && { 
         #CURSOR=$#vpa
-        selected=$vpa[$PREV_CURSOR]
-        if [[ -d "$selected" ]]; then
-            selection=$selected
-            return 1
+        if [[ $LIST_COLS -eq 1 ]]; then
+            selected=$vpa[$PREV_CURSOR]
+            if [[ -d "$selected" ]]; then
+                selection=$selected
+                return 1
+            fi
         fi
     #}
     return 0
@@ -95,9 +104,15 @@ function cursor_left () {
     ## -le required for empty dirs
     $cursor_left_action
     [[ $? -eq 1 ]] && return
-    _rows=$(ceiling_divide $#vpa $cols)
+    _rows=$(ceiling_divide $#vpa $LIST_COLS)
     (( CURSOR -= _rows ))
-    (( CURSOR < 1 )) && CURSOR=1
+    #(( CURSOR < 1 )) && CURSOR=1
+    (( CURSOR < 1 )) && { 
+        CURSOR=$PREV_CURSOR
+        (( i = _rows * ( LIST_COLS - 1) ))
+        (( CURSOR = ( i + CURSOR - 1 ) ))
+
+    }
     (( CURSOR > $#vpa )) && CURSOR=$#vpa
 
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
@@ -144,5 +159,17 @@ function select_current_line () {
 ## what to do when user enters a row, such as display some text or 
 # help or pop or enter dir
 function on_enter_row() {
+    selected=$vpa[$CURSOR]
+    if [[ -d "$selected" ]]; then
+        M_MESSAGE="=> Press Enter to cd into directory"
+    else
+        M_MESSAGE="=> Press Enter to run command on file"
+        #
+        ## only display details in multicol listing when file details are not shown
+        if [[ $LIST_COLS -gt 1 ]]; then
+            get_file_details $selected
+            M_MESSAGE="$M_HELP [$CURSOR] $_detail"
+        fi
+    fi
 
 }
