@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-23 01:07
+#  Last update: 2013-01-23 23:29
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -658,7 +658,7 @@ param=$(print -rl -- *(M))
                     ;;
                 *)
                     [[ "$ans" == $ZFM_REFRESH_KEY ]] && { perror "breaking";  break }
-                    M_MESSAGE=
+                    #M_MESSAGE=
                     [[ -n $ans ]] && M_MESSAGE="$ans unused. $M_HELP"
                     ## NOTE messages will only be refreshed if key had some
                     #  effect, else unused key warning won't do anything since we dont
@@ -1135,6 +1135,13 @@ function init_file_menus() {
     # now we need to define what constitutes markdown files such as MD besides MARKDOWN extension
     FT_OPTIONS[MARKDOWN]="Markdown.pl w3m1 multimarkdown"
     FT_OPTIONS[BIN]="od bgrep strings"
+    #
+    ## options for when a directory is selected
+    # This doesn't allow us to do stuff inside a dir like mkdir or newfile since 
+    #  we are not inside a dir
+    # added 2013-01-23 - 20:46 
+    FT_OPTIONS[DIR]="chdir archive trash du dush ncdu"
+
     ## -- how to specify a space, no mnemonic?
     #FT_TEXT=(v vim : cmd l less # mv D ${ZFM_RM_COMMAND} z archive t tail h head o open a auto)
     typeset -Ag COMMAND_HOTKEYS
@@ -1147,6 +1154,8 @@ function init_file_menus() {
     COMMANDS[trash]="$ZFM_RM_COMMAND"
     COMMANDS[archive]="$ZFM_ZIP_COMMAND"
     COMMANDS[unzip]="$ZFM_UNZIP_COMMAND"
+    COMMANDS[chdir]="$ZFM_CD_COMMAND"
+    COMMANDS[dush]="du -sh"
     #COMMANDS[head]="head -25"
     #COMMANDS[tail]='tail -${lines} %%'
     COMMANDS[pdftohtml]='vim =(pdftohtml %%)'
@@ -1178,6 +1187,10 @@ zfm_get_key_binding() {
     return $ret
 }
 toggle_options_menu() {
+    ## by default or first time pressing toggle key twice will toggle full-indexing
+    # After that it toggles whatever the last toggle was. If that is too confusing
+    # maybe i can set it to one option whatever is the most used.
+
     toggle_menu_last_choice=FullIndexing
     ML_COLS=2 menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
     [[ $menu_text == $ZFM_TOGGLE_MENU_KEY ]] && { menu_text=$toggle_menu_last_choice }
