@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-23 22:28
+#  Last update: 2013-01-24 01:41
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -357,6 +357,9 @@ function eval_menu_text () {
         "mv") 
             zfm_mv $files
             ;;
+        #"chdir") 
+            #$ZFM_CD_COMMAND $files && post_cd
+            #;;
         "archive") 
             zfm_zip $files
             ;;
