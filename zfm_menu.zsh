@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-23 00:58
+#  Last update: 2013-01-23 22:28
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -143,8 +143,11 @@ do
     #print_menu "$@"
     print_menu "$1" "$options" "$mnem"
     print
-    #perror "key is 1 $menu_char"
-    # next line crashes program on ESC
+
+    ## pressing ENTER selects first entry. 
+    [[ $menu_char = $'\n' ]] && { menu_char="1" }
+    # 
+    # precent some line from crashes program on ESC
     [[ $menu_char = "" ]] && { perror "Got a ESC XXX"; menu_char="q" }
     ## the -- is required else a hyphen entered is swallowed
     menu_char=$(print -- "$menu_char" | tr -d '[\n\r\t ]')
@@ -152,7 +155,7 @@ do
     #[[ -z $menu_char ]] && menu_char="$default"
     if [[ -z $menu_char ]] ;
     then
-        # enter pressed
+        # enter pressed, no enter converted to 1, possible tab pressed
         print "press q or ',' to exit without selection " 1>&2
         #print_menu 
     else
@@ -228,6 +231,7 @@ fileopt() {
     ## if no extension then do filetype check
     local -U apps
     extn=$name:e
+    [[ -d $name ]] && { extn="DIR" }
 
     extn=${extn:-NIL}
     if [[ -n $extn ]]; then
@@ -308,7 +312,7 @@ fileopt() {
     print_title "File summary for $name:"
     file $name
     ls -lh $name
-    [[ -f "$name" ]] || { perror "$name not found."; pause; return }
+    [[ -e "$name" ]] || { perror "$name not found or not a regular file."; pause; return }
     pdebug "$0 before ML : $apps"
     menu_loop "File Operations:" "$apps" $hotkeys
     [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned 270 $menu_char, $menutext "
@@ -502,6 +506,7 @@ fileopt_noauto() {
 filetype(){
     local name="$1"
     [[ -z $name ]] && return
+    [[ -d $name ]] && { print "DIR"; return }
     local type=""
     extn=$name:e
     uextn=${(U)extn}
