@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-23 23:36
+#  Last update: 2013-01-24 01:42
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -51,9 +51,9 @@ list_printer() {
     shift
     #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
-    #local cols=3
+    #local COLS=3
     # using cols to calculate cursor movement right
-    cols=3
+    LIST_COLS=3
     local tot=$#myopts
     local sta=1
     #local patt="."
@@ -102,17 +102,17 @@ list_printer() {
             ZFM_LS_L=
             if (( $ttcount <  (ZFM_LINES -2 ) )); then
                 # need to account for title and read lines at least and message line
-                cols=1
+                LIST_COLS=1
                 # this could have the entire listing which contains TABS !!!
                 (( width= ZFM_COLS - 2 ))
                 ZFM_LS_L=1
             elif [[ $ttcount -lt 40 ]]; then
-                cols=2
-                (( width = (ZFM_COLS / cols) - 2 ))
+                LIST_COLS=2
+                (( width = (ZFM_COLS / LIST_COLS) - 2 ))
             else
-                cols=3
+                LIST_COLS=3
                 # i can use 1 instead of 2, it touches the end, 2 to be safe for other widths
-                (( width = (ZFM_COLS / cols) - 2 ))
+                (( width = (ZFM_COLS / LIST_COLS) - 2 ))
             fi
             # NO, vpa is not entire thing, its grepped and filtered, so it can't be more than page size=
             #let tot=$#vpa
@@ -122,9 +122,9 @@ list_printer() {
             (( CURSOR == -1 || CURSOR > $tot )) && CURSOR=$tot
             print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}  "
 
-            #print -rC$cols "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
+            #print -rC$LIST_COLS "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
             numberlines -p "$patt" -w $width $viewport
-            print -rC$cols "${(@f)$(print -l -- $OUTPUT)}"
+            print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
 
             #print -n "> $patt"
             mode=
@@ -462,9 +462,10 @@ post_cd() {
     [[ $#param -eq 0 ]] && {
         M_MESSAGE="$#param files, use UP or ZFM_GOTO_PARENT_KEY to go to parent folder, LEFT to popd"
     }
-    CURSOR=1
     # clear hash of file details to avoid recomp
     FILES_HASH=()
+    execute_hooks "chdir"
+    CURSOR=1
 }
 zfm_refresh() {
     filterstr=${filterstr:-M}
@@ -513,7 +514,7 @@ pause
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.3"
+ZFM_VERSION="0.1.3-a"
 M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/23"
 #print $M_TITLE
 #  Array to place selected files
@@ -561,7 +562,7 @@ ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
 integer ZFM_COLS=$(tput cols)
 integer ZFM_LINES=$(tput lines)
 integer CURSOR=1
-export ZFM_COLS ZFM_LINES
+export ZFM_COLS ZFM_LINES CURSOR
 export ZFM_STRING
 init_key_function_map
 init_menu_options
@@ -581,7 +582,8 @@ param=$(print -rl -- *(M))
         [[ -n $selection ]] && print "returned with $selection"
         # value selected is in selection, key pressed in ans
         [[ -z "$selection" ]] && {
-            [[ "$ans" = "q" || "$ans" = "" ]] && break
+            #[[ "$ans" = "q" || "$ans" = "" ]] && break
+            [[ "$ans" = "q" ]] && break
             case $ans in 
                 "~")
                     selection=$HOME
@@ -794,27 +796,8 @@ numberlines() {
             if [[ -n "$line" ]]; then
                 if [[ -e "$line" ]]; then
                     # check cache for file details
-                    _detail=$FILES_HASH[$line]
-                    if [[ -z $_detail ]]; then
-                        mtime=$(zstat -L -F "%Y-%m-%d %H:%M" +mtime $line)
-                        zstat -L -H hash $line
-                        sz=$hash[size]
-                        if [[ $sz -gt 1048576 ]]; then
-                            (( sz = sz / 1048576 )) ; sz="${sz}M" 
-                            # statements
-                        elif [[ $sz -gt 9999 ]]; then
-                            (( sz = sz / 1024 )) ; sz="${sz}k" 
-                        fi
-                        sz=$( print ${(l:6:)sz} )
-                        #[[ $sz -gt 9999 ]] && {  (( sz = sz / 1024 )) ; sz="${sz}k" }
-                        link=$hash[link]
-                        [[ -n $link ]] && link=" -> $link"
-                        _detail="${TAB}$sz${TAB}$mtime${TAB}"
-                        # cache details of file
-                        FILES_HASH[$line]=$_detail
-                    else
-                        #_detail="$_detail +"
-                    fi
+                    get_file_details "$line"
+                    # above call updates _detail and the hash, so has to be in current process
                 else
                     _detail="(deleted?)"
                     # file does not exist so it could be deleted ?
@@ -853,6 +836,36 @@ numberlines() {
     done
     #print -l -- $OUTPUT
 } # numberlines
+
+## 
+# updates file details in _detail and also updates hash/cache
+# this cannot be called in new process, must be called and then _detail used
+function get_file_details() {
+    local line=$1
+    local sz link
+    _detail=$FILES_HASH[$line]
+    if [[ -z $_detail ]]; then
+        mtime=$(zstat -L -F "%Y-%m-%d %H:%M" +mtime $line)
+        zstat -L -H hash $line
+        sz=$hash[size]
+        if [[ $sz -gt 1048576 ]]; then
+            (( sz = sz / 1048576 )) ; sz="${sz}M" 
+            # statements
+        elif [[ $sz -gt 9999 ]]; then
+            (( sz = sz / 1024 )) ; sz="${sz}k" 
+        fi
+        sz=$( print ${(l:6:)sz} )
+        #[[ $sz -gt 9999 ]] && {  (( sz = sz / 1024 )) ; sz="${sz}k" }
+        link=$hash[link]
+        [[ -n $link ]] && link=" -> $link"
+        _detail="${TAB}$sz${TAB}$mtime${TAB}"
+        # cache details of file
+        FILES_HASH[$line]=$_detail
+    else
+        #_detail="$_detail +"
+    fi
+
+}
 
 selection_menu() {
     local mode="remove_mode"
@@ -1049,6 +1062,10 @@ init_menu_options() {
         )
 }
 init_key_function_map() {
+    typeset -gA zfm_hook
+    #add_hook "chdir" "M_MESSAGE='=>   LEFT: popd   UP: Parent dir'"
+    add_hook "chdir" chdir_message
+
     typeset -gA zfm_keymap
     # testing out key mappings with different kinds of keys
     zfm_keymap=("$ZFM_GOTO_PARENT_KEY"
@@ -1154,7 +1171,7 @@ function init_file_menus() {
     COMMANDS[trash]="$ZFM_RM_COMMAND"
     COMMANDS[archive]="$ZFM_ZIP_COMMAND"
     COMMANDS[unzip]="$ZFM_UNZIP_COMMAND"
-    COMMANDS[chdir]="$ZFM_CD_COMMAND"
+    COMMANDS[chdir]="$ZFM_CD_COMMAND %% && post_cd"
     COMMANDS[dush]="du -sh"
     #COMMANDS[head]="head -25"
     #COMMANDS[tail]='tail -${lines} %%'
@@ -1185,6 +1202,29 @@ zfm_get_key_binding() {
     ret=1
     [[ -n $binding ]] && ret=0
     return $ret
+}
+#
+## add a function to call on an event
+#  Events are chdir 
+#  Should be check event passed in or let it be open?
+#  $1 - event
+#  $2 - function to call when even happens
+function add_hook() {
+    zfm_hook[$1]+=" $2 "
+}
+function execute_hooks() {
+    local event=$1
+    local hooks=$zfm_hook[$event]
+    for ev in $hooks; do
+        if [[ -x "$ev" ]]; then
+            $ev
+        else
+            eval "$ev"
+        fi
+    done
+}
+function chdir_message() {
+    [[ $#param -gt 0 ]] && M_MESSAGE="$M_HELP   <LEFT>: popd   <UP>: Parent dir"
 }
 toggle_options_menu() {
     ## by default or first time pressing toggle key twice will toggle full-indexing
