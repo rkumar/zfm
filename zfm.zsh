@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-24 01:42
+#  Last update: 2013-01-24 20:36
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -120,7 +120,9 @@ list_printer() {
             local sortorder=""
             [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
             (( CURSOR == -1 || CURSOR > $tot )) && CURSOR=$tot
-            print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT}  "
+            ## if there are no rows then CURSOR gets set to 0 and remains there forever, check
+            (( CURSOR == 0 )) && CURSOR=1
+            print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT} "
 
             #print -rC$LIST_COLS "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
             numberlines -p "$patt" -w $width $viewport
@@ -150,9 +152,11 @@ list_printer() {
         fi
         #print 2013-01-21 - 00:09 due to \r in print
         #clear # trying this out # commenting out, if we don't reprint then clearing was wrong
-        [[ $ans = $'\t' ]] && pdebug "Got a TAB XXX"
+        #[[ $ans = $'\t' ]] && pdebug "Got a TAB XXX"
         [[ $ans = "C-i" ]] && ans=$'\t'
-        [[ $ans = "" ]] && pdebug "Got a ESC XXX"
+        ## giving names so easier to find and use
+        [[ $ans = "" ]] && ans="ESCAPE"
+        [[ $ans = "" ]] && ans="BACKSPACE"
         case $ans in
             "")
                 # BLANK blank
@@ -194,6 +198,7 @@ list_printer() {
                     lines=
                     if [[ -n "$M_SWITCH_OFF_DUPL_CHECK" ]]; then
                         lines=$(check_patt $npatt)
+                        ## XXX why not ct=$#lines 2013-01-24 - 20:05 
                         ct=$(print -rl -- $lines | wc -l)
                     else
                         ct=0
@@ -297,13 +302,24 @@ list_printer() {
                 #[[ -n $ZFM_VERBOSE ]] && pdebug "breaking here with $ans , sel: $selection"
                 #break
                 #;;
+            BACKSPACE)
+                # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
+                if [[ $patt = "" ]]; then
+                    #patt=""
+                    M_NO_REPRINT=1
+                else
+                    # backspace if we are filtering, remove last char from pattern
+                    patt=${patt[1,${#patt}-1]}
+                fi
+                ;;
 
 
-            *) pdebug "default got :$ans:"
+            *) 
                 (( sta = 1 ))
                 ## a case within a case for the same var -- how silly
                 case $ans in
-                    "")
+                    #"")
+                        BACKSPACE)
                         # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
                         if [[ $patt = "" ]]; then
                             #patt=""
@@ -318,7 +334,7 @@ list_printer() {
                         patt=""
                         ;;
                     *)
-                        # lets check if user or we have bound something to the key
+                        # check something bound to the key
                         # Now we should use this and bind everything, so its more modular
                         zfm_get_key_binding $ans
                         if [[ -n $binding ]]; then
@@ -326,10 +342,9 @@ list_printer() {
                             ans=
                             break
                         else
-                            #[[ "$ans" == "[" ]] && pdebug "got ["
-                            #[[ "$ans" == "{" ]] && pdebug "got {"
+                            
                             pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
-                           #pinfo "? for key help"
+                           
                             #  put key in SWALLOW section to pass to caller
                             if [[ -n $patt ]]; then
                                 patt=""
@@ -343,7 +358,10 @@ list_printer() {
                 esac
                 [[ -n $ZFM_VERBOSE ]] && print "Pattern is :$patt:"
         esac
-        [[ $sta -ge $tot ]] && break
+
+        ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
+        ## was causing the unused error to keep popping up when no rows were returned
+        [[ $sta -ge $tot ]] && { ans= ;  break }
         # break takes control back to MARK1 section below
 
     done
@@ -514,8 +532,8 @@ pause
 myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.3-a"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/23"
+ZFM_VERSION="0.1.3-b"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/24"
 #print $M_TITLE
 #  Array to place selected files
 typeset -U selectedfiles
@@ -557,6 +575,7 @@ MFM_LISTORDER=${MFM_LISTORDER:-""}
 M_EXCLUDE_PATTERN=
 pattern='*' # this is separate from patt which is a temp filter based on hotkeys
 filterstr="M"
+M_PRINT_COMMAND_DESC=1
 MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
 integer ZFM_COLS=$(tput cols)
@@ -1129,7 +1148,7 @@ function init_file_menus() {
     FT_EXTNS[IMAGE]=" png jpg jpeg gif "    # ends with ~ not an extension
     FT_EXTNS[VIDEO]=" flv mp4 "    # ends with ~ not an extension
     FT_EXTNS[AUDIO]=" mp3 m4a aiff aac ogg "    # ends with ~ not an extension
-    FT_COMMON="open cmd mv trash auto clip"
+    FT_COMMON="open cmd mv trash auto clip chdir"
     
     ## options displayed when you select multiple files
     ##  Sadly, this is not taking into account filetypes selected, thatcould be helpful
@@ -1171,7 +1190,7 @@ function init_file_menus() {
     COMMANDS[trash]="$ZFM_RM_COMMAND"
     COMMANDS[archive]="$ZFM_ZIP_COMMAND"
     COMMANDS[unzip]="$ZFM_UNZIP_COMMAND"
-    COMMANDS[chdir]="$ZFM_CD_COMMAND %% && post_cd"
+    #COMMANDS[chdir]="$ZFM_CD_COMMAND %% && post_cd"
     COMMANDS[dush]="du -sh"
     #COMMANDS[head]="head -25"
     #COMMANDS[tail]='tail -${lines} %%'
