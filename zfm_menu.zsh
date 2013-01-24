@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-24 01:41
+#  Last update: 2013-01-24 18:26
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -99,7 +99,7 @@ print_menu() {
         sub=$c
         [[ $c -gt 9 ]] && { sub=" " }
         desc=
-        if [[ -z "$M_SUPPRESS_PRINT_COMMAND" ]]; then
+        if [[ -n "$M_PRINT_COMMAND_DESC" ]]; then
             desc="$COMMANDS[$f]"
             [[ -n "$desc" ]] && desc="==>  $desc"
         fi
@@ -357,9 +357,13 @@ function eval_menu_text () {
         "mv") 
             zfm_mv $files
             ;;
-        #"chdir") 
-            #$ZFM_CD_COMMAND $files && post_cd
-            #;;
+        "chdir") 
+            # you can select a file in some cases and cd to it as in recent_files
+            if [[ -f $files ]]; then
+                files=$files:h
+            fi
+            $ZFM_CD_COMMAND $files && post_cd
+            ;;
         "archive") 
             zfm_zip $files
             ;;
