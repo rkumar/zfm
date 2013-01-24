@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-24 20:36
+#  Last update: 2013-01-24 20:43
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -173,9 +173,9 @@ list_printer() {
                 # KEY PRESS key
                 if [[ -n "$M_FULL_INDEXING" ]]; then
                     iix=$MFM_NLIDX[(i)$ans]
-                    pinfo "got iix $iix for $ans"
+                    pdebug "got iix $iix for $ans"
                     [[ -n "$iix" ]] && selection=$vpa[$iix]
-                    pinfo "selection was $selection"
+                    pdebug "selection was $selection"
                 else
 
                 # actix needs to be consistent in 2 cases:
@@ -188,7 +188,6 @@ list_printer() {
                 # could happen alot if you keep numbered files)
 
                 selection=""
-                [[ -n $ZFM_VERBOSE ]] && pdebug "files shown $#vpa "
                 if [[ $ttcount -gt 9 ]]; then
                     if [[ $patt = "" ]]; then
                         npatt="${ans}*"
@@ -316,24 +315,8 @@ list_printer() {
 
             *) 
                 (( sta = 1 ))
-                ## a case within a case for the same var -- how silly
-                case $ans in
-                    #"")
-                        BACKSPACE)
-                        # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
-                        if [[ $patt = "" ]]; then
-                            #patt=""
-                            M_NO_REPRINT=1
-                        else
-                            # backspace if we are filtering, remove last char from pattern
-                            patt=${patt[1,${#patt}-1]}
-                        fi
-                        ;;
-                    ".")
-                        # reset the patter when pressing ,
-                        patt=""
-                        ;;
-                    *)
+                # 2013-01-24 - 20:38 moved backspace up
+
                         # check something bound to the key
                         # Now we should use this and bind everything, so its more modular
                         zfm_get_key_binding $ans
@@ -354,9 +337,6 @@ list_printer() {
                             ## added on 2013-01-22 - 16:33 so caller can capture
                             break
                         fi
-                        ;;
-                esac
-                [[ -n $ZFM_VERBOSE ]] && print "Pattern is :$patt:"
         esac
 
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
