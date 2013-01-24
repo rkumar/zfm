@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-22 13:08
+# Last update: 2013-01-24 20:23
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -58,7 +58,7 @@ fuzzyselectrow() {
             # split into 2 columns
             print -rC2 -- "${(@f)$(print -rl -- $viewport | numbernine | sed "s#$HOME#~#g")}"
         else
-            print -rl -- $viewport | numbernine
+            print -rl -- $viewport | numbernine | sed "s#$HOME#~#g"
         fi
         # PROMPT prompt
         print  -n "Select a row [1-$_hv] ? Help, ESC/ENTER ($#deleted/$#vpa)/$gpatt/: "
@@ -114,7 +114,7 @@ fuzzyselectrow() {
     }
 
 
-    [[ $reply = "" ]] && { pdebug "Got esc" ; selected_file=; selected_files=; break }
+    [[ $reply = "" ]] && { selected_file=; selected_files=; break }
     pdebug "got $reply"
     [[ -z "$reply" ]] && break
     #  check for numeric as some values like "o" can cause abort
@@ -148,7 +148,8 @@ fuzzyselectrow() {
         print -rl  "         [1-9] to add to selection"
         print -rl  "         $ZFM_MENU_KEY menu"
         print -rl  "         ^ Toggle fuzzy mode"
-        print -rl  "         = Toggle 2 columns"
+        print -rl  "         | Toggle 2 columns"
+        print -rl  "         = Toggle auto-view"
         pause
     else
         #perror "Sorry. [$reply] not numeric"
@@ -159,38 +160,42 @@ fuzzyselectrow() {
                 gpatt=${gpatt[1,-2]}
                 [[ $gpatt[-2,-1] == ".*" ]] && gpatt=${gpatt[1,-3]}
             fi
-        elif [[ "$reply" == "=" ]]; then
+        elif [[ "$reply" == '|' ]]; then
             if [[ $ZFM_AUTO_COLUMNS == "1" ]]; then
                 ZFM_AUTO_COLUMNS=
             else
                 ZFM_AUTO_COLUMNS="1"
             fi
+        elif [[ "$reply" == '=' ]]; then
+            pinfo "Toggling auto viewing of selected files/"
+            toggle_auto_view
         elif [[ "$reply" == $ZFM_MENU_KEY ]]; then
             # files with spaces are getting split !!! 
-            menu_loop "Options" "remove truncate rem_extn extn" ""
+            menu_loop "Options for filtering list" "reject truncate reject_extn accept" ""
             case $menu_text in
-                "remove")
-                    print  "removes all files matching given pattern"
+                "reject")
+                    print  "reject all files matching given pattern"
                     rejpattern=${rejpattern:-"tmp Trash Backups"}
                     vared -p "Enter pattern to reject: " rejpattern
                     #files=( $(print -rl -- $ff ) )
                     rejpattern=${rejpattern:gs/ /|/}
-                    files=("${(@f)$(print -rl -- $ff | egrep -v "\.($rejpattern)$")}")
+                    local oldc=$#files
+                    files=("${(@f)$(print -rl -- $ff | egrep -v "($rejpattern)")}")
                     ;;
                 "truncate")
                     print  "truncates beginning of files to shorten name, toggles "
                     (( ZFM_TRUNCATE = ZFM_TRUNCATE * -1 ))
                     #pdebug "truncate value is: $ZFM_TRUNCATE "
                     ;;
-                "rem_extn")
+                "reject_extn")
                     print  "removes files for given extensions (space delim)"
                     xrejpattern=${xrejpattern:-"~ bak swp o pyo class lib"}
                     vared -p "Enter extensions to reject: " xrejpattern
                     xrejpattern=${xrejpattern:gs/ /|/}
                     files=("${(@f)$(print -rl -- $ff | egrep -v "\.($xrejpattern)$")}")
                     ;;
-                "extn")
-                    print  "only keep files for given extensions (space delim) remove others"
+                "accept")
+                    print  "only show files for given extensions (space delim) remove others"
                     accpattern=${accpattern:-""}
                     vared -p "Enter pattern to accept: " accpattern
                     accpattern=${accpattern:gs/ /|/}
@@ -234,6 +239,7 @@ fuzzyselectrow() {
        fi
     fi
     done
+    M_MESSAGE=
 }
 
 # 
@@ -862,7 +868,7 @@ m_recentfiles() {
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
             #perror "XXX $#selected_files ,, $selected_file,, $selected_files"
             if [[ $#selected_files -eq 1 ]]; then
-                fileopt "$selected_file"
+                fileopt "$selected_files[1]"
             elif [[ $#selected_files -gt 1 ]]; then
                 multifileopt $selected_files
             elif [[ -e "$selected_file" ]]; then
