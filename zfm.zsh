@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-24 20:43
+#  Last update: 2013-01-25 11:04
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -41,7 +41,7 @@ PAGESZ=59     # used for incrementing while paging
 #  list_printer "Directory Listing" ./*
 #    param 1 title
 #    rest is files to list
-list_printer() {
+function list_printer() {
     selection="" # contains return value if anything chosen
     #integer ZFM_COLS=$(tput cols) # it was here since it could change if resize, but not getting passed
     #integer ZFM_LINES=$(tput lines)
@@ -137,6 +137,7 @@ list_printer() {
         print -n "\r$mode${mark}$patt > "
         # prompt for key PROMPT
         #read -k -r ans
+        # see zfm_menu.zsh for _read moved there
         _read_keys
         #M_MESSAGE=
         if [[ $? != 0 ]]; then
@@ -348,7 +349,7 @@ list_printer() {
 }
 # }
 
-toggle_match_from_start() {
+function toggle_match_from_start() {
     # default is unset, it matches what you type from start
     if [[ -z "$M_MATCH_ANYWHERE" ]]; then
         M_MATCH_ANYWHERE=1
@@ -360,7 +361,7 @@ toggle_match_from_start() {
 # utility functions {
 # check if there is only one file for this pattern, then straight go for it
 # with some rare cases the next char is a number, so then don't jump.
-check_patt() {
+function check_patt() {
     local p=${1:s/^//}  # obsolete, refers to earlier grep version
     local ic=
     ic=${ZFM_IGNORE_CASE+i}
@@ -374,7 +375,7 @@ check_patt() {
     # need to account for match from start
     print $lines
 }
-subcommand() {
+function subcommand() {
     dcommand=${dcommand:-""}
     vared -p "Enter command (? - help): " dcommand
     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && break
@@ -432,13 +433,13 @@ subcommand() {
 
 #  add current dir to stack so we can pop back
 #  We add it backwards so i can shift 
-push_pwd() {
+function push_pwd() {
     ZFM_DIR_STACK=(
     $ZFM_DIR_STACK
     $PWD:q
     )
 }
-pop_pwd() {
+function pop_pwd() {
     # remove from end
     newd=$ZFM_DIR_STACK[-1]
     ZFM_DIR_STACK[-1]=()
@@ -453,7 +454,7 @@ pop_pwd() {
     post_cd
 }
 #  executed when dir changed
-post_cd() {
+function post_cd() {
     patt=""
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
@@ -465,13 +466,13 @@ post_cd() {
     execute_hooks "chdir"
     CURSOR=1
 }
-zfm_refresh() {
+function zfm_refresh() {
     filterstr=${filterstr:-M}
     #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
     myopts=("${(@f)$(print -rl -- $param)}")
 }
-print_help_keys() {
+function print_help_keys() {
 
     pbold "$ZFM_APP_NAME some keys"
     sed -e 's/^    //' <<EndHelp
@@ -509,7 +510,7 @@ pause
 # utility }
 # main {
 #   alias this to some signle letter after sourceing this file in .zshrc
-myzfm() {
+function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
 ZFM_VERSION="0.1.3-b"
@@ -739,7 +740,7 @@ param=$(print -rl -- *(M))
 ## Earlier this acted as a filter and read lines and printed back output, But now we cache
 # file details to avoid screen flicker, so the hash must be in the same shell/process, thus 
 # it stored details in OUTPUT string. And reads from viewport.
-numberlines() {
+function numberlines() {
     let c=1
     local patt='.'
     if [[ -n "$ZFM_NO_COLOR" ]]; then
@@ -866,7 +867,7 @@ function get_file_details() {
 
 }
 
-selection_menu() {
+function selection_menu() {
     local mode="remove_mode"
     local mmode="Selection"
     [[ $#selectedfiles -eq 0 ]] && ZFM_REMOVE_MODE=
@@ -945,103 +946,10 @@ selection_menu() {
 }
 # }
 
-function _read_keys() {
-
-    local key key2 key3 key4
-    integer ret
-    ckey=
-
-    ## 2013-01-21 - 00:19 trying out -s with M_NO_REPRINT
-    read -k -s key
-    ret=$?
-    reply="${key}"
-    if [[ '#key' -eq '#\\e' ]]; then
-        # M-...
-        read -t $(( KEYTIMEOUT / 1000 )) -k -s key2
-        ret=$?
-        if [[ "${key2}" == '[' ]]; then
-            # cursor keys
-            read -k -s key3
-            ret=$?
-            if [[ "${key3}" == [0-9] ]]; then
-                # Home, End, PgUp, PgDn ...
-                # F5 etc take a fifth key, so a loop
-                #read -k -s key4
-                #ret=$?
-                #reply="${key}${key2}${key3}${key4}"
-                reply="${key}${key2}${key3}"
-                while (true); do
-                    read -t $(( KEYTIMEOUT / 1000 )) -k -s key4
-                    if [[ $? -eq 0 ]]; then
-                        reply+="$key4"
-                    else
-                        break
-                    fi
-                done
-            else
-                # arrow keys
-                reply="${key}${key2}${key3}"
-            fi
-            resolve_key_codes
-        elif [[ $ret == "1" ]]; then
-            # we have an escape
-            ret=0
-        elif [[ "${key2}" == 'O' ]]; then
-            read -t $(( KEYTIMEOUT / 1000 )) -k -s key3
-            if [[ $? -eq 0 ]]; then
-                reply="${key}${key2}${key3}"
-                resolve_key_codes
-            fi
-        else
-            # alt keys
-            reply="${key}${key2}"
-            if (( key = 27 )); then
-                x=$((#key2))
-                y=${(#)x}
-                ckey="M-$y"
-            fi
-        fi
-    else
-        reply="${key}"
-        ascii=$((#key))
-        # ctrl keys
-        (( ascii >= 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
-    fi
-    return $ret
-}
-# this is for those cases with 3 or 4 keys
-resolve_key_codes() {
-    typeset -A kh;
-    kh[(27 91 54 126)]="PgDn"
-    kh[(27 91 53 126)]="PgUp"
-    kh[(27 91 65)]="UP"
-    kh[(27 91 66)]="DOWN"
-    kh[(27 91 67)]="RIGHT"
-    kh[(27 91 68)]="LEFT"
-    kh[(27 91 70)]="End"
-    kh[(27 79 80)]="F1"
-    kh[(27 79 81)]="F2"
-    kh[(27 79 82)]="F3"
-    kh[(27 79 83)]="F4"
-    kh[(27 91 49 53 126)]="F5"
-    kh[(27 91 49 55 126)]="F6"
-    kh[(27 91 49 56 126)]="F7"
-    kh[(27 91 49 57 126)]="F8"
-    kh[(27 91 50 48 126)]="F9"
-    kh[(27 91 50 49 126)]="F10"
-
-    keyarr=()
-    for (( i = 1; i <= $#reply; i++ )); do
-        j=$reply[$i]
-        k=$((#j))
-        keyarr+=($k)
-    done
-    ckey=$kh[($keyarr)]
-}
 # this is the main menu used in the list when pressing MENU_KEY
 # The purpose of initializing this is to make it configurable or modifiable through
 # a config file
-init_menu_options() {
+function init_menu_options() {
     typeset -gA main_menu_command_hash
     main_menu_options=("f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings" "_) Last viewed file")
     main_menu_command_hash=(
@@ -1060,7 +968,7 @@ init_menu_options() {
         _ edit_last_file
         )
 }
-init_key_function_map() {
+function init_key_function_map() {
     typeset -gA zfm_hook
     #add_hook "chdir" "M_MESSAGE='=>   LEFT: popd   UP: Parent dir'"
     add_hook "chdir" chdir_message
@@ -1100,7 +1008,7 @@ init_key_function_map() {
     zfm_bind_key "F1" "print_help_keys"
     zfm_bind_key "F2" "goto_dir"
 }
-function init_file_menus() {
+function function init_file_menus() {
     # edit these or override in ENV
     ZFM_ZIP_COMMAND=${ZFM_ZIP_COMMAND:-'tar zcvf ${archive} %%'}
     ZFM_RM_COMMAND=${ZFM_RM_COMMAND:-rmtrash}
@@ -1189,14 +1097,14 @@ function init_file_menus() {
 function get_command_for_title() {
     print $COMMANDS[$1]
 }
-zfm_bind_key() {
+function zfm_bind_key() {
     # should we check for existing and refuse ?
     zfm_keymap[$1]=$2
 }
-zfm_unbind_key() {
+function zfm_unbind_key() {
     zfm_keymap[$1]=()
 }
-zfm_get_key_binding() {
+function zfm_get_key_binding() {
     binding=$zfm_keymap[$1]
     ret=1
     [[ -n $binding ]] && ret=0
@@ -1225,7 +1133,7 @@ function execute_hooks() {
 function chdir_message() {
     [[ $#param -gt 0 ]] && M_MESSAGE="$M_HELP   <LEFT>: popd   <UP>: Parent dir"
 }
-toggle_options_menu() {
+function toggle_options_menu() {
     ## by default or first time pressing toggle key twice will toggle full-indexing
     # After that it toggles whatever the last toggle was. If that is too confusing
     # maybe i can set it to one option whatever is the most used.
@@ -1265,12 +1173,12 @@ toggle_options_menu() {
     esac
     toggle_menu_last_choice=$menu_text
 }
-zfm_popd() {
+function zfm_popd() {
     dirs
     popd && post_cd
     selection=
 }
-zfm_show_menu() {
+function zfm_show_menu() {
     if [[ -n "$M_SELECTION_MODE" ]]; then
         selection_menu
     else
@@ -1362,12 +1270,3 @@ function source_addons() {
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
 myzfm
-#if [ "$(basename $0)" = "m.sh" ]
-#then
-    #myzfm
-    ## this is running a as a command, run myfunc
-#else
-    #print "This is being sourced"
-    #alias m=myzfm
-    ## this is being sourced, make aliases
-#fi
