@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-25 20:40
+#  Last update: 2013-01-26 00:12
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -86,6 +86,7 @@ ZFM_structure() {
 }
 ZFM_ffind() {
     # find files with string in filename
+    # FAILS if filename contains spaces
     searchpattern=${searchpattern:-""}
     pinfo "Pattern entered must match basename not dirname"
     vared -p "Filename to search for (enter 3 characters): " searchpattern
