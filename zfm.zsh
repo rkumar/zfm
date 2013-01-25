@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-25 11:04
+#  Last update: 2013-01-25 19:16
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -513,8 +513,8 @@ pause
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.3-b"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/24"
+ZFM_VERSION="0.1.3-c"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/25"
 #print $M_TITLE
 #  Array to place selected files
 typeset -U selectedfiles
@@ -577,7 +577,7 @@ M_MESSAGE="$M_HELP    $M_TITLE"
 param=$(print -rl -- *(M))
     while (true)
     do
-        list_printer "Directory Listing ${PWD} " $param
+        list_printer "${PWD} " $param
         # MARK1 section comes back when list_p breaks from SWALLOW
         [[ -n $selection ]] && print "returned with $selection"
         # value selected is in selection, key pressed in ans
