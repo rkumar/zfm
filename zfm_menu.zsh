@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-24 18:26
+#  Last update: 2013-01-25 14:01
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -27,32 +27,33 @@ ZFM_UNZIP_COMMAND=${ZFM_UNZIP_COMMAND:-dtrx}
 typeset -A ZFM_AUTO_ACTION
 
 #  Print error to stderr so it doesn't mingle with output of method
-perror(){
+#  M_MESSAGE is a global we are using to print since we clear the screen each time we display
+function perror(){
     M_MESSAGE="ERROR: ${COLOR_RED}$@${COLOR_DEFAULT}"
     print -- "$M_MESSAGE" 1>&2
 }
 #  Print debug statement to stderr so it doesn't mingle with output of method
-pdebug(){
+function pdebug(){
     [[ -n "$ZFM_VERBOSE" ]] && {
         M_MESSAGE="DEBUG: ${COLOR_RED}$@${COLOR_DEFAULT}"
         print -- "$M_MESSAGE" 1>&2
     }
 }
-psuccess(){
+function psuccess(){
     print -- "${COLOR_GREEN}$@${COLOR_DEFAULT}" 1>&2
 }
 
 #  Print info statement to stderr so it doesn't mingle with output of method
-pinfo(){
+function pinfo(){
     M_MESSAGE="$@"
     print -- "$@" 1>&2
 }
 #  Print something bold to stderr
-pbold() {
+function pbold() {
     print -- "${COLOR_BOLD}$*${COLOR_DEFAULT}" 1>&2
 }
 #  Pause and get a single key
-pause() {
+function pause() {
     #local prompt=${1:"Press a key ..."}
     local prompt="Press a key ..."
     local kk
@@ -61,20 +62,16 @@ pause() {
     print
 }
 #  Print a title in bold
-print_title() {
+function print_title() {
     local title="$@"
     print -- "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
 }
 
-# check if being used else delete
-array2lines() {
-    ZFM_NEWLINE_ARRAY=("${(@f)$(print -rl -- $@)}")
-}
 default="1"
 
 #  Display a menu using numbering and hotkeys if provided
 #  Returns selected char in "menu_char"
-print_menu() {
+function print_menu() {
     print_title "$1"
 
     # chars to use as hotkeys
@@ -125,7 +122,7 @@ print_menu() {
 #  Try to keep options to 9, and add a mnemonic for options that go beyond
 #  TODO currently splits on string, thus cannot use parameters to command
 #  TODO use a comma or something else to delimit so we can pass params
-menu_loop () {
+function menu_loop () {
     menu_text=""  # this contains the text of menu such as command
     menu_char="" # contains actual character pressed could be numeric or hotkey (earlier ans)
     menu_index=0 # this contain index numeric
@@ -224,7 +221,7 @@ do
 done
 }
 # new
-fileopt() {
+function fileopt() {
     local name="$1"
     [[ -z $name ]] && return
     #local type="$(filetype $name)"
@@ -357,11 +354,18 @@ function eval_menu_text () {
         "mv") 
             zfm_mv $files
             ;;
+        "cp") 
+            ## currently zfm_mv will use menu_text so it should work with cp also
+            #  since both need a target.
+            zfm_mv $files
+            ;;
         "chdir") 
             # you can select a file in some cases and cd to it as in recent_files
             if [[ -f $files ]]; then
                 files=$files:h
             fi
+            ## darn, if spaces then this gives an error on quotes
+            files=${(Q)files}
             $ZFM_CD_COMMAND $files && post_cd
             ;;
         "archive") 
@@ -443,74 +447,8 @@ function zfm_change_command () {
     COMMANDS[$key]=$command
     pbold "$key is ${COMMANDS[$key]}"
 }
-origfileopt() {
-    local name="$1"
-    [[ -z $name ]] && return
-    local type="$(filetype $name)"
-    extn=$name:e
-    # we can store def app in a hash so not queried each time
-    #default_app=$(alias -s | grep $extn | cut -f2 -d= )
-    [[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
-    pdebug "$0 got $type for $name"
-    case $type in
-        "text"|"txt")
-            #[[ -n "$ZFM_AUTO_TEXT_ACTION" ]] && "$ZFM_AUTO_TEXT_ACTION" $name || textfileopt $name
-            if [[ -n "$ZFM_AUTO_TEXT_ACTION" ]]; then
-                "$ZFM_AUTO_TEXT_ACTION" $name
-                [[ $ZFM_AUTO_TEXT_ACTION == $EDITOR ]] && { last_viewed_files=$name }
-            else 
-                textfileopt $name $default_app
-            fi
-            ;;
-        "image")
-            if [[ -n "$ZFM_AUTO_IMAGE_ACTION" ]]; then
-               "$ZFM_AUTO_IMAGE_ACTION" $name 
-               else
-                   otherfileopt $name $default_app
-               fi
-            #otherfileopt $name
-            ;;
-        "zip")
-            if [[ -n "$ZFM_AUTO_ZIP_ACTION" ]]; then
-               eval "$ZFM_AUTO_ZIP_ACTION $name"
-               else
-                   zipfileopt $name $default_app
-               fi
-            #zipfileopt $name
-            ;;
-        *)
-            if [[ -n "$ZFM_AUTO_OTHER_ACTION" ]]; then
-               "$ZFM_AUTO_OTHER_ACTION" $name 
-               else
-                   otherfileopt $name $default_app
-               fi
-            #otherfileopt $name
-            ;;
-    esac
-}
-# bypass auto if user wants to exec action on file even though
-# auto is on
-fileopt_noauto() {
-    local name="$1"
-    local type="$(filetype $name)"
-    extn=$name:e
-    # we can store def app in a hash so not queried each time
-    [[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
-    pdebug "$0 got $type for $name"
-    case $type in
-        "text"|"txt")
-            textfileopt $name $default_app
-            ;;
-        "zip")
-            zipfileopt $name $default_app
-            ;;
-        *)
-            otherfileopt $name $default_app
-            ;;
-    esac
-}
 #  check file type based on output of file command and return a filetype or blank
-filetype(){
+function filetype(){
     local name="$1"
     [[ -z $name ]] && return
     [[ -d $name ]] && { print "DIR"; return }
@@ -563,7 +501,7 @@ filetype(){
 # Also all files in the selection list have been quoted, but from other sources they could
 # come unquoted, esp to other procedures. If so, have them quoted first.
 #   This procedure has operations for multiple files
-multifileopt() {
+function multifileopt() {
     local files
     # careful I am quoting spaces so some commands can work like the tar
     # this may cause problems with some commands
@@ -614,59 +552,6 @@ multifileopt() {
             ;;
     esac
 }
-textfileopt() {
-    local files="$@"
-    # NOTE eval commands require quoting of spaces whereas other commands will fail
-    # NOTE what about multiple files
-    print_title "File summary for $files:"
-    file $files
-    ls -lh $files
-    [[ -f "$files" ]] || { perror "$files not found."; pause; return }
-    files=${files:q}
-    # use ! for command even if not shown since user may replace menu with own commands
-    #menu_loop "File operations:" "vim cmd less cat mv rmtrash archive tail head wc open auto" "v!lcmrzthwoa"
-    #menu_loop "File operations:" "vim cmd less mv ${ZFM_RM_COMMAND} archive tail head open auto $default_app" "vcl!#zthoa"
-    #M_MENU_TEXT=${M_MENU_TEXT:-"vim cmd less mv ${ZFM_RM_COMMAND} archive tail head open auto $default_app" 
-    # based on text options we generate the hotkeys, however
-    # this needs to be in all menu_loop calls so it has to be in one place
-    # yet i don;t want to do this each time inside menu_loop. i want to do it once
-    if [[ -z "$M_TEXT_HOTKEYS" ]]; then
-        M_TEXT_HOTKEYS=$(get_hotkeys "$FT_TEXT")
-    fi
-    menu_loop "File operations:" "$FT_TEXT" $M_TEXT_HOTKEYS
-    [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned $menu_char, $menutext "
-    [[ "$menu_char" = "!" ]] && menu_text="cmd"
-    case $menu_text in
-        "cmd")
-            zfm_cmd $files
-            ;;
-        "auto")
-            # added this 2012-12-26 - 01:11 
-            command=${command:-"$EDITOR"}
-            vared -p "Enter command to automatically execute for selected text files: " command
-            export ZFM_AUTO_TEXT_ACTION="$command"
-            eval "$command $files"
-            [[ $command == $EDITOR ]] && { last_viewed_files=$files }
-            ;;
-        "")
-            [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in fileopt $menu_char. Coud be programmer error or key needs to be handled"
-            }
-            ;;
-        "mv") 
-            zfm_mv $files
-            ;;
-        "archive") 
-            zfm_zip $files
-            ;;
-        *)
-            # now again this needs to be done for all cases so we can't have such
-            # a long loop repeated everywhere
-            evaluate_command "$menu_text" $files
-            [  $? -eq 0 ] && zfm_refresh
-            ;;
-    esac
-}
 ## 
 ## refresh should be done in caller if stat is 0
 ## need to check for any variables that need to be prompted
@@ -708,88 +593,6 @@ function evaluate_command () {
         eval "$menu_text $files" && ret=0 || ret=1
     fi
     return $ret
-}
-zipfileopt() {
-    # TODO allow user to add a string in ENV for other executables which we can add here
-    # such as als or atools aunpack
-    local files="$@"
-    print_title "File summary for $files:"
-    file $files
-    ls -lh $files
-    [[ -f "$files" ]] || { perror "$files not found."; pause; return 1 }
-    tar -ztvf $files | head -n 20
-    files=${files:q} # required for eval
-    if [[ -z "$M_ZIP_HOTKEYS" ]]; then
-        M_ZIP_HOTKEYS=$(get_hotkeys "$FT_ZIP")
-    fi
-    menu_loop "File operations:" "$FT_ZIP" $M_ZIP_HOTKEYS
-    #menu_loop "Zip operations:" "cmd view zless mv ${ZFM_RM_COMMAND} $ZFM_UNZIP_COMMAND" "cvl!#d"
-    [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned $menu_char, $menutext "
-    #[[ "$menu_char" = "!" ]] && menu_text="cmd"
-    case $menu_text in
-        "view") 
-            eval "tar ztvf $files"
-            ;;
-        "cmd")
-            zfm_cmd $files
-            ;;
-        "")
-            [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in zipopt $menu_char. Coud be programmer error or key needs to be handled"
-            }
-            ;;
-        "mv") 
-            zfm_mv $files
-            ;;
-        *)
-            evaluate_command "$menu_text" $files
-            [  $? -eq 0 ] && zfm_refresh
-            #eval "$menu_text $files"
-            #[[ "$menu_text" == "${ZFM_RM_COMMAND}" ]] && zfm_refresh
-            ;;
-    esac
-}
-# takes one file (despite variable name) for non text files
-# TODO check for pdf2html antiword and put in menu
-# or allow to be added as ENV var by user
-otherfileopt() {
-    local files="$@"
-    #[[ ! -f "$files" ]] && files=$(echo "$files" | cut -f 1 -d ' ')
-    print -rl -- $files
-    print_title "File summary for $files:"
-    file $files
-    ls -lh $files
-    [[ -f "$files" ]] || { perror "$files not found."; pause; return }
-    files=${files:q} # required for eval
-    if [[ -z "$M_OTHER_HOTKEYS" ]]; then
-        M_OTHER_HOTKEYS=$(get_hotkeys "$FT_OTHER")
-    fi
-    menu_loop "File operations:" "$FT_OTHER" $M_OTHER_HOTKEYS
-    #menu_loop "Other operations:" "cmd open mv ${ZFM_RM_COMMAND} od stat vim $default_app" "co!#dsv"
-    [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned $menu_char, $menu_text "
-    [[ "$menu_char" = "!" ]] && menu_text="cmd"
-    case $menu_text in
-        "cmd")
-            zfm_cmd $files
-            ;;
-        "")
-            [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
-            perror "got nothing in zipopt $menu_char. Coud be programmer error or key needs to be handled"
-            }
-            ;;
-        "mv") 
-            zfm_mv $files
-            ;;
-        "vim")
-            zfm_edit $files
-            ;;
-        *)
-            evaluate_command "$menu_text" $files
-            [  $? -eq 0 ] && zfm_refresh
-            #eval "$menu_text $files"
-            #[[ "$menu_text" == "${ZFM_RM_COMMAND}" ]] && zfm_refresh
-            ;;
-    esac
 }
 #
 # print a hash with key in bold
@@ -862,4 +665,128 @@ function get_hotkeys () {
         fi
     done
     print $str
+}
+## 
+## Takes a key, if ESC tries to take more and returns
+#  normal or function or alt keys.
+#  I think this could be vastly simplified by taking a read
+#    then if its an ESC keep reading with a timeout till non zero ret val.
+#    put this into an array and match against the hash for complex keys.
+#    Control and Meta/Alt keys can be checked without the hash.
+function _read_keys() {
+
+    local key key2 key3 key4
+    integer ret
+    ckey=
+
+    ## 2013-01-21 - 00:19 trying out -s with M_NO_REPRINT
+    read -k -s key
+    ret=$?
+    reply="${key}"
+    if [[ '#key' -eq '#\\e' ]]; then
+        # M-...
+        read -t $(( KEYTIMEOUT / 1000 )) -k -s key2
+        ret=$?
+        if [[ "${key2}" == '[' ]]; then
+            # cursor keys
+            read -k -s key3
+            ret=$?
+            if [[ "${key3}" == [0-9] ]]; then
+                # Home, End, PgUp, PgDn ...
+                # F5 etc take a fifth key, so a loop
+                #read -k -s key4
+                #ret=$?
+                #reply="${key}${key2}${key3}${key4}"
+                reply="${key}${key2}${key3}"
+                while (true); do
+                    read -t $(( KEYTIMEOUT / 1000 )) -k -s key4
+                    if [[ $? -eq 0 ]]; then
+                        reply+="$key4"
+                    else
+                        break
+                    fi
+                done
+            else
+                # arrow keys
+                reply="${key}${key2}${key3}"
+            fi
+            resolve_key_codes
+        elif [[ $ret == "1" ]]; then
+            # we have an escape
+            ret=0
+        elif [[ "${key2}" == 'O' ]]; then
+            read -t $(( KEYTIMEOUT / 1000 )) -k -s key3
+            if [[ $? -eq 0 ]]; then
+                reply="${key}${key2}${key3}"
+                resolve_key_codes
+            fi
+        else
+            # alt keys
+            reply="${key}${key2}"
+            if (( key = 27 )); then
+                x=$((#key2))
+                y=${(#)x}
+                ckey="M-$y"
+            fi
+        fi
+    else
+        reply="${key}"
+        ascii=$((#key))
+        # ctrl keys
+        (( ascii >= 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
+    fi
+    return $ret
+}
+function init_key_codes() {
+# this is for those cases with 3 or 4 keys
+    typeset -Ag kh;
+    kh[(27)]="ESC"
+    kh[(27 91 54 126)]="PgDn"
+    kh[(27 91 53 126)]="PgUp"
+    kh[(27 91 65)]="UP"
+    kh[(27 91 66)]="DOWN"
+    kh[(27 91 67)]="RIGHT"
+    kh[(27 91 68)]="LEFT"
+    kh[(27 91 70)]="End"
+    kh[(27 79 80)]="F1"
+    kh[(27 79 81)]="F2"
+    kh[(27 79 82)]="F3"
+    kh[(27 79 83)]="F4"
+    kh[(27 91 49 53 126)]="F5"
+    kh[(27 91 49 55 126)]="F6"
+    kh[(27 91 49 56 126)]="F7"
+    kh[(27 91 49 57 126)]="F8"
+    kh[(27 91 50 48 126)]="F9"
+    kh[(27 91 50 49 126)]="F10"
+
+}
+## if not found should we return UNKNOWN or since ckey is blank, reply will be checked.
+#
+function resolve_key_codes() {
+
+    [[ -z $kh ]] && init_key_codes
+
+    keyarr=()
+    for (( i = 1; i <= $#reply; i++ )); do
+        j=$reply[$i]
+        k=$((#j))
+        keyarr+=($k)
+    done
+    ckey=$kh[($keyarr)]
+    if [[ -z $ckey ]]; then
+        perror "  insided blank $keyarr"
+        # alt keys
+        # there should be only 27 and one more
+        # need to check with rbc about these keys, hundreds of other combos in there
+        key2=$reply[2]
+        # should check reply[1] and not array
+        #if (( $keyarr[1] = 27 )); then
+            x=$((#key2))
+            y=${(#)x}
+            ckey="M-$y"
+        #else
+            #perror "keyarr[1] != 27 $keyarr[1]"
+            #pause
+        #fi
+    fi
 }
