@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-25 20:04
+#  Last update: 2013-01-26 01:22
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -308,7 +308,10 @@ function list_printer() {
                             if [[ -n $patt ]]; then
                                 patt=""
                             else
-                                M_NO_REPRINT=1
+                                # this could be a problem since list won't reprint
+                                # after handled in caller. XXX
+                                # I am putting this down to caller if no action done
+                                #M_NO_REPRINT=1
                             fi
                             ## added on 2013-01-22 - 16:33 so caller can capture
                             break
@@ -363,6 +366,9 @@ function subcommand() {
         "P"|"pop")
             pop_pwd
         ;;
+        "a"|"ack")
+            zfm_ack
+        ;;
         "f"|"file")
             if [[ -n $selectedfiles ]]; then
                 pdebug "selected files: $#selectedfiles"
@@ -396,6 +402,7 @@ function subcommand() {
             print "'f' 'file' - file operations on selected file"
             print "     helpful if you have auto-actions on but want to execute"
             print "     another action on selected file"
+            print "'a'  ack (search string) in files"
             print "'q' 'quit' - quit application"
             print "You may enter any other command too such as 'git status'"
             print
@@ -573,7 +580,8 @@ param=$(print -rl -- *(M))
                         M_SELECTION_MODE=
                         pinfo "array has $selectedfiles"
                         [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
-                        [[ $#selectedfiles -eq 1 ]] && fileopt_noauto $selectedfiles
+                        M_NO_AUTO=1
+                        [[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
                         selectedfiles=()
                         pbold "selection mode is off"
                     else
@@ -590,13 +598,19 @@ param=$(print -rl -- *(M))
                         #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
                         # find is more optimized acco to zsh users guide
                         # this won't work if user puts * in pattern.
-                        files=$( print -rl -- **/*$searchpattern*(.) )
-                        if [[ $#files -eq 0 ]]; then
-                            perror "trying with find"
-                            files=$( find . -iname $searchpattern )
+                        #files=$( print -rl -- **/*$searchpattern*(.) )
+                        files=("${(@f)$(print -rl -- **/*$searchpattern*(.) )}")
+                        #I get a blank returned so it passed and does not use find
+                        #Earlier it worked but failed on spaces in fiel name
+                        if [[ $#files -eq 0 || $files == "" ]]; then
+                            perror "Trying with find -iname"
+                            files=("${(@f)$(noglob find . -iname *$searchpattern*  )}")
+                            #files=$( find . -iname $searchpattern )
+                        else
                         fi
                         if [[ $#files -gt 0 ]]; then
-                            files=$( print $files | xargs ls -t )
+                            files=$( print -N $files | xargs -0 ls -t )
+                            #files=$( print -N -- $files | xargs -0 ls -t )
                             ZFM_FUZZY_MATCH_DIR="1" fuzzyselectrow $files
                             # XXX careful we shold only use the array if one file
                             if [[ $#selected_files -eq 1 ]]; then
@@ -606,10 +620,15 @@ param=$(print -rl -- *(M))
                             elif [[ -n "$selected_file" ]]; then
                                 fileopt "$selected_file"
                             fi
+                            selected_files=
+                            selected_file=
 
-                    else
-                        perror "No files matching $searchpattern"
-                    fi
+                        else
+                            perror "No files matching $searchpattern"
+                        fi
+                        # next line required or doesn't print list
+                        # this could be a problem
+                        M_NO_REPRINT=
                     ;;
                 "?") 
                     print_help_keys
@@ -617,14 +636,10 @@ param=$(print -rl -- *(M))
                 '*')
                     for line in $vpa
                     do
-                        print "line $line"
+                        pdebug "line $line"
                         selected_row=("${(s/	/)line}")
                         selected_file=$selected_row[-1]
                         selectedfiles+=( $PWD/$selected_file )
-                        #selectedfiles=(
-                        #$selectedfiles
-                        #$selected_file
-                        #)
                     done
                     pinfo "selected files $#selectedfiles"
                     if [[ -n "$M_SELECTION_MODE" ]]; then
@@ -632,44 +647,31 @@ param=$(print -rl -- *(M))
                     else
                         # this is outside of selection mode
                         [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
-                        [[ $#selectedfiles -eq 1 ]] && fileopt_noauto $selectedfiles
+                        M_NO_AUTO=1
+                        [[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
                         selectedfiles=()
+                        M_MESSAGE=
                     fi
                     ;;
                 *)
                     [[ "$ans" == $ZFM_REFRESH_KEY ]] && { perror "breaking";  break }
                     #M_MESSAGE=
-                    [[ -n $ans ]] && M_MESSAGE="$ans unused. $M_HELP"
+                    [[ -n $ans ]] && { 
+                        M_MESSAGE="$ans unused. $M_HELP"
+                        M_NO_REPRINT=1
+                    }
                     ## NOTE messages will only be refreshed if key had some
                     #  effect, else unused key warning won't do anything since we dont
                     #  redraw.
                     #
-                    #
-                    # why repeat it here too, just do this once in top level
-                    #  2013-01-22 - 16:04 removing second get_key
-                    #zfm_get_key_binding $ans
-                    #if [[ -n $binding ]]; then
-                        ##perror "2 calling binding for $ans"
-                        ##$binding
-                    #else
-                        # this sometimes is triggered even when a key has been
-                        # used such as BACKSPACE
-                        #pdebug "unhandled key $ans, type ? for key help"
-                    #fi
                     ;;
             }
-
-            #print "Blank selection"
-            #read -k
 
         }
         if [[ -d "$selection" ]]; then
             [[ -n $ZFM_VERBOSE ]] && print "got a directory $selection"
             $ZFM_CD_COMMAND $selection
             post_cd
-            #patt="" # 2012-12-26 - 00:54 
-            #filterstr=${filterstr:-M}
-            #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
         elif [[ -f "$selection" ]]; then
             # although nice to immediately open, but what if its not a text file
             # and what if i want to do something else
@@ -1042,7 +1044,7 @@ function function init_file_menus() {
     # This doesn't allow us to do stuff inside a dir like mkdir or newfile since 
     #  we are not inside a dir
     # added 2013-01-23 - 20:46 
-    FT_OPTIONS[DIR]="chdir archive trash du dush ncdu"
+    FT_OPTIONS[DIR]="chdir archive trash du dush ncdu cmd"
 
     ## -- how to specify a space, no mnemonic?
     #FT_TEXT=(v vim : cmd l less # mv D ${ZFM_RM_COMMAND} z archive t tail h head o open a auto)
