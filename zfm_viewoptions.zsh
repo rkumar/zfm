@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-25 20:06
+# Last update: 2013-01-26 01:38
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -274,6 +274,7 @@ function nonrecviewoptions(){
 
 }
 # various canned listings like today's modified files or recent ones
+# ACK
 function viewoptions() {
     local str=""
     menu_loop "Directory views" "today ago recent largest dirs extn oldest substring ack" "tarldxosk"
@@ -314,21 +315,7 @@ function viewoptions() {
             #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
             ;;
         "ack" )
-            print "List / select Files containing string"
-            cpattern=${cpattern:-""}
-            vared -p "Enter pattern to search for: " cpattern
-            #files=$(eval "listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern)" | nl)
-            # somehow with eval only first row was coming through
-            # maybe due to newlines
-            pinfo "Using ack -l $M_ACK_REC_FLAG (-n non recursive, -r recursive)"
-            files=$(ack -l $M_ACK_REC_FLAG $cpattern)
-            if [[ $#files -gt 0 ]]; then
-                files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern))
-                $ZFM_FILE_SELECT_FUNCTION $files
-            else
-                pinfo "No files found containing $cpattern (using ack -l $M_ACK_REC_FLAG)"
-            fi
-            #[[ -n $ZFM_VERBOSE ]] && echo "file: $selected_file"
+            zfm_ack
             ;;
         "dirs")
             # list dirs under current dir
@@ -734,6 +721,35 @@ function m_recentfiles() {
         fi
     }
 }
+## 
+#  zfmcommands has similar program, same name
+#
+zfm_ack() {
+    print "List / select Files containing string"
+    cpattern=${cpattern:-""}
+    vared -p "Enter pattern to search for: " cpattern
+    #files=$(eval "listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern)" | nl)
+    # somehow with eval only first row was coming through
+    # maybe due to newlines
+    pinfo "Using ack -l $M_ACK_REC_FLAG (-n non recursive, -r recursive)"
+    ack $M_ACK_REC_FLAG "$cpattern"
+    pause
+    files=$(ack -l $M_ACK_REC_FLAG "$cpattern")
+    if [[ $#files -gt 0 ]]; then
+        ## next line fails on spaces in files
+        #  MAYBE listdir needs to be fixed so it can take spaces in files. XXX
+        #files=$(listdir.pl $(ack -l $M_ACK_REC_FLAG $cpattern))
+        #files=$(listdir.pl $files)
+        $ZFM_FILE_SELECT_FUNCTION $files
+        [[ $#selected_files -gt 0 ]] && {
+            vim -c /$cpattern $selected_files
+            selected_files=
+        }
+    else
+        pinfo "No files found containing $cpattern (using ack -l $M_ACK_REC_FLAG)"
+        pause
+    fi
+}
 # this is a retake on select_menu using datastructures, so one may add or modify 
 # items and hotkeys at startup thru a config file
 function select_menu() {
@@ -849,7 +865,7 @@ function numbernine() {
     done
 }
 function edit_last_file() {
-    print "Last viewed : $last_viewed_files"
+    pinfo "Last viewed : $last_viewed_files"
     [[ -n $last_viewed_files ]] && $EDITOR $last_viewed_files
 }
 function get_exclude_pattern() {
