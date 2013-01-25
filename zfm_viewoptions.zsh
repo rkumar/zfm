@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-25 19:23
+# Last update: 2013-01-25 20:06
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -58,7 +58,7 @@ function fuzzyselectrow() {
     do
 
         ## filter the list on rows (used if more rows than can be viewed
-        fin=$#files
+        fin=$#ff
         (( offset > 0 )) && {
             (( fin = $#files - offset ))
         }
