@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-25 02:07
+# Last update: 2013-01-25 19:23
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -47,9 +47,27 @@ function fuzzyselectrow() {
     ff=("${(@f)$(print -rl -- $files)}")
     local gpatt="" # grep pattern which user types
 
+    local sta fin sortrev
+    sta=1
+
+    ## used in scrolling list
+    integer offset
+    offset=0
+
     while (true)
     do
-        viewport=$(print -rl -- $files  | grep "$gpatt")
+
+        ## filter the list on rows (used if more rows than can be viewed
+        fin=$#files
+        (( offset > 0 )) && {
+            (( fin = $#files - offset ))
+        }
+        (( sortrev == 1 )) && { 
+            ## reverse sort the list on index order
+            files=(${(Oa)files})
+            sortrev=0
+        }
+        viewport=$(print -rl -- $files  | grep "$gpatt" | sed -n "$sta,$fin p")
         vpa=("${(@f)$(print -rl -- $viewport)}")
         local _hv=$#vpa # size of result after grep
         print  "   No.\t  Name"
@@ -132,9 +150,11 @@ function fuzzyselectrow() {
         print -rl  "         ^ Toggle fuzzy mode"
         print -rl  "         | Toggle 2 columns"
         print -rl  "         = Toggle auto-view"
+        print -rl  "         C-n Scroll List"
+        print -rl  "         C-p Scroll List"
+        print -rl  "         C-w Reverse List"
         pause
     else
-        #perror "Sorry. [$reply] not numeric"
         # Use chars to drill down
         #  Handling backspace
         if [[ "$reply" == "" || "$reply" == "" ]]; then
@@ -197,10 +217,20 @@ function fuzzyselectrow() {
                 for ((i = 1; i <= $#gpatt; i++)); do xx="${xx}$gpatt[i].*"; done
                 gpatt=$xx
             fi
+        elif [[ $ckey == "C-n" ]]; then
+            ## scroll list down -- neeeded if more rows than can be seen
+            let offset++
+        elif [[ $ckey == "C-p" ]]; then
+            let offset--
+            (( offset < 0 )) && offset=0
+        elif [[ $ckey == "C-w" ]]; then
+            # sort reverse order so first comes closest to prompt
+            # i chose c-w since C-r not working on my terminal ?? even Alt-x just flashin in
+            #  iterm but okay in Terminal.
+            let sortrev=1
         elif [[ -n $ckey ]]; then
-            perror "Not trapped $ckey !" 
+            pdebug "Not trapped $ckey !" 
             ckey=
-            pause
         elif [[ -z "$gpatt" ]]; then
             gpatt="$reply"
         else
