@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-22 13:36
+#  Last update: 2013-01-25 20:40
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -30,10 +30,16 @@ ZFM_ack() {
     # check for whether you have ack installed
     cpattern=${cpattern:-""}
     vared -p "Pattern to ack for: " cpattern
+    [[ -z $cpattern ]] && return 1
     ack "$cpattern"
     pause
     files=$( ack -l "$cpattern" )
-    handle_files $files
+    [[ $#files -eq 0 ]] && return 1
+    #handle_files $files
+    fuzzyselectrow $files
+    if [[ $#selected_files -gt 0 ]]; then
+        vim -c /$cpattern $selected_files
+    fi
 }
 
 
@@ -41,10 +47,16 @@ ZFM_ag() {
     # check for whether you have ag installed (the_silver_searcher)
     cpattern=${cpattern:-""}
     vared -p "Pattern to ag for: " cpattern
+    [[ -z $cpattern ]] && return 1
     ag "$cpattern"
     pause
     files=$( ag -l "$cpattern" )
-    handle_files $files
+    [[ $#files -eq 0 ]] && return 1
+    #handle_files $files
+    fuzzyselectrow $files
+    if [[ $#selected_files -gt 0 ]]; then
+        vim -c /$cpattern $selected_files
+    fi
 }
 #
 # remove the space when defining the function and add ZFM_ before it.
@@ -147,6 +159,10 @@ ZFM_newdir() {
     [[ -d $filename ]] && zfm_refresh
 
 }
+##
+## take a file list and allow user to select one or more files, and then popup a menu of options
+#  for those files
+#
 handle_files() {
     files=($@)
     if [[ $#files -gt 0 ]]; then
