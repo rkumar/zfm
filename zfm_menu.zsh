@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-25 20:00
+#  Last update: 2013-01-26 01:04
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -160,7 +160,7 @@ do
         # we can release it. The comma is used as it is the back key
         # hash '#' needs to be escaped to be detected
         [[ "$menu_char" =~ [q,] ]] && { return 1 }
-        [[ "$menu_char" =~ [-+] ]] && { return 0 }
+        [[ "$menu_char" =~ [-+:] ]] && { return 0 }
         print ""
         if [[ "$menu_char" == [1-9] ]]; then
             var="${myopts[$menu_char]}" # 2>/dev/null
@@ -311,7 +311,7 @@ function fileopt() {
     ls -lh $name
     [[ -e "$name" ]] || { perror "$name not found or not a regular file."; pause; return }
     pdebug "$0 before ML : $apps"
-    menu_loop "File Operations:" "$apps" $hotkeys
+    menu_loop "File Operations ($name):" "$apps" $hotkeys
     [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned 270 $menu_char, $menutext "
     [[ "$menu_char" =~ [!:] ]] && menu_text="cmd"   # XXX we've moved to ':'
     [[ "$menu_char" = '+' ]] && { zfm_add_option "$name" "$extn" }
@@ -511,7 +511,7 @@ function multifileopt() {
     eval "ls -lh $files"
     #IFS=, menu_loop "File operations:" "zip,cmd,grep,mv,${ZFM_RM_COMMAND},git add,git com,vim,vimdiff" "zcg!#a vd"
     hotkeys=$(get_hotkeys "$FT_OPTIONS[MULTI]")
-    menu_loop "Multiple File operations:" $FT_OPTIONS[MULTI] $hotkeys
+    menu_loop "Multiple File operations ($#files):" $FT_OPTIONS[MULTI] $hotkeys
     [[ -n $ZFM_VERBOSE ]] && pdebug "$0 returned $menu_char, $menutext "
     [[ "$menu_char" = "!" ]] && menu_text="cmd"
     case $menu_text in
