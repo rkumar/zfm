@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-24 20:23
+# Last update: 2013-01-25 02:07
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -16,7 +16,7 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 # Rows have columns delimited by tabs
 
 # MENU that comes up on ZFM_MENU_KEY 
-view_menu() {
+function view_menu() {
     select_menu "Menu" main_menu_options main_menu_command_hash
     if [  $? -ne 0 ]; then
         perror "Incorrect option $reply"
@@ -29,7 +29,7 @@ view_menu() {
 # You could call this fuzzy
 # in that the pattern is not contiguous, if you press abc it matches "a.*b.*c"
 #
-fuzzyselectrow() {
+function fuzzyselectrow() {
     local files
     files=($@)
     [[ $#files -eq 0 ]] && return
@@ -62,25 +62,7 @@ fuzzyselectrow() {
         fi
         # PROMPT prompt
         print  -n "Select a row [1-$_hv] ? Help, ESC/ENTER ($#deleted/$#vpa)/$gpatt/: "
-        len=1
-        read -k $len reply
-        # if user enters a numeric and there are double digit values too
-        # then wait for a second number. e.g. if he types 1 and there are 10 items
-        # wait for another keypress for a second. BUt if he types 2 and there are less than
-        # 20 then continue without taking another key
-        if [[ "$reply" == <1-9> ]]; then
-            (( tens = reply * 10 ))
-            (( $#vpa >= tens )) && {
-                read -k -t 1 ret1
-                if [[  $? -eq 0 ]]; then
-                    # check it is numeric not a CR, if no input then $? gives 1
-                    if [[ $ret1 == <0-9> ]]; then
-                        (( reply = reply * 10 + ret1 ))
-                    fi
-                fi
-
-            }
-        fi
+        _read_numbers $#vpa
         print
 
     #
@@ -115,7 +97,7 @@ fuzzyselectrow() {
 
 
     [[ $reply = "" ]] && { selected_file=; selected_files=; break }
-    pdebug "got $reply"
+    pdebug "got $reply $ckey"
     [[ -z "$reply" ]] && break
     #  check for numeric as some values like "o" can cause abort
     if [[ "$reply" == <1-> ]]; then
@@ -215,6 +197,10 @@ fuzzyselectrow() {
                 for ((i = 1; i <= $#gpatt; i++)); do xx="${xx}$gpatt[i].*"; done
                 gpatt=$xx
             fi
+        elif [[ -n $ckey ]]; then
+            perror "Not trapped $ckey !" 
+            ckey=
+            pause
         elif [[ -z "$gpatt" ]]; then
             gpatt="$reply"
         else
@@ -242,182 +228,23 @@ fuzzyselectrow() {
     M_MESSAGE=
 }
 
-# 
-# Allow multiple selection of row, highlight selected row
-# This allows deselection also
-# Pressing <enter> completes selection
-# 
-selectmulti() {
-    local files
-    local tabd=$'\t'
-    #files=$@
-    files=($@)
-    # selected rows go into a buffer named deleted
-    # as they are no longer displayed
-    typeset -U deleted
-    deleted=()
-    selected_files=
-    local delix=1
-    print  "Enter row numbers to select, press ENTER when finished selection"
-    print  "  Press I to invert selection, A to select all"
-    print  "  e opens EDITOR on selected files, z zips selected files"
-    print  " Press 'S' for short 2-col list, 's' to revert to 1-col"
-    echo
-    local M_SHORT="1"
-    local indices
-    indices=( {1..$#files} )
-    while (true) 
-    do
-        local c=1
-        print  "No.\t  Size \t  Modified Date  \t  Name"
-        #print -rl -- $files
-        ff=("${(@f)$(print -rl -- $files)}")
-
-        # print in 1 or 2 columns, if list is long, then print only filename
-        # and break into 2 columns.
-        #
-        print -rC$M_SHORT -- $( \
-        #for fil in $ff
-        for ix in $indices
-        do
-            fil=$ff[$ix]
-            # stores the entire row and matches entire row, so take care when shortening that only
-            # filename is matched
-
-            [[ $#deleted -gt 0 ]] && { delix=$deleted[(i)$fil]
-            }
-                # M_SHORT signifies how many columns, we try 2
-                if [[ $M_SHORT == "2" ]]; then
-                    row=("${(s/	/)fil}")
-                    rfile=$row[-1]
-                    fil=$rfile
-                fi
-            if [[ $delix -gt $#deleted ]]; then
-                print  "$ix${tabd}$fil"
-            else
-                print  "$ix${tabd}${COLOR_BOLD}${fil}${COLOR_DEFAULT}"
-            fi
-            let c++
-
-        done \
-        | tr " \t" "" )  | tr "" " \t"
-
-        print  -n "Select rows by number (ENTER when done, all-A, invert-I, reverse-R, e - edit, z - zip): "
-        read -r reply
-        [[ -z $reply ]] && { pdebug "breaking on blank" ; break }
-        case $reply in
-            "S")
-                M_SHORT="2"
-                ;;
-            "s")
-                M_SHORT="1"
-                ;;
-            "R")
-                # reverse the output in case important files are no longer on screen
-                #files=(${(Oa)files} )
-                indices=(${(Oa)indices} )
-                ;;
-            "q")
-                break
-                ;;
-            "e"|"z"|"v")
-                break
-                ;;
-            "A") 
-                pdebug "selected all"
-                ff=("${(@f)$(print -rl -- $files)}")
-                deleted+=($ff)
-                #deleted=(
-                #$deleted
-                #$ff
-                #)
-                #break
-                ;;
-            'I')
-                # invert selection
-                ff=("${(@f)$(print -rl -- $files)}")
-                deleted=( ${ff:|deleted} )
-                #delix=0
-                #ttmp=($deleted)
-                #deleted=()
-                #ff=("${(@f)$(print -rl -- $files)}")
-                #for fil in $ff
-                #do
-                    #[[ $#ttmp -gt 0 ]] && 
-                    #{ delix=$ttmp[(i)$fil]
-                    ##print  "      [ $fi ] : delix, deleted: $delix => $#deleted "
-                #}
-                #if [[ $delix -gt $#ttmp ]]; then
-                    #deleted+=($fil)
-                    ##deleted=(
-                    ##$deleted
-                    ##$fil
-                    ##)
-                #fi
-                #done
-            ;; 
-            *)
-
-                if [[ "$reply" == <-> ]]; then
-                    ff=("${(@f)$(print -rl -- $files)}")
-                    line=${ff[$reply]}
-                    # only a physical tab was working, \t etc was not working
-                    #split
-                    selected_row=("${(s/	/)line}")
-                    selected_file=$selected_row[-1]
-                    pdebug "selected: $selected_file"
-                    if [[ $deleted[(i)$line] -le $#deleted ]]; then
-                        deleted[$deleted[(i)$line]]=()
-                    else
-                        deleted+=($line)
-                        #deleted=(
-                        #$deleted
-                        #$line
-                        #)
-                    fi
-                    files=$( print -rl -- $ff)
-                else
-                    perror "Don't know what to do with $reply"
-                fi
-                ;;
-    #*)
-        #print  "default got $reply"
-        #;;
-esac
-    done
-    pdebug "selected were:"
-    selected_files=()
-    for line in $deleted
-    do
-        #print  "line $line"
-        selected_row=("${(s/	/)line}")
-        selected_file=$selected_row[-1]
-        selected_files+=($selected_file)
-        #selected_files=(
-        #$selected_files
-        #$selected_file
-        #)
-        pdebug " file: $selected_file "
-    done
-    pdebug " sm files: $#selected_files "
-}
 #
 # recursive listing
 #
-recviewoptions() {
+function recviewoptions() {
     M_REC_STRING="**/"
     M_ACK_REC_FLAG="-r"
     viewoptions
 }
 # non-recursive listing
-nonrecviewoptions(){
+function nonrecviewoptions(){
     M_REC_STRING=""
     M_ACK_REC_FLAG="-n"
     viewoptions
 
 }
 # various canned listings like today's modified files or recent ones
-viewoptions() {
+function viewoptions() {
     local str=""
     menu_loop "Directory views" "today ago recent largest dirs extn oldest substring ack" "tarldxosk"
     case $menu_text in
@@ -495,7 +322,7 @@ viewoptions() {
 # e - use editor to edit
 # q   don't do anything
 # *  allow user to enter command
-handle_selection() {
+function handle_selection() {
     local reply=$1
     shift
     selected_files=($@:q)
@@ -536,7 +363,7 @@ handle_selection() {
 #  toggle between full-indexing and drill down mode.
 #  I think full-indexing will be useful in selection mode
 #
-full_indexing_toggle() {
+function full_indexing_toggle() {
     if [[ -z "$M_FULL_INDEXING" ]]; then
         M_FULL_INDEXING=1
     else
@@ -544,7 +371,7 @@ full_indexing_toggle() {
     fi
     export M_FULL_INDEXING
 }
-show_hidden_toggle() {
+function show_hidden_toggle() {
     if [[ -z "$M_SHOW_HIDDEN" ]]; then
         M_SHOW_HIDDEN=1
         setopt GLOB_DOTS
@@ -557,7 +384,7 @@ show_hidden_toggle() {
     fi
     export M_SHOW_HIDDEN
 }
-fuzzy_match_toggle() {
+function fuzzy_match_toggle() {
     if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
         ZFM_FUZZY_MATCH_DIR=1
     else
@@ -565,7 +392,7 @@ fuzzy_match_toggle() {
     fi
     export ZFM_FUZZY_MATCH_DIR
 }
-ignore_case_toggle() {
+function ignore_case_toggle() {
     if [[ -z "$ZFM_IGNORE_CASE" ]]; then
         ZFM_IGNORE_CASE=1
     else
@@ -573,7 +400,7 @@ ignore_case_toggle() {
     fi
     export ZFM_IGNORE_CASE
 }
-approx_match_toggle() {
+function approx_match_toggle() {
     if [[ -z "ZFM_APPROX_MATCH" ]]; then
         ZFM_APPROX_MATCH=1
     else
@@ -586,7 +413,7 @@ approx_match_toggle() {
 # THis is because sometimes colors may not show, or long files can have the ANSI escape
 # sequence truncated at end
 #
-color_toggle() {
+function color_toggle() {
     if [[ -z "$ZFM_NO_COLOR" ]]; then
         ZFM_NO_COLOR=1
         pinfo "Selected files will be displayed in bold"
@@ -596,7 +423,7 @@ color_toggle() {
     fi
     export ZFM_NO_COLOR
 }
-settingsmenu(){
+function settingsmenu(){
     settings_menu_options=("i) Full Indexing toggle" "c) Case toggle" "h) Hidden files toggle" "p) Paging key" "4) Dupe check" \
         "a) Auto select action" "A) Toggle Auto Action" "x) Approximate match toggle" "C) Color toggle" "_) Redefine command")
     typeset -A settings_menu_command_hash
@@ -617,7 +444,7 @@ settingsmenu(){
         perror "Incorrect option $reply"
     fi
 }
-change_paging_key() {
+function change_paging_key() {
     print  "Page key is (default <SPACE>: [$M_PAGE_KEY]"
     print  -n "Enter key to use for paging (should preferable not exist in filenames): "
     read -k cha
@@ -625,7 +452,7 @@ change_paging_key() {
     print  "Using page key: $cha"
 }
 ## define actions for various file types, if you don't want to be prompted with a menu
-define_auto_action() {
+function define_auto_action() {
     # specify action with various filetypes
     # Misses out on OTHER category, not sure what to do
     # but some text files land in there, `file` says "data".
@@ -643,7 +470,7 @@ define_auto_action() {
     done
 
 }
-toggle_duplicate_check() {
+function toggle_duplicate_check() {
     print  "When pressing hotkeys 1-9, we check if there are files with numbers in that position"
     print  "Without this check some numbered files can become inaccessible"
     print  "If you rarely use this, you can switch it off here, or permanently at top of source"
@@ -656,14 +483,14 @@ toggle_duplicate_check() {
 }
 #  toggle between automatuc viewing on selection, the other mode
 #  being that the fileopt menu is opened
-toggle_auto_view(){
+function toggle_auto_view(){
     if [[ "$ZFM_AUTOVIEW_TOGGLE_KEY" == "1" ]]; then
         unset_auto_view
     else
         set_auto_view
     fi
 }
-set_auto_view(){
+function set_auto_view(){
     ZFM_AUTOVIEW_TOGGLE_KEY="1"
     typeset -Ag ZFM_AUTO_ACTION ZFM_AUTO_ACTION_BAK; 
     ZFM_AUTO_ACTION=("${(@kv)ZFM_AUTO_ACTION_BAK}")
@@ -672,7 +499,7 @@ set_auto_view(){
     ZFM_AUTO_ACTION[TXT]=${ZFM_AUTO_ACTION_BAK[TXT]:-$EDITOR}
     ZFM_AUTO_ACTION[ZIP]=${ZFM_AUTO_ACTION_BAK[ZIP]:-"tar ztvf"}
 }
-unset_auto_view(){
+function unset_auto_view(){
     ZFM_AUTOVIEW_TOGGLE_KEY=
     ## store values in bak hash and clear this one
     typeset -Ag ZFM_AUTO_ACTION_BAK; ZFM_AUTO_ACTION_BAK=("${(@kv)ZFM_AUTO_ACTION}")
@@ -684,7 +511,7 @@ unset_auto_view(){
         #ZFM_AUTO_ACTION[$key]=
     #done
 }
-filteroptions() {
+function filteroptions() {
     menu_loop "Filter Options " "Today Files Dirs Recent Old Large Pattern Small Hidden Links Clear" "tfdrolpshLc"
     # XXX usage of o or O clashes with sort order and gives error, FIXME
     case $menu_text in
@@ -734,7 +561,7 @@ filteroptions() {
     param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     export param
 }
-sortoptions() {
+function sortoptions() {
     # LIST list section (think of a better key)
     menu_loop "Sort Order" "newest oldest largest smallest name rname dirs clear" "nolsmrdc"
     case $menu_text in
@@ -775,7 +602,7 @@ sortoptions() {
 }
 # cycle through various views
 # This should include long listings
-zfm_views() {
+function zfm_views() {
     #typeset -A views
     #views=(om Newest Om Oldest OL Largest oL smallest)
     views=(om Om OL oL On on /)
@@ -797,7 +624,7 @@ zfm_views() {
 
 }
 # give directories from dirs command
-m_dirstack() {
+function m_dirstack() {
     if [[ -x "${ZFM_DIR}/zfmdirs" ]]; then
         #files=$(listdir.pl $(${ZFM_DIR}/zfmdirs) | nl)
         #files=$(print -rl -- $(${ZFM_DIR}/zfmdirs))
@@ -815,7 +642,7 @@ m_dirstack() {
     }
 
 }
-m_child_dirs() {
+function m_child_dirs() {
     local ff
     ff=$(print -rl -- *(/) | wc -l)
     [[ $ff -eq 0 ]] && { perror "No child dirs." ; return }
@@ -833,7 +660,7 @@ m_child_dirs() {
         $ZFM_CD_COMMAND $selected_file
     }
 }
-m_recentfiles() {
+function m_recentfiles() {
     # recently edited files
     typeset -U files
     files=""
@@ -879,7 +706,7 @@ m_recentfiles() {
 }
 # this is a retake on select_menu using datastructures, so one may add or modify 
 # items and hotkeys at startup thru a config file
-select_menu() {
+function select_menu() {
     local title="$1"
     shift
     local moptions
@@ -909,7 +736,7 @@ select_menu() {
     print
     return $ret
 }
-mycommands() {
+function mycommands() {
     source $ZFM_DIR/zfmcommands.zsh
     IFS=$ZFM_MY_DELIM menu_loop "My Commands" "$ZFM_MY_COMMANDS${ZFM_MY_DELIM:-' '}cmd" "${ZFM_MY_MNEM}:"
     local zcmd z
@@ -951,7 +778,7 @@ mycommands() {
 
 # numbers the first nine rows only since these are hotkeys
 # the rest must be filtered by some character.
-numbernine() {
+function numbernine() {
     let c=1
     local tabd=$'\t'
     local selct=$#deleted
@@ -991,12 +818,55 @@ numbernine() {
         let c++
     done
 }
-edit_last_file() {
+function edit_last_file() {
     print "Last viewed : $last_viewed_files"
     [[ -n $last_viewed_files ]] && $EDITOR $last_viewed_files
 }
-get_exclude_pattern() {
+function get_exclude_pattern() {
     M_EXCLUDE_PATTERN=${M_EXCLUDE_PATTERN:-"~(*.tgz|*.gz|*.z|*.bz2|*.zip)"}
     vared -p "Enter pattern to exclude from listings: " M_EXCLUDE_PATTERN
     ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
+}
+
+## This take a single char from user. If its a number and the options are more than
+# 10 it takes another. If he enters 2 and >= 20 options it takes another.
+# It can also take a char or anything else to filter lists down.
+#
+function _read_numbers() {
+    local rows=$1
+    read -k reply
+    local key=$reply
+    # if user enters a numeric and there are double digit values too
+    # then wait for a second number. e.g. if he types 1 and there are 10 items
+    # wait for another keypress for a second. BUt if he types 2 and there are less than
+    # 20 then continue without taking another key
+    if [[ "$reply" == <1-9> ]]; then
+        (( tens = reply * 10 ))
+        (( $rows >= tens )) && {
+            read -k -t 1 ret1
+            if [[  $? -eq 0 ]]; then
+                # check it is numeric not a CR, if no input then $? gives 1
+                if [[ $ret1 == <0-9> ]]; then
+                    (( reply = reply * 10 + ret1 ))
+                fi
+            fi
+
+        }
+    elif [[ '#key' -eq '#\\e' ]]; then
+        while (true); do
+            read -t $(( KEYTIMEOUT / 1000 )) -k -s key2
+            ret=$?
+            if [[ $ret -ne 0 ]]; then
+                break
+            else
+                reply+="$key2"
+            fi
+        done
+        resolve_key_codes
+        # check ckey
+    else
+        ascii=$((#key))
+        # ctrl keys
+        (( ascii >= 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
+    fi
 }
