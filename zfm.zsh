@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-25 19:16
+#  Last update: 2013-01-25 20:04
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -15,10 +15,6 @@
 # ----------------------------------------------------------------------------- #
 #   Copyright (C) 2012-2013 rahul kumar
 
-# TODO some keys are valid in a patter such as hyphen but can be shortcuts if no pattern.
-# TODO what if user wants to send in some args suc as folder to start in, or resume where one left off.
-# TODO If user does not use z/j/autojmp etc then we should have option to build dir database and save it
-# Same for file edit list
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
 export ZFM_DIR
@@ -26,15 +22,16 @@ export EDITOR=$VISUAL
 source ${ZFM_DIR}/zfm_menu.zsh
 source $ZFM_DIR/zfm_viewoptions.zsh
 setopt MARK_DIRS
-#ZFM_VERBOSE=
+
 export M_FULL_INDEXING=
 export TAB=$'\t'
 set_auto_view
-# for printing details 2012-12-30 - 16:57 
+#
+# for printing details 
 zmodload zsh/stat
 zmodload -F zsh/stat b:zstat
 PAGESZ=59     # used for incrementing while paging
-#[[ -n "$M_FULL_INDEXING" ]] && PAGESZ=61
+
 (( PAGESZ1 = PAGESZ + 1 ))
 
 # list_printer {
@@ -51,13 +48,13 @@ function list_printer() {
     shift
     #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
-    #local COLS=3
+
     # using cols to calculate cursor movement right
     LIST_COLS=3
     local tot=$#myopts
     local sta=1
-    #local patt="."
-    #local patt=""
+
+
     # 2012-12-26 - 00:49 trygin this out so after a selection i don't lose what's filtered
     # but changing dirs must clear this, so it's dicey
     patt=${patt:-""}
@@ -71,10 +68,7 @@ function list_printer() {
             clear
             print -l -- ${M_MESSAGE:-"  $M_HELP"}
             (( fin = sta + $PAGESZ )) # 60
-            #  We are now using grep to filter based on what user types
-            #  However, this means that our index is wrong since we don't save this new array
-            #  Saving this array doesn't make sense since we truncate file name and add numbers and mnem
-            #  to it - maybe caller should do this
+
             # THIS WORKS FINE but trying to avoid external commands
             #viewport=$(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d')
             # this line replace grep and searches from start. if we plae a * after
@@ -128,7 +122,6 @@ function list_printer() {
             numberlines -p "$patt" -w $width $viewport
             print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
 
-            #print -n "> $patt"
             mode=
             [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
         fi # M_NO_REPRINT
@@ -261,10 +254,6 @@ function list_printer() {
 
                         patt="$patt$ans"
                     fi
-                    #[[ $ans = '.' && $patt = '' ]] && patt="^\."
-                    #pdebug "Pattern is $patt "
-                    #[[ -n $ZFM_VERBOSE ]] && print "Pattern is :$patt:"
-                    #[[ -n $ZFM_VERBOSE ]] && pdebug "sending $patt to chcek"
                     # if there's only one file for that char then just jump to it
                     lines=$(check_patt $patt)
                     ct=$(print -rl -- $lines | wc -l)
@@ -274,11 +263,7 @@ function list_printer() {
                 fi # M_FULL
                 ;;
             $ZFM_REFRESH_KEY)
-                pdebug "refreshing rescanning"
                 zfm_refresh
-                # why is next line not in post_cd 
-                #myopts=("${(@f)$(print -rl -- $param)}")
-                #break
                 ;;
             "$ZFM_RESET_PATTERN_KEY")
                 patt=""
@@ -292,24 +277,14 @@ function list_printer() {
                 selection=$vpa[1]
                 [[ -n "$selection" ]] && break
                 ;; 
-                # commenting out this on 2013-01-22 - 15:57 as it required
-                # checking bindings here and in caller
-            #","|"+"|"~"|":"|"\`"|"/"|"@"|"%"|"#"|"?"|'*'|$'\t')
-            #","|"+"|"~"|":"|"/"|"@"|"%"|"#"|"?"|'*'|$'\t')
-                # we break these keys so caller can handle them, other wise they
-                # get unhandled PLACE SWALLOWED keys here to handle
-                # go down to MARK1 section to put in handling code
-                #[[ -n $ZFM_VERBOSE ]] && pdebug "breaking here with $ans , sel: $selection"
-                #break
-                #;;
             BACKSPACE)
                 # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
                 if [[ $patt = "" ]]; then
-                    #patt=""
                     M_NO_REPRINT=1
                 else
                     # backspace if we are filtering, remove last char from pattern
-                    patt=${patt[1,${#patt}-1]}
+                    #patt=${patt[1,${#patt}-1]}
+                    patt[-1]=
                 fi
                 ;;
 
@@ -362,7 +337,8 @@ function toggle_match_from_start() {
 # check if there is only one file for this pattern, then straight go for it
 # with some rare cases the next char is a number, so then don't jump.
 function check_patt() {
-    local p=${1:s/^//}  # obsolete, refers to earlier grep version
+    #local p=${1:s/^//}  # obsolete, refers to earlier grep version
+    local p=$1
     local ic=
     ic=${ZFM_IGNORE_CASE+i}
     approx=${ZFM_APPROX_MATCH+a1}
@@ -394,7 +370,8 @@ function subcommand() {
                 if [[ $#selectedfiles -gt 1 ]]; then
                     multifileopt $selectedfiles
                 else
-                    fileopt_noauto $selectedfiles[1]
+                    M_NO_AUTO=1
+                    fileopt $selectedfiles[1]
                 fi
             else
                 pinfo "No selected files. About $#vpa files on screen"
@@ -404,7 +381,8 @@ function subcommand() {
                     #pinfo "Please try selecting one or more files"
                 fi
                 if [[ -n "$selection" ]]; then
-                    fileopt_noauto $selection
+                    M_NO_AUTO=1
+                    fileopt $selection
                 else
                     perror "Please select a file first. Use $ZFM_SELECTION_MODE_KEY key to toggle selection mode"
                 fi
