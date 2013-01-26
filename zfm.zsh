@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-26 15:48
+#  Last update: 2013-01-27 01:43
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -940,7 +940,10 @@ function selection_menu() {
 # a config file
 function init_menu_options() {
     typeset -gA main_menu_command_hash
-    main_menu_options=("f) File Listings" "r) Recursive Listings" "z|k) dirjump" "d) Dirs (child)" "v|l) filejump" "x) Exclude Pattern" "F) Filter options" "s) Sort Options" "c) Commands" "o) Options and Settings" "_) Last viewed file")
+    main_menu_options+=("Directory" "zk dirjump" "d children" "[ Siblings" "] cd OLD NEW" " " " " " " "\n")
+    main_menu_options+=("Commands" "a ack" "/ ffind" "v filejump" "l locate" "u User Commands" "_ Last viewed file" "\n")
+    main_menu_options+=("Settings"  "x Exclude Pattern" "F Filter options" "s Sort Options" "o General"  "\n")
+    main_menu_options+=("Listings" "f File Listings" "r Recursive Listings" "\n")
     main_menu_command_hash=(
         o settingsmenu
         f nonrecviewoptions
@@ -949,11 +952,12 @@ function init_menu_options() {
         z m_dirstack
         k m_dirstack
         v m_recentfiles
-        l m_recentfiles
         F filteroptions
         x get_exclude_pattern
         s sortoptions
-        c mycommands
+        u mycommands
+        a zfm_ack
+        l zfm_locate
         _ edit_last_file
         )
 }
