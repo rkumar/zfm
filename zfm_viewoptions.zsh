@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-26 19:37
+# Last update: 2013-01-27 01:53
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -816,11 +816,14 @@ function select_menu() {
     #print $#moptions
     #print $#myhas
     #print $#myhas  :: ${(kv)myhas}
+    print
     print  "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
-    for o in $moptions
-    do
-        print  "  $o"
-    done
+    #for o in $moptions
+    #do
+        #print  "  $o"
+    #done
+    M_BOLD_FIRST=1
+    columnate $moptions
     print  -n "Select :"
     read -k reply
     print
@@ -828,6 +831,7 @@ function select_menu() {
     if (( ${+myhas[$reply]} )); then
         #pdebug found $reply in hash as $myhas[$reply]
         $myhas[$reply]
+        ret=0
     else
         #print
         #print $#myhas :: $myhas
@@ -836,6 +840,52 @@ function select_menu() {
     print
     return $ret
 }
+
+# take an array that has values with some divider for columns and paste into one array
+# lets use newlines as end of one column, we don;t know how many columns are coming in
+# so use 50 as default. what of titles ??
+#
+function columnate() {
+
+    local FOO BUFF ctr f ff
+    FOO=($@)
+
+    BUFF=()
+    local width=25
+
+    (( ctr = 0 ))
+
+    ## loop through array creating a buffer called BUFF which contains
+    #  side by side columns
+    #
+    for f in $FOO ; do
+        ## newline signifies next column
+        if [[ $f == "\n" ]]; then
+            (( ctr = 0 ))
+            continue
+        else
+            (( ctr++ ))
+        fi
+        ## we assume the first one in each list is a title and should be bolded
+        ff=${(r:$width:)f}
+        if [[ -n $M_BOLD_FIRST ]]; then
+            if [[ $ctr -eq 1 ]]; then
+                ff="$fg_bold[white]$ff$reset_color"
+            fi
+        fi
+        BUFF[$ctr]+=$ff
+        ## if we are to boldface, we must first pad then boldface otherwise
+        # ANSI chars get counted in size but actually don't take up size,
+        # we know that from past experience of using other libraries
+        #
+        #BUFF[$ctr]+=${(r:30:)f}
+    done
+
+    #print "$fg_bold[white] title $fg_bold[blue] red fgbbb $reset_color"
+    M_BOLD_FIRST=
+    print -l $BUFF
+}
+
 function mycommands() {
     source $ZFM_DIR/zfmcommands.zsh
     IFS=$ZFM_MY_DELIM menu_loop "My Commands" "$ZFM_MY_COMMANDS${ZFM_MY_DELIM:-' '}cmd" "${ZFM_MY_MNEM}:"
@@ -934,6 +984,7 @@ function get_exclude_pattern() {
 #
 function _read_numbers() {
     local rows=$1
+    local ret=0
     read -k reply
     local key=$reply
     # if user enters a numeric and there are double digit values too
