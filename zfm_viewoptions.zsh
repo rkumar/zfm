@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-26 01:38
+# Last update: 2013-01-26 19:37
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -173,13 +173,12 @@ function fuzzyselectrow() {
             toggle_auto_view
         elif [[ "$reply" == $ZFM_MENU_KEY ]]; then
             # files with spaces are getting split !!! 
-            menu_loop "Options for filtering list" "reject truncate reject_extn accept" ""
+            menu_loop "Options for filtering list" "reject truncate reject_extn accept filter" "rtxaf"
             case $menu_text in
                 "reject")
                     print  "reject all files matching given pattern"
                     rejpattern=${rejpattern:-"tmp Trash Backups"}
                     vared -p "Enter pattern to reject: " rejpattern
-                    #files=( $(print -rl -- $ff ) )
                     rejpattern=${rejpattern:gs/ /|/}
                     local oldc=$#files
                     files=("${(@f)$(print -rl -- $ff | egrep -v "($rejpattern)")}")
@@ -202,6 +201,11 @@ function fuzzyselectrow() {
                     vared -p "Enter pattern to accept: " accpattern
                     accpattern=${accpattern:gs/ /|/}
                     files=("${(@f)$(print -rl -- $ff | egrep "\.($accpattern)$")}")
+                    ;;
+                "filter")
+                    print  "Add a command to filter file list, e.g. head / grep foo/ "
+                    vared -c -p "Enter filter: " cfilter
+                    files=("${(@f)$(print -rl -- $ff | eval "$cfilter"   )}")
                     ;;
             esac
             ff=( $files ) # XXX what if nothign changed above ?
@@ -339,12 +343,13 @@ function viewoptions() {
 # e - use editor to edit
 # q   don't do anything
 # *  allow user to enter command
+## XXX is this really in use now ?
 function handle_selection() {
     local reply=$1
     shift
     selected_files=($@:q)
     #selected_files=${selected_files:q}
-    pdebug "handle_selection with $reply $#selected_files"
+    pdebug "$0 with $reply $#selected_files"
 
     case $reply in
         "q")
@@ -375,6 +380,55 @@ function handle_selection() {
     esac
     selected_files=
 
+}
+##
+## take a file list and allow user to select one or more files, and then popup a menu of options
+#  for those files
+#  Typically you would execute a command that returns a files list and then hand the list
+#  to this function so the user can select files and then be sent to fileopt or multi depending
+#  on how many he selected
+#
+function handle_files() {
+    files=($@)
+    if [[ $#files -gt 0 ]]; then
+        #files=$( echo $files | xargs ls -t )
+        fuzzyselectrow $files
+
+        if [[ $#selected_files -eq 1 ]]; then
+            fileopt "$selected_file"
+        elif [[ $#selected_files -gt 1 ]]; then
+            multifileopt $selected_files
+        elif [[ -n "$selected_file" ]]; then
+            fileopt "$selected_file"
+        fi
+    else
+        perror "No files matching $searchpattern"
+    fi
+}
+## 
+# enter a command and select files from output
+# e.g. output of locate command
+# select_files_from_cmd_output
+function command_select() {
+    vared -c -p "Enter command to pipe to selectrows: " command
+    files=("${(@f)$( eval "$command" )}")
+    M_NO_AUTO=1
+    handle_files $files
+}
+function zfm_locate() {
+    searchpattern=${searchpattern:-""}
+    vared -p "Filename to 'locate' (enter >= 3 characters): " searchpattern
+    [[ -z $searchpattern ]] && return 1
+    #files=$( locate "$searchpattern" | grep -P $searchpattern'[^/]*$' )
+    #if [[ searchpattern[(i)/] -le $#searchpattern ]]; then
+        files=$( locate -l 100 -i -0 "$searchpattern" | xargs -0 ls -t )
+    #else
+        # grep can't deal with zero byte terminating line, and --null is useless here
+        # sicne there's no filename, grep only sees input
+        # not sure how this will deal with spaces in file names
+        #files=$( locate "$searchpattern" | grep  -P $searchpattern'[^/]*$' | xargs ls -t)
+    #fi
+    handle_files $files
 }
 #
 #  toggle between full-indexing and drill down mode.
