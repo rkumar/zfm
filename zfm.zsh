@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-26 01:22
+#  Last update: 2013-01-26 15:48
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -369,6 +369,9 @@ function subcommand() {
         "a"|"ack")
             zfm_ack
         ;;
+        "l"|"locate")
+            zfm_locate
+        ;;
         "f"|"file")
             if [[ -n $selectedfiles ]]; then
                 pdebug "selected files: $#selectedfiles"
@@ -407,7 +410,13 @@ function subcommand() {
             print "You may enter any other command too such as 'git status'"
             print
         ;;
-        *)
+    "pipe")
+        command_select
+        ;;
+    "l"|"locate")
+        zfm_locate
+        ;;
+    *)
         eval "$dcommand"
         ;;
     esac
