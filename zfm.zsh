@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-27 13:12
+#  Last update: 2013-01-27 16:15
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -237,7 +237,7 @@ function list_printer() {
             fi # M_FULL
                 [[ -n "$selection" ]] && break
                 ;;
-            "q")
+            $ZFM_QUIT_KEY)
                 break
                 ;;
             [a-zA-Z_0\.\ ])
@@ -374,7 +374,7 @@ function check_patt() {
 function subcommand() {
     dcommand=${dcommand:-""}
     vared -p "Enter command (? - help): " dcommand
-    [[ "$dcommand" = "q" || $dcommand = "quit" ]] && break
+    [[ "$dcommand" = "q" || $dcommand = "quit" ]] && { QUITTING=1 ; break }
     case "$dcommand" in
         "S"|"save")
             push_pwd
@@ -439,7 +439,7 @@ function subcommand() {
         ;;
     esac
     M_SELECTION_MODE=
-    [[ "$dcommand" = "q" || $dcommand = "quit" ]] && quitting=1
+    [[ "$dcommand" = "q" || $dcommand = "quit" ]] && QUITTING=1
     pause
 }
 
@@ -561,6 +561,7 @@ ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
 ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
 ZFM_FFIND_KEY=${ZFM_FFIND_KEY:-'/'}  # reset the pattern, use something else
+ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # reset the pattern, use something else
 export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
 #export ZFM_NO_COLOR   # use to swtich off color in selection
 M_SWITCH_OFF_DUPL_CHECK=
@@ -590,12 +591,12 @@ param=$(print -rl -- *(M))
     while (true)
     do
         list_printer "${PWD} " $param
+        [[ -n $QUITTING ]] && break
         # MARK1 section comes back when list_p breaks from SWALLOW
         [[ -n $selection ]] && print "returned with $selection"
         # value selected is in selection, key pressed in ans
         [[ -z "$selection" ]] && {
-            #[[ "$ans" = "q" || "$ans" = "" ]] && break
-            [[ "$ans" = "q" ]] && break
+            [[ "$ans" == $ZFM_QUIT_KEY ]] && break
             case $ans in 
                 "~")
                     selection=$HOME
