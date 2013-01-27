@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-27 20:52
+#  Last update: 2013-01-28 01:30
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -57,7 +57,7 @@ function list_printer() {
 
     # 2012-12-26 - 00:49 trygin this out so after a selection i don't lose what's filtered
     # but changing dirs must clear this, so it's dicey
-    patt=${patt:-""}
+    PATT=${PATT:-""}
     local mark ic approx
     globflags=
     ic=
@@ -70,7 +70,7 @@ function list_printer() {
             (( fin = sta + $PAGESZ )) # 60
 
             # THIS WORKS FINE but trying to avoid external commands
-            #viewport=$(print -rl -- $myopts  | grep "$patt" | sed "$sta,${fin}"'!d')
+            #viewport=$(print -rl -- $myopts  | grep "$PATT" | sed "$sta,${fin}"'!d')
             # this line replace grep and searches from start. if we plae a * after
             # the '#' then the match works throughout filename
             ic=${ZFM_IGNORE_CASE+i}
@@ -83,12 +83,35 @@ function list_printer() {
             # I am fed up of this crazy crap. Things were great when i used grep and sed
             # I am giong back even though it will cause various changes
             if [[ -z $M_MATCH_ANYWHERE ]]; then
-                viewport=(${(M)myopts:#(#${ic}${approx})$patt*})
+                #viewport=(${(M)myopts:#(#${ic}${approx})$PATT*})
                 mark="^"
+                prefix="^"
             else
-                viewport=(${(M)myopts:#(${ic}${approx})*$patt*})
+                #viewport=(${(M)myopts:#(${ic}${approx})*$PATT*})
                 mark="*"
+                prefix=""
             fi
+            viewport=("${(@f)$(print -rl -- $myopts | grep "${prefix}$PATT" )}")
+
+            ## testing out 
+            #if [[ $#viewport -eq 0 ]]; then
+            ## Ifwe don't get any results lets take the last entered pattern
+            ## and place a .* before it so its a little more helpful. This is since
+            ## sometimes there are too many common characters in file names.
+            #
+            if [[ -z $viewport ]]; then
+                if [[ $#PATT -ge 2 ]]; then
+                    local testpatt=$PATT
+                    testpatt[-2]+='.*'
+                    ## we repeat the above command, so make sure it is identical
+                    viewport=("${(@f)$(print -rl -- $myopts | grep "${prefix}$testpatt" )}")
+                    [[ ! -z $viewport ]] && PATT=$testpatt
+                fi
+            fi
+
+
+            ## Run a filter entered by the user on the existing data
+            #
             if [[ -n "$M_CFILTER" ]]; then
                 viewport=("${(@f)$(print -rl -- $viewport | eval "$M_CFILTER" )}")
             fi
@@ -138,16 +161,16 @@ function list_printer() {
             ## since it updates a cache of file details and this cache is lost each
             ## time a call is made, since it is in another process
             #
-            #print -rC$LIST_COLS "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
-            numberlines -p "$patt" -w $width $viewport
+            #print -rC$LIST_COLS "${(@f)$(print -rl -- $viewport | numberlines -p "$PATT" -w $width)}"
+            numberlines -p "$PATT" -w $width $viewport
             print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
 
             mode=
             [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
         fi # M_NO_REPRINT
         M_NO_REPRINT=
-        #print -n "$mode${mark}$patt > "
-        print -n "\r$mode${mark}$patt > "
+        #print -n "$mode${mark}$PATT > "
+        print -n "\r$mode${mark}$PATT > "
         # prompt for key PROMPT
         #read -k -r ans
         # see zfm_menu.zsh for _read moved there
@@ -175,8 +198,17 @@ function list_printer() {
             "")
                 # BLANK blank
                 (( sta = 1 ))
-                patt="."
-                patt=""
+                PATT="."
+                PATT=""
+                ;;
+            $ZFM_LITERAL_KEY)
+                ## character like number cause automatic selection, but if your file name
+                ## contains or starts with numbers then this key allows you to enter a key
+                ## which will get added to search pattern 2013-01-28
+                #
+                print -n "Enter a char to add to pattern: "
+                read -k tmpkey
+                PATT+=$tmpkey
                 ;;
             $ZFM_PAGE_KEY)
                 # SPACE space, however may change to ENTER due to spaces in filenames
@@ -203,10 +235,10 @@ function list_printer() {
 
                 selection=""
                 if [[ $ttcount -gt 9 ]]; then
-                    if [[ $patt = "" ]]; then
+                    if [[ $PATT = "" ]]; then
                         npatt="${ans}*"
                     else
-                        npatt="$patt$ans"
+                        npatt="$PATT$ans"
                     fi
                     lines=
                     if [[ -n "$M_SWITCH_OFF_DUPL_CHECK" ]]; then
@@ -225,7 +257,7 @@ function list_printer() {
                         #selection=$myopts[$ix] # fails on filtering
                         [[ -n $ZFM_VERBOSE ]] && print " selected $selection"
                     else
-                        patt=$npatt
+                        PATT=$npatt
                     fi
                 else
                     # there are only 9 or less so just use mnemonics, don't check
@@ -243,7 +275,7 @@ function list_printer() {
             $ZFM_QUIT_KEY)
                 break
                 ;;
-            [a-zA-Z_0\.\ ])
+            [a-zA-Z_0\.\ \*])
                 ## UPPER CASE upper section alpha characters
                 (( sta = 1 ))
 
@@ -255,7 +287,7 @@ function list_printer() {
 
                 else
 
-                    if [[ $patt = "" ]]; then
+                    if [[ $PATT = "" ]]; then
                         [[ $ans = '.' ]] && { 
                             # i will be doing this each time dot is pressed
                             # ad changing setting for calling shell too ! XXX
@@ -268,14 +300,14 @@ function list_printer() {
                             myopts=("${(@f)$(print -rl -- $param)}")
                             pbold "count is $#myopts"
                         }
-                        patt="${ans}"
+                        PATT="${ans}"
                     else
                         [[ -n $ZFM_VERBOSE ]] && pdebug "comes here 1"
 
-                        patt="$patt$ans"
+                        PATT="$PATT$ans"
                     fi
-                    # if there's only one file for that char then just jump to it
-                    lines=$(check_patt $patt)
+                    ## if there's only one file for that char then just jump to it
+                    lines=$(check_patt $PATT)
                     ct=$(print -rl -- $lines | wc -l)
                     if [[ $ct -eq 1 ]]; then
                         [[ -n "$lines" ]] && { selection=$lines; break }
@@ -286,7 +318,7 @@ function list_printer() {
                 zfm_refresh
                 ;;
             "$ZFM_RESET_PATTERN_KEY")
-                patt=""
+                PATT=""
                 ;;
             "$ZFM_POPD_KEY")
                 break
@@ -299,12 +331,12 @@ function list_printer() {
                 ;; 
             BACKSPACE)
                 # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
-                if [[ $patt = "" ]]; then
+                if [[ $PATT = "" ]]; then
                     M_NO_REPRINT=1
                 else
                     # backspace if we are filtering, remove last char from pattern
                     #patt=${patt[1,${#patt}-1]}
-                    patt[-1]=
+                    PATT[-1]=
                 fi
                 ;;
 
@@ -325,8 +357,10 @@ function list_printer() {
                             pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
                            
                             #  put key in SWALLOW section to pass to caller
-                            if [[ -n $patt ]]; then
-                                patt=""
+                            if [[ -n $PATT ]]; then
+                                # if ans has been used then don't clear
+                                #PATT=""  # commented on 2013-01-28 - 00:03 often gets reset
+                                # when it should not like ? or @
                             else
                                 # this could be a problem since list won't reprint
                                 # after handled in caller. XXX
@@ -376,6 +410,7 @@ function check_patt() {
     local ic=
     ic=${ZFM_IGNORE_CASE+i}
     approx=${ZFM_APPROX_MATCH+a1}
+    ## XXX TODO needs to be checked based on grep version
     if [[ -z $M_MATCH_ANYWHERE ]]; then
         # match from start - default
         lines=$(print -rl -- (#$ic${approx})${p}*)
@@ -481,7 +516,7 @@ function pop_pwd() {
 }
 #  executed when dir changed
 function post_cd() {
-    patt=""
+    PATT=""
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
     [[ $#param -eq 0 ]] && {
@@ -509,6 +544,8 @@ function print_help_keys() {
     $ZFM_GOTO_DIR_KEY	- Enter directory name to jump to
     $ZFM_FFIND_KEY	- Find a file for a pattern
     $ZFM_SELECTION_MODE_KEY	- Toggle selection mode
+    $ZFM_SELECT_ALL_KEY	- Select all files
+    $ZFM_LITERAL_KEY	- Accept char as part of pattern (as in number or other action key)
     $ZFM_GOTO_PARENT_KEY	- Goto parent of existing dir (cd ..)
     $ZFM_POPD_KEY	- popd (go back to previously visited dirs)
     :	- Command key
@@ -539,14 +576,14 @@ pause
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.3-c"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/25"
+ZFM_VERSION="0.1.4-alpha"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/28"
 #print $M_TITLE
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
 typeset -Ag FILES_HASH
-#export FILES_HASH
+
 selectedfiles=()
 #export selectedfiles  # for nl.sh
 #  directory stack for jumping back
@@ -574,8 +611,11 @@ ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change filter options
 ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
 ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
-ZFM_FFIND_KEY=${ZFM_FFIND_KEY:-'/'}  # reset the pattern, use something else
-ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # reset the pattern, use something else
+ZFM_FFIND_KEY=${ZFM_FFIND_KEY:-'/'}  # file find
+ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # quit application
+#ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-'*'}  # select all files on screen
+ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-"M-a"}  # select all files on screen
+ZFM_LITERAL_KEY=${ZFM_LITERAL_KEY:-"\\"}  # accept a char as literal
 export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
 #export ZFM_NO_COLOR   # use to swtich off color in selection
 M_SWITCH_OFF_DUPL_CHECK=
@@ -607,7 +647,7 @@ param=$(print -rl -- *(M))
         list_printer "${PWD} " $param
         [[ -n $QUITTING ]] && break
         # MARK1 section comes back when list_p breaks from SWALLOW
-        [[ -n $selection ]] && print "returned with $selection"
+        [[ -n $selection ]] && pdebug "returned with $selection"
         # value selected is in selection, key pressed in ans
         [[ -z "$selection" ]] && {
             [[ "$ans" == $ZFM_QUIT_KEY ]] && break
@@ -629,13 +669,14 @@ param=$(print -rl -- *(M))
                     else
                         M_SELECTION_MODE=1
                         pinfo "selection mode is on. After selecting files, use same key to toggle off and operate on files"
-                        pinfo "Use '*' to select all, $ZFM_MENU_KEY for selection menu"
+                        pinfo "Use $ZFM_SELECT_ALL_KEY to select all, $ZFM_MENU_KEY for selection menu"
                     fi
                     ;; 
                 $ZFM_FFIND_KEY)
                     # find files with string in filename, uses zsh (ffind)
                         searchpattern=${searchpattern:-""}
                         vared -p "Filename to search for (enter > 2 characters): " searchpattern
+                        [[ -z $searchpattern ]] && break
                         # recurse and match filename only
                         #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
                         # find is more optimized acco to zsh users guide
@@ -675,7 +716,7 @@ param=$(print -rl -- *(M))
                 "?") 
                     print_help_keys
                     ;;
-                '*')
+                $ZFM_SELECT_ALL_KEY)
                     for line in $vpa
                     do
                         pdebug "line $line"
@@ -787,7 +828,6 @@ function numberlines() {
     #let w++
     nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     #while IFS= read -r line; do
-    #for line in $viewport; do
     for line in $*; do
         # read from viewport now TODO
         cc=' '
@@ -1076,7 +1116,7 @@ function function init_file_menus() {
     FT_OPTIONS[TXT]="vim $PAGER archive tail head ${FT_COMMON}"
     FT_OPTIONS[OTHER]="$FT_COMMON od stat vim"
     FT_OPTIONS[IMAGE]="${FT_COMMON}"
-    FT_OPTIONS[ZIP]="view zless unzip zipgrep $FT_COMMON"
+    FT_OPTIONS[ZIP]="view tvf zless unzip zipgrep $FT_COMMON"
     FT_OPTIONS[SWAP]="vim cmd"
     ## in addiition to other commands for pdf's
     FT_OPTIONS[PDF]="pdftohtml pdfgrep"
@@ -1117,6 +1157,7 @@ function function init_file_menus() {
     ## convert selected flv file to m4a using ffmpeg
     COMMANDS[ffmp]='ffmpeg -i %% -vn ${${:-%%}:r}.m4a'
     COMMANDS[clip]='print %% | pbcopy && print "Copied filename to clipboard"'
+    COMMANDS[tvf]='tar ztvf'
     # pdftohtml -stdout %% | links -stdin
     #FT_DEFAULT_PDF="pdftohtml"
     #export FT_TXT FT_ZIP FT_OTHERS COMMANDS COMMAND_HOTKEYS
@@ -1236,7 +1277,7 @@ function goto_dir() {
     # FIXME backspace etc issues in vared here, hist not working
     vared -h -p "Enter path: " GOTO_PATH
     selection=${(Q)GOTO_PATH}  # in case space got quoted, -d etc will all give errors
-    patt="" # 2012-12-26 - 00:54 
+    PATT="" # 2012-12-26 - 00:54 
 }
 function cd_old_new() {
     #$ZFM_CD_OLD_NEW_KEY)
