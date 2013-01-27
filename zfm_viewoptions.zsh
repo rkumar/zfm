@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-27 19:54
+# Last update: 2013-01-28 01:31
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -560,7 +560,7 @@ function set_auto_view(){
     ZFM_AUTO_ACTION[IMAGE]=${ZFM_AUTO_ACTION_BAK[IMAGE]:-"open"}
     #ZFM_AUTO_ACTION[OTHER]=${ZFM_AUTO_ACTION_BAK[OTHER]:-"open"}
     ZFM_AUTO_ACTION[TXT]=${ZFM_AUTO_ACTION_BAK[TXT]:-$EDITOR}
-    ZFM_AUTO_ACTION[ZIP]=${ZFM_AUTO_ACTION_BAK[ZIP]:-"tar ztvf"}
+    ZFM_AUTO_ACTION[ZIP]=${ZFM_AUTO_ACTION_BAK[ZIP]:-"view"}
 }
 function unset_auto_view(){
     ZFM_AUTOVIEW_TOGGLE_KEY=
