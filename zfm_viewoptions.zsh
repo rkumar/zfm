@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-27 15:59
+# Last update: 2013-01-27 19:54
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -212,15 +212,7 @@ function fuzzyselectrow() {
         elif [[ "$reply" == "^" ]]; then
             fuzzy_match_toggle
             # remove .*s
-            if [[ -n "$ZFM_FUZZY_MATCH_DIR" ]]; then
-                gpatt=${gpatt:gs/*//}
-                gpatt=${gpatt:gs/\.//}
-            else
-                local xx=""
-                # insert .* between each char
-                for ((i = 1; i <= $#gpatt; i++)); do xx="${xx}$gpatt[i].*"; done
-                gpatt=$xx
-            fi
+            gpatt=$(pattern_toggle $gpatt)
         elif [[ $ckey == "C-n" ]]; then
             ## scroll list down -- neeeded if more rows than can be seen
             let offset++
@@ -238,7 +230,7 @@ function fuzzyselectrow() {
         elif [[ -z "$gpatt" ]]; then
             gpatt="$reply"
         else
-            if [[ "$ZFM_FUZZY_MATCH_DIR" == "1" ]]; then
+            if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
                 # contiguous search
                 gpatt="${gpatt}${reply}"
             else
@@ -475,7 +467,7 @@ function approx_match_toggle() {
     if [[ -z "ZFM_APPROX_MATCH" ]]; then
         ZFM_APPROX_MATCH=1
     else
-        ZFM_APPROX_MATCH=
+        unset ZFM_APPROX_MATCH
     fi
     export ZFM_APPROX_MATCH
 }
@@ -761,7 +753,7 @@ function m_recentfiles() {
         else
             tmpfuzz=$ZFM_FUZZY_MATCH_DIR
             # we want a contiguous match, not fuzzy
-            ZFM_FUZZY_MATCH_DIR="1"
+            ZFM_FUZZY_MATCH_DIR=
             $ZFM_FILE_SELECT_FUNCTION $files
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
             #perror "XXX $#selected_files ,, $selected_file,, $selected_files"
@@ -977,6 +969,21 @@ function get_exclude_pattern() {
     M_EXCLUDE_PATTERN=${M_EXCLUDE_PATTERN:-"~(*.tgz|*.gz|*.z|*.bz2|*.zip)"}
     vared -p "Enter pattern to exclude from listings: " M_EXCLUDE_PATTERN
     ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
+}
+## fuzzy uses grep so it uses .*
+#  However, we moved away from grep in the main lister so it cannot use this
+function pattern_toggle() {
+    local gpatt="$1"
+    if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
+        gpatt=${gpatt:gs/*//}
+        gpatt=${gpatt:gs/\.//}
+    else
+        local xx=""
+        # insert .* between each char
+        for ((i = 1; i <= $#gpatt; i++)); do xx="${xx}$gpatt[i].*"; done
+        gpatt=$xx
+    fi
+    print $gpatt
 }
 
 ## This take a single char from user. If its a number and the options are more than
