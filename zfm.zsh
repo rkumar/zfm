@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-27 01:43
+#  Last update: 2013-01-27 13:12
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -86,9 +86,16 @@ function list_printer() {
                 viewport=(${(M)myopts:#(${ic}${approx})*$patt*})
                 mark="*"
             fi
+            if [[ -n "$M_CFILTER" ]]; then
+                viewport=("${(@f)$(print -rl -- $viewport | eval "$M_CFILTER" )}")
+            fi
+
+            ## these lines must come after any filtering, othewise totals displayed
+            ## are wrong
             let tot=$#viewport  # store the size of matching rows prior to paging it. 2013-01-09 - 01:37 
             [[ $fin -gt $tot ]] && fin=$tot
-            # this line replaces the sed filter
+            
+            ## this line replaces the sed filter
             viewport=(${viewport[$sta, $fin]})
             vpa=("${(@f)$(print -rl -- $viewport)}")
             #vpa=("${(f)=viewport}")
@@ -113,14 +120,24 @@ function list_printer() {
             [[ $fin -gt $tot ]] && fin=$tot
             local sortorder=""
             [[ -n $ZFM_SORT_ORDER ]] && sortorder="o=$ZFM_SORT_ORDER"
+
+            ## This relates to the new cursor functionality. Arrow keys allow us to
+            ## move around the file list and press ENTER
+            #
             (( CURSOR == -1 || CURSOR > $tot )) && CURSOR=$tot
             ## if there are no rows then CURSOR gets set to 0 and remains there forever, check
             (( CURSOR == 0 )) && CURSOR=1
+
+
             print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT} "
 
             #print -rC$LIST_COLS "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
             numberlines -p "$patt" -w $width $viewport
-            print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
+            #if [[ -n "$M_CFILTER" ]]; then
+                #print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT | eval "$M_CFILTER" )}"
+            #else
+                print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
+            #fi
 
             mode=
             [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
@@ -411,6 +428,7 @@ function subcommand() {
             print
         ;;
     "pipe")
+        # accept a command and pass the result to selectrows
         command_select
         ;;
     "l"|"locate")
@@ -1000,6 +1018,7 @@ function init_key_function_map() {
     zfm_bind_key "M-f" "filteroptions"
     zfm_bind_key "F1" "print_help_keys"
     zfm_bind_key "F2" "goto_dir"
+    zfm_bind_key "|" "zfm_filter_list"
 }
 function function init_file_menus() {
     # edit these or override in ENV
@@ -1259,6 +1278,15 @@ function source_addons() {
         }
     fi
 
+}
+## 
+## Apply a filter to the list displayed.
+#  XXX THis needs to reflect in the count etc
+#
+function zfm_filter_list() {
+    print
+    print  "Add a command to filter file list, e.g. head / grep foo/ "
+    vared -c -p "Enter filter: " M_CFILTER
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
