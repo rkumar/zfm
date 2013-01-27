@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-27 01:53
+# Last update: 2013-01-27 15:59
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -17,7 +17,7 @@ ZFM_CD_COMMAND=${ZFM_CD_COMMAND:-"pushd"}
 
 # MENU that comes up on ZFM_MENU_KEY 
 function view_menu() {
-    select_menu "Menu" main_menu_options main_menu_command_hash
+    select_menu "   ==      M e n u     ==" main_menu_options main_menu_command_hash
     if [  $? -ne 0 ]; then
         perror "Incorrect option $reply"
     fi
@@ -836,6 +836,7 @@ function select_menu() {
         #print
         #print $#myhas :: $myhas
         ret=1
+        [[ $reply == "q" || $reply == "" ]] && ret=0
     fi
     print
     return $ret
