@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-27 16:15
+#  Last update: 2013-01-27 20:52
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -79,6 +79,9 @@ function list_printer() {
             globflags="$ic$approx"
             # we keep filtering, not refreshing so deleted moved files still show up
             # the caller queries, and that sucks
+
+            # I am fed up of this crazy crap. Things were great when i used grep and sed
+            # I am giong back even though it will cause various changes
             if [[ -z $M_MATCH_ANYWHERE ]]; then
                 viewport=(${(M)myopts:#(#${ic}${approx})$patt*})
                 mark="^"
@@ -131,13 +134,13 @@ function list_printer() {
 
             print_title "$title $sta to $fin of $tot ${COLOR_GREEN}$sortorder $ZFM_STRING ${globflags}${COLOR_DEFAULT} "
 
+            ## This is the original line, which had a pipeline. I had to break this up
+            ## since it updates a cache of file details and this cache is lost each
+            ## time a call is made, since it is in another process
+            #
             #print -rC$LIST_COLS "${(@f)$(print -rl -- $viewport | numberlines -p "$patt" -w $width)}"
             numberlines -p "$patt" -w $width $viewport
-            #if [[ -n "$M_CFILTER" ]]; then
-                #print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT | eval "$M_CFILTER" )}"
-            #else
-                print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
-            #fi
+            print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
 
             mode=
             [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
@@ -254,17 +257,17 @@ function list_printer() {
 
                     if [[ $patt = "" ]]; then
                         [[ $ans = '.' ]] && { 
-                        # i will be doing this each time dot is pressed
-                        # ad changing setting for calling shell too ! XXX
-                        pdebug "I should only set and do this if nothing is showing or glob dots is off"
-                        #pbold "Setting glob_dots ..."
-                        #setopt GLOB_DOTS
-                        show_hidden_toggle
-                        #setopt globdots
-                        param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
-                        myopts=("${(@f)$(print -rl -- $param)}")
-                        pbold "count is $#myopts"
-                    }
+                            # i will be doing this each time dot is pressed
+                            # ad changing setting for calling shell too ! XXX
+                            pdebug "I should only set and do this if nothing is showing or glob dots is off"
+                            #pbold "Setting glob_dots ..."
+                            #setopt GLOB_DOTS
+                            show_hidden_toggle
+                            #setopt globdots
+                            param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+                            myopts=("${(@f)$(print -rl -- $param)}")
+                            pbold "count is $#myopts"
+                        }
                         patt="${ans}"
                     else
                         [[ -n $ZFM_VERBOSE ]] && pdebug "comes here 1"
@@ -343,6 +346,16 @@ function list_printer() {
     done
 }
 # }
+function patt_toggle() {
+    local gpatt=$1
+    gpatt=${gpatt:gs/*//}
+    gpatt="${gpatt}"
+    if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
+    else
+        gpatt=$(print $gpatt | sed 's/\(.\)/\1\*/g')
+    fi
+    print "$gpatt"
+}
 
 function toggle_match_from_start() {
     # default is unset, it matches what you type from start
@@ -359,6 +372,7 @@ function toggle_match_from_start() {
 function check_patt() {
     #local p=${1:s/^//}  # obsolete, refers to earlier grep version
     local p=$1
+    local approx
     local ic=
     ic=${ZFM_IGNORE_CASE+i}
     approx=${ZFM_APPROX_MATCH+a1}
