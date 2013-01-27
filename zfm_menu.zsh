@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-27 01:19
+#  Last update: 2013-01-28 01:26
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -296,7 +296,7 @@ function fileopt() {
     local act=$ZFM_AUTO_ACTION[$uft]
     [[ -n "$M_NO_AUTO" ]] && { unset M_NO_AUTO; act= }
     if [[ -n "${act}" ]]; then
-        pdebug "got $act for $_act ($uft)"
+        print "got $act for $_act ($uft)"
         name=${name:q}
         eval "${act} $name"
         [[ $act == $EDITOR ]] && { last_viewed_files=$name }
