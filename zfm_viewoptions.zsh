@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-28 20:51
+# Last update: 2013-01-28 23:06
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -992,6 +992,8 @@ function zfm_edit_pattern() {
     pattern=${pattern:-'*'}
     vared -p "Enter pattern: " pattern
     pattern=${pattern:-"*"}
+    ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
+    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     M_MESSAGE="zsh pattern set to: $pattern"
 }
 function zfm_newfile() {
