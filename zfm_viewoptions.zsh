@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-28 01:31
+# Last update: 2013-01-28 20:51
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -450,9 +450,12 @@ function show_hidden_toggle() {
 function fuzzy_match_toggle() {
     if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
         ZFM_FUZZY_MATCH_DIR=1
+        FPATT='.*'
     else
         ZFM_FUZZY_MATCH_DIR=
+        FPATT=
     fi
+    PATT=$(pattern_toggle $PATT)
     export ZFM_FUZZY_MATCH_DIR
 }
 function ignore_case_toggle() {
@@ -575,7 +578,7 @@ function unset_auto_view(){
     #done
 }
 function filteroptions() {
-    menu_loop "Filter Options " "Today Files Dirs Recent Old Large Pattern Small Hidden Links Clear" "tfdrolpshLc"
+    menu_loop "Filter Options " "Pattern Today Files Dirs Recent Old Large Small Hidden Links Clear" "ptfdrolshLc"
     # XXX usage of o or O clashes with sort order and gives error, FIXME
     case $menu_text in
         "Files")
@@ -600,9 +603,7 @@ function filteroptions() {
             filterstr="Lm+2"
             ;;
         "Pattern")
-            pattern=${pattern:-'*'}
-            vared -p "Enter pattern: " pattern
-            pattern=${pattern:-"*"}
+            zfm_edit_pattern
             ;;
         "Small")
             filterstr="oL[1,15]"
@@ -965,7 +966,7 @@ function edit_last_file() {
     pinfo "Last viewed : $last_viewed_files"
     [[ -n $last_viewed_files ]] && $EDITOR $last_viewed_files
 }
-function get_exclude_pattern() {
+function zfm_exclude_pattern() {
     M_EXCLUDE_PATTERN=${M_EXCLUDE_PATTERN:-"~(*.tgz|*.gz|*.z|*.bz2|*.zip)"}
     vared -p "Enter pattern to exclude from listings: " M_EXCLUDE_PATTERN
     ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
@@ -974,16 +975,42 @@ function get_exclude_pattern() {
 #  However, we moved away from grep in the main lister so it cannot use this
 function pattern_toggle() {
     local gpatt="$1"
+    ## Do this always to prevent repeat of .* between existing ones
+    gpatt=${gpatt:gs/*//}
+    gpatt=${gpatt:gs/\.//}
     if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
-        gpatt=${gpatt:gs/*//}
-        gpatt=${gpatt:gs/\.//}
     else
-        local xx=""
         # insert .* between each char
-        for ((i = 1; i <= $#gpatt; i++)); do xx="${xx}$gpatt[i].*"; done
-        gpatt=$xx
+        gpatt=$(print $gpatt | sed 's/\(.\)/\1.\*/g')
+        gpatt=${gpatt%.*}
     fi
     print $gpatt
+}
+## edit the zsh globbing pattern used by zsh to return files
+#
+function zfm_edit_pattern() {
+    pattern=${pattern:-'*'}
+    vared -p "Enter pattern: " pattern
+    pattern=${pattern:-"*"}
+    M_MESSAGE="zsh pattern set to: $pattern"
+}
+function zfm_newfile() {
+
+    print
+    print -n "Enter filename: "
+    read filename
+    $EDITOR $filename
+    [[ -e $filename ]] && zfm_refresh 
+
+}
+function zfm_newdir() {
+
+    print
+    print -n "Enter directory name: "
+    read filename
+    mkdir $filename && pushd $filename
+    [[ -d $filename ]] && { GOTO_PATH=$filename ; zfm_refresh }
+
 }
 
 ## This take a single char from user. If its a number and the options are more than
