@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-28 21:02
+#  Last update: 2013-01-29 02:01
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -26,6 +26,9 @@ setopt MARK_DIRS
 export M_FULL_INDEXING=
 export TAB=$'\t'
 set_auto_view
+## We need C-c for mappings, so we disable it 
+stty intr '^-'
+
 #
 # for printing details 
 zmodload zsh/stat
@@ -557,6 +560,7 @@ function print_help_keys() {
     $ZFM_FILTER_KEY	- change filter criteria (pref. use menu) **
     $ZFM_SIBLING_DIR_KEY	- view/select sibling directories **
     $ZFM_CD_OLD_NEW_KEY	- cd OLD NEW functionality (visit second cousins) **
+    $ZFM_ACCEPT_FIRST_KEY - open file (selected) or under cursor
 
     Most keys are likely to change after getting feedback, the ** ones definitely will
     
@@ -604,7 +608,7 @@ ZFM_ACCEPT_FIRST_KEY=${ZFM_ACCEPT_FIRST_KEY:-'C-o'}  # pressing selects whatever
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
 ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
-ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'\'}  # reset the pattern, use something else
+#ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'\'}  # reset the pattern, use something else
 ZFM_POPD_KEY=${ZFM_POPD_KEY:-"<"}  # goto previously visited dir
 ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # toggle selection mode
 ZFM_SORT_KEY=${ZFM_SORT_KEY:-"%"}  # change sort options
@@ -618,6 +622,7 @@ ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # quit application
 ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-"M-a"}  # select all files on screen
 ZFM_EDIT_REGEX_KEY=${ZFM_EDIT_REGEX_KEY:-"/"}  # edit PATT used to filter
 export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
+ZFM_MAP_LEADER=${ZFM_MAP_LEADER:-'\'}
 #export ZFM_NO_COLOR   # use to swtich off color in selection
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
@@ -979,6 +984,12 @@ function init_key_function_map() {
                     zfm_selection_mode_toggle
                 $ZFM_TOGGLE_FILE_KEY
                     zfm_toggle_file
+                "'"
+                    full_indexing_toggle
+                "C-x"
+                    cx_map
+                $ZFM_MAP_LEADER
+                    cx_map
                     )
     zfm_bind_key "M-x" "zfm_views"
     zfm_bind_key "M-o" "settingsmenu"
@@ -1091,6 +1102,26 @@ function zfm_unbind_key() {
 }
 function zfm_get_key_binding() {
     binding=$zfm_keymap[$1]
+    ret=1
+    [[ -n $binding ]] && ret=0
+    return $ret
+}
+## A separate mapping namespace
+# If we use a separate hash we can print out mappings for C-x or prompt easily
+# Generalized this for C-x and mapleader
+#
+function cx_map() {
+    local kp=$ans
+    local anskey
+    anskey=$ans
+    [[ $ans == '\' ]] && anskey='\\'
+    print -n "$anskey awaiting a key: "
+    _read_keys
+    [[ -n $ckey ]] && reply=$ckey
+    local key
+    key="$ans $reply"
+    binding=$zfm_keymap[key]
+    M_MESSAGE="$anskey $reply => $binding"
     ret=1
     [[ -n $binding ]] && ret=0
     return $ret
