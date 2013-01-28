@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-28 01:26
+#  Last update: 2013-01-28 17:57
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -734,7 +734,8 @@ function _read_keys() {
         reply="${key}"
         ascii=$((#key))
         # ctrl keys
-        (( ascii >= 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
+        (( ascii == 0 )) && { ckey="C-SPACE" }
+        (( ascii > 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
     fi
     return $ret
 }
