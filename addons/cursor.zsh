@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-24 01:31
+#  Last update: 2013-01-28 13:16
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -21,7 +21,7 @@ function cursor_init() {
     zfm_bind_key "LEFT" "cursor_left"
     zfm_bind_key "PgDn" "cursor_bottom"
     zfm_bind_key "PgUp" "cursor_top"
-    zfm_bind_key "C-j" "select_current_line"
+    zfm_bind_key "ENTER" "select_current_line"
     cursor_up_action=_my_goto_parent
     cursor_left_action=_my_popd
     cursor_right_action=_my_cd
