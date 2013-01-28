@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-28 01:30
+#  Last update: 2013-01-28 20:58
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -73,7 +73,7 @@ function list_printer() {
             #viewport=$(print -rl -- $myopts  | grep "$PATT" | sed "$sta,${fin}"'!d')
             # this line replace grep and searches from start. if we plae a * after
             # the '#' then the match works throughout filename
-            ic=${ZFM_IGNORE_CASE+i}
+            ic=${ZFM_IGNORE_CASE:+"-i"}
             approx=${ZFM_APPROX_MATCH+a1}
             # in case other programs need to display or account for, put in round bracks
             globflags="$ic$approx"
@@ -88,10 +88,10 @@ function list_printer() {
                 prefix="^"
             else
                 #viewport=(${(M)myopts:#(${ic}${approx})*$PATT*})
-                mark="*"
+                mark=" "
                 prefix=""
             fi
-            viewport=("${(@f)$(print -rl -- $myopts | grep "${prefix}$PATT" )}")
+            viewport=("${(@f)$(print -rl -- $myopts | grep $ic "${prefix}$PATT" )}")
 
             ## testing out 
             #if [[ $#viewport -eq 0 ]]; then
@@ -99,13 +99,17 @@ function list_printer() {
             ## and place a .* before it so its a little more helpful. This is since
             ## sometimes there are too many common characters in file names.
             #
-            if [[ -z $viewport ]]; then
-                if [[ $#PATT -ge 2 ]]; then
-                    local testpatt=$PATT
-                    testpatt[-2]+='.*'
-                    ## we repeat the above command, so make sure it is identical
-                    viewport=("${(@f)$(print -rl -- $myopts | grep "${prefix}$testpatt" )}")
-                    [[ ! -z $viewport ]] && PATT=$testpatt
+            ## This was nice but can be confusing esp when you backspace
+            #
+            if [[ -n "$M_SMART_FUZZY" ]]; then
+                if [[ -z $viewport ]]; then
+                    if [[ $#PATT -ge 2 ]]; then
+                        local testpatt=$PATT
+                        testpatt[-2]+='.*'
+                        ## we repeat the above command, so make sure it is identical
+                        viewport=("${(@f)$(print -rl -- $myopts | grep "${prefix}$testpatt" )}")
+                        [[ ! -z $viewport ]] && PATT=$testpatt
+                    fi
                 fi
             fi
 
@@ -189,8 +193,9 @@ function list_printer() {
         fi
         #print 2013-01-21 - 00:09 due to \r in print
         #clear # trying this out # commenting out, if we don't reprint then clearing was wrong
-        #[[ $ans = $'\t' ]] && pdebug "Got a TAB XXX"
-        [[ $ans = "C-i" ]] && ans=$'\t'
+        [[ $ans = "C-i" ]] && ans="TAB" # 2013-01-28 - 13:07 
+        [[ $ans = "C-j" ]] && ans="ENTER" # 2013-01-28 - 13:07 
+        [[ $ans = " " ]] && ans="SPACE" # 2013-01-28 - 13:07 , so that they show up on help clearly
         ## giving names so easier to find and use
         [[ $ans = "" ]] && ans="ESCAPE"
         [[ $ans = "" ]] && ans="BACKSPACE"
@@ -198,17 +203,17 @@ function list_printer() {
             "")
                 # BLANK blank
                 (( sta = 1 ))
-                PATT="."
                 PATT=""
                 ;;
-            $ZFM_LITERAL_KEY)
+            $ZFM_EDIT_REGEX_KEY)
                 ## character like number cause automatic selection, but if your file name
                 ## contains or starts with numbers then this key allows you to enter a key
                 ## which will get added to search pattern 2013-01-28
                 #
-                print -n "Enter a char to add to pattern: "
-                read -k tmpkey
-                PATT+=$tmpkey
+                #print -n "Enter a char to add to pattern: "
+                #read -k tmpkey
+                #PATT+=$tmpkey
+                vared -p "Edit pattern (valid regex): " PATT
                 ;;
             $ZFM_PAGE_KEY)
                 # SPACE space, however may change to ENTER due to spaces in filenames
@@ -262,11 +267,7 @@ function list_printer() {
                 else
                     # there are only 9 or less so just use mnemonics, don't check
                     # earlier
-                    # XXX THIS will not work with spaces
-                    #print " selected $viewport[(w)$ix] "
-                    #selection=$viewport[(w)$ix]
                     selection=$vpa[$ans]
-                    #selection=$myopts[$ix]
                     print " 1. selected $selection"
                 fi
             fi # M_FULL
@@ -304,7 +305,8 @@ function list_printer() {
                     else
                         [[ -n $ZFM_VERBOSE ]] && pdebug "comes here 1"
 
-                        PATT="$PATT$ans"
+                        ## Fpatt is either unset or contains .*
+                        PATT+="${FPATT}$ans"
                     fi
                     ## if there's only one file for that char then just jump to it
                     lines=$(check_patt $PATT)
@@ -320,13 +322,11 @@ function list_printer() {
             "$ZFM_RESET_PATTERN_KEY")
                 PATT=""
                 ;;
-            "$ZFM_POPD_KEY")
-                break
-                ;; 
+                # I think this overrides what cursor defines
             "$ZFM_ACCEPT_FIRST_KEY")
-                # Accept the first option shown, default is ENTER key
-                # but if no files shown then what happens ?
-                selection=$vpa[1]
+                ## Accept the first option shown, default is ENTER key
+                ## but if no files shown then what happens ?
+                selection=$vpa[$CURSOR]
                 [[ -n "$selection" ]] && break
                 ;; 
             BACKSPACE)
@@ -337,6 +337,7 @@ function list_printer() {
                     # backspace if we are filtering, remove last char from pattern
                     #patt=${patt[1,${#patt}-1]}
                     PATT[-1]=
+                    PATT=${PATT%.*}
                 fi
                 ;;
 
@@ -410,7 +411,7 @@ function check_patt() {
     local ic=
     ic=${ZFM_IGNORE_CASE+i}
     approx=${ZFM_APPROX_MATCH+a1}
-    ## XXX TODO needs to be checked based on grep version
+    ## XXX TODO needs to be checked sicne we have moved back to grep
     if [[ -z $M_MATCH_ANYWHERE ]]; then
         # match from start - default
         lines=$(print -rl -- (#$ic${approx})${p}*)
@@ -529,23 +530,22 @@ function post_cd() {
 }
 function zfm_refresh() {
     filterstr=${filterstr:-M}
-    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
     myopts=("${(@f)$(print -rl -- $param)}")
 }
 function print_help_keys() {
 
-    pbold "$ZFM_APP_NAME some keys"
-    sed -e 's/^    //' <<EndHelp
+    print
+    str="$fg_bold[white]$ZFM_APP_NAME some keys$reset_color"
+    str+=" \n"
+    str+=$(cat <<EndHelp
 
     $ZFM_MENU_KEY	- Invoke menu (default: backtick)
     $ZFM_PAGE_KEY	- Paging of output (default SPACE)
     ^	- toggle match from start of filename
     $ZFM_GOTO_DIR_KEY	- Enter directory name to jump to
-    $ZFM_FFIND_KEY	- Find a file for a pattern
     $ZFM_SELECTION_MODE_KEY	- Toggle selection mode
-    $ZFM_SELECT_ALL_KEY	- Select all files
-    $ZFM_LITERAL_KEY	- Accept char as part of pattern (as in number or other action key)
+    $ZFM_EDIT_REGEX_KEY	- Edit pattern (should be valid grep regex)
     $ZFM_GOTO_PARENT_KEY	- Goto parent of existing dir (cd ..)
     $ZFM_POPD_KEY	- popd (go back to previously visited dirs)
     :	- Command key
@@ -559,15 +559,16 @@ function print_help_keys() {
     $ZFM_CD_OLD_NEW_KEY	- cd OLD NEW functionality (visit second cousins) **
 
     Most keys are likely to change after getting feedback, the ** ones definitely will
-
+    
 EndHelp
-pause
+)
+    str+=" \n"
 for key in ${(k)zfm_keymap} ; do
-    print $key  : $zfm_keymap[$key]
+    #print $key  : $zfm_keymap[$key]
+    str+=$(print "    $key  : $zfm_keymap[$key]")"\n"
 done
+print -l -- "$str" | $PAGER
 #pbold "Key mappings"
-print
-pause
 }
 
 # utility }
@@ -598,8 +599,8 @@ export last_viewed_files
 
 #  defaults KEYS
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
-ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-' '}  # trying out enter if files have spaces and i need to type a space
-ZFM_ACCEPT_FIRST_KEY=${ZFM_ACCEPT_FIRST_KEY:-$'\n'}  # pressing ENTER selects first
+ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-'SPACE'}  # trying out enter if files have spaces and i need to type a space
+ZFM_ACCEPT_FIRST_KEY=${ZFM_ACCEPT_FIRST_KEY:-'C-o'}  # pressing selects whatever cursor is on
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
 ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
@@ -609,13 +610,13 @@ ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # toggle selection mode
 ZFM_SORT_KEY=${ZFM_SORT_KEY:-"%"}  # change sort options
 ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change filter options
 ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
+ZFM_TOGGLE_FILE_KEY=${ZFM_TOGGLE_FILE_KEY:-"C-SPACE"}  # change toggle options
 ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
-ZFM_FFIND_KEY=${ZFM_FFIND_KEY:-'/'}  # file find
 ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # quit application
 #ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-'*'}  # select all files on screen
 ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-"M-a"}  # select all files on screen
-ZFM_LITERAL_KEY=${ZFM_LITERAL_KEY:-"\\"}  # accept a char as literal
+ZFM_EDIT_REGEX_KEY=${ZFM_EDIT_REGEX_KEY:-"/"}  # edit PATT used to filter
 export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
 #export ZFM_NO_COLOR   # use to swtich off color in selection
 M_SWITCH_OFF_DUPL_CHECK=
@@ -655,90 +656,9 @@ param=$(print -rl -- *(M))
                 "~")
                     selection=$HOME
                     ;;
-                "$ZFM_SELECTION_MODE_KEY")
-                    # maybe we could toggle
-                    #  This switches on selection so files will be added to a list
-                    if [[ -n "$M_SELECTION_MODE" ]]; then
-                        M_SELECTION_MODE=
-                        pinfo "array has $selectedfiles"
-                        [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
-                        M_NO_AUTO=1
-                        [[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
-                        selectedfiles=()
-                        pbold "selection mode is off"
-                    else
-                        M_SELECTION_MODE=1
-                        pinfo "selection mode is on. After selecting files, use same key to toggle off and operate on files"
-                        pinfo "Use $ZFM_SELECT_ALL_KEY to select all, $ZFM_MENU_KEY for selection menu"
-                    fi
-                    ;; 
-                $ZFM_FFIND_KEY)
-                    # find files with string in filename, uses zsh (ffind)
-                        searchpattern=${searchpattern:-""}
-                        vared -p "Filename to search for (enter > 2 characters): " searchpattern
-                        [[ -z $searchpattern ]] && break
-                        # recurse and match filename only
-                        #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
-                        # find is more optimized acco to zsh users guide
-                        # this won't work if user puts * in pattern.
-                        #files=$( print -rl -- **/*$searchpattern*(.) )
-                        files=("${(@f)$(print -rl -- **/*$searchpattern*(.) )}")
-                        #I get a blank returned so it passed and does not use find
-                        #Earlier it worked but failed on spaces in fiel name
-                        if [[ $#files -eq 0 || $files == "" ]]; then
-                            perror "Trying with find -iname"
-                            files=("${(@f)$(noglob find . -iname *$searchpattern*  )}")
-                            #files=$( find . -iname $searchpattern )
-                        else
-                        fi
-                        if [[ $#files -gt 0 ]]; then
-                            files=$( print -N $files | xargs -0 ls -t )
-                            #files=$( print -N -- $files | xargs -0 ls -t )
-                            ZFM_FUZZY_MATCH_DIR="1" fuzzyselectrow $files
-                            # XXX careful we shold only use the array if one file
-                            if [[ $#selected_files -eq 1 ]]; then
-                                fileopt "$selected_file"
-                            elif [[ $#selected_files -gt 1 ]]; then
-                                multifileopt $selected_files
-                            elif [[ -n "$selected_file" ]]; then
-                                fileopt "$selected_file"
-                            fi
-                            selected_files=
-                            selected_file=
-
-                        else
-                            perror "No files matching $searchpattern"
-                        fi
-                        # next line required or doesn't print list
-                        # this could be a problem
-                        M_NO_REPRINT=
-                    ;;
-                "?") 
-                    print_help_keys
-                    ;;
-                $ZFM_SELECT_ALL_KEY)
-                    for line in $vpa
-                    do
-                        pdebug "line $line"
-                        selected_row=("${(s/	/)line}")
-                        selected_file=$selected_row[-1]
-                        selectedfiles+=( $PWD/$selected_file )
-                    done
-                    pinfo "selected files $#selectedfiles"
-                    if [[ -n "$M_SELECTION_MODE" ]]; then
-                        pbold "Press $ZFM_SELECTION_MODE_KEY when done selecting"
-                    else
-                        # this is outside of selection mode
-                        [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
-                        M_NO_AUTO=1
-                        [[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
-                        selectedfiles=()
-                        M_MESSAGE=
-                    fi
-                    ;;
                 *)
                     [[ "$ans" == $ZFM_REFRESH_KEY ]] && { perror "breaking";  break }
-                    #M_MESSAGE=
+            
                     [[ -n $ans ]] && { 
                         M_MESSAGE="$ans unused. $M_HELP"
                         M_NO_REPRINT=1
@@ -748,9 +668,9 @@ param=$(print -rl -- *(M))
                     #  redraw.
                     #
                     ;;
+            esac
             }
 
-        }
         if [[ -d "$selection" ]]; then
             [[ -n $ZFM_VERBOSE ]] && print "got a directory $selection"
             $ZFM_CD_COMMAND $selection
@@ -761,19 +681,7 @@ param=$(print -rl -- *(M))
             #vim $selection
             if [[ -n "$M_SELECTION_MODE" ]]; then
                 selection=$PWD/$selection
-                if [[ -n  ${selectedfiles[(re)$selection]} ]]; then
-                    pinfo "File $selection already selected, removing ..."
-                    i=$selectedfiles[(ie)$selection]
-                    selectedfiles[i]=()
-                    pinfo "File $selection unselected"
-                    pause
-                else
-                    selectedfiles=(
-                    $selectedfiles
-                    $selection
-                    )
-                    pinfo "Adding $selection to array, $#selectedfiles "
-                fi
+                zfm_toggle_file $selection
             else
                 fileopt $selection
                 #pause 2012-12-26 - 00:01 pauses after vim which is irritating
@@ -788,7 +696,6 @@ param=$(print -rl -- *(M))
                 pause
             }
         fi
-        #case $selection in 
     done
     print "bye"
     # do this only if is different from invoking dir
@@ -875,7 +782,6 @@ function numberlines() {
         # its becoming too confusing, and even now the trunc is taking size of 
         # ANSI codes which are not displayed, so a little less is shown that cold be
         if [[ $selct -gt 0 ]]; then
-            ##perror "matching $#selct, ($line) , $selectedfiles[$c]" # XXX
             # quoted spaces causing failure in matching,
             # however if i don't quote then other programs fail such as ls and tar
             if [[ $selectedfiles[(ie)$PWD/${line}] -gt $selct ]]; then
@@ -973,12 +879,10 @@ function selection_menu() {
             ;;
             #(( ZFM_REMOVE_FLAG =  ZFM_REMOVE_MODE * -1 ))
         "invert")
+            ## This is resulting in directories getting selected, avoid that
             local vp
-            # this whole string quoting thing sucks so bad
-            #vp=${viewport:q}
             vp=($PWD/${^viewport}) # prepend PWD to each element 2013-01-10 - 00:17
             selectedfiles=( ${vp:|selectedfiles} )
-            #selectedfiles=( ${(Q)selectedfiles:q} )
             ;;
 
 
@@ -1013,7 +917,7 @@ function selection_menu() {
 # a config file
 function init_menu_options() {
     typeset -gA main_menu_command_hash
-    main_menu_options+=("Directory" "zk dirjump" "d children" "[ Siblings" "] cd OLD NEW" " " " " " " "\n")
+    main_menu_options+=("Directory" "zk dirjump" "d children" "[ Siblings" "] cd OLD NEW" "M mkdir" "% New File" " " "\n")
     main_menu_options+=("Commands" "a ack" "/ ffind" "v filejump" "l locate" "u User Commands" "_ Last viewed file" "\n")
     main_menu_options+=("Settings"  "x Exclude Pattern" "F Filter options" "s Sort Options" "o General"  "\n")
     main_menu_options+=("Listings" "f File Listings" "r Recursive Listings" "\n")
@@ -1026,11 +930,13 @@ function init_menu_options() {
         k m_dirstack
         v m_recentfiles
         F filteroptions
-        x get_exclude_pattern
+        x zfm_exclude_pattern
         s sortoptions
         u mycommands
         a zfm_ack
         l zfm_locate
+        M zfm_newdir
+        % zfm_newfile
         _ edit_last_file
         )
 }
@@ -1049,7 +955,7 @@ function init_key_function_map() {
                     sortoptions
                 $ZFM_FILTER_KEY
                     filteroptions
-                $'\t'
+                "TAB"
                     zfm_views
                 "$ZFM_POPD_KEY"
                     zfm_popd
@@ -1065,15 +971,25 @@ function init_key_function_map() {
                     sibling_dir
                 $ZFM_CD_OLD_NEW_KEY
                     cd_old_new
+                "?"
+                    print_help_keys
+                $ZFM_SELECT_ALL_KEY
+                    zfm_select_all_rows
+                $ZFM_SELECTION_MODE_KEY
+                    zfm_selection_mode_toggle
+                $ZFM_TOGGLE_FILE_KEY
+                    zfm_toggle_file
                     )
     zfm_bind_key "M-x" "zfm_views"
-    #zfm_bind_key "C-x" "zfm_views"
     zfm_bind_key "M-o" "settingsmenu"
     zfm_bind_key "M-s" "sortoptions"
     zfm_bind_key "M-f" "filteroptions"
     zfm_bind_key "F1" "print_help_keys"
     zfm_bind_key "F2" "goto_dir"
     zfm_bind_key "|" "zfm_filter_list"
+    zfm_bind_key "C-e" "zfm_edit_pattern"
+    zfm_bind_key "M-e" "zfm_exclude_pattern"
+    zfm_bind_key "M-/" "zfm_ffind"
 }
 function function init_file_menus() {
     # edit these or override in ENV
@@ -1119,12 +1035,12 @@ function function init_file_menus() {
     FT_OPTIONS[ZIP]="view tvf zless unzip zipgrep $FT_COMMON"
     FT_OPTIONS[SWAP]="vim cmd"
     ## in addiition to other commands for pdf's
-    FT_OPTIONS[PDF]="pdftohtml pdfgrep"
+    FT_OPTIONS[PDF]="pdftohtml pdfgrep w3mpdf"
     FT_OPTIONS[VIDEO]="open vlc mplayer ffmp ${FT_COMMON}"
     FT_OPTIONS[AUDIO]="open mpg321 afplay ${FT_COMMON}"
     FT_OPTIONS[HTML]="html2text w3m elvis sgrep"
     # now we need to define what constitutes markdown files such as MD besides MARKDOWN extension
-    FT_OPTIONS[MARKDOWN]="Markdown.pl w3m1 multimarkdown"
+    FT_OPTIONS[MARKDOWN]="Markdown.pl w3mmd multimarkdown"
     FT_OPTIONS[BIN]="od bgrep strings"
     #
     ## options for when a directory is selected
@@ -1149,9 +1065,10 @@ function function init_file_menus() {
     COMMANDS[dush]="du -sh"
     #COMMANDS[head]="head -25"
     #COMMANDS[tail]='tail -${lines} %%'
-    COMMANDS[pdftohtml]='vim =(pdftohtml %%)'
+    COMMANDS[pdftohtml]='vim =(pdftohtml -stdout %%)'
+    COMMANDS[w3mpdf]='w3m -T text/html =(pdftohtml -stdout %%)'
     COMMANDS[Markdown.pl]='Markdown.pl %% | $PAGER'
-    COMMANDS[w3m1]='w3m -T text/html =(Markdown.pl %%)'
+    COMMANDS[w3mmd]='w3m -T text/html =(Markdown.pl %%)'
     COMMANDS[gitadd]='git add'
     COMMANDS[gitcom]='git commit'
     ## convert selected flv file to m4a using ffmpeg
@@ -1207,7 +1124,8 @@ function toggle_options_menu() {
     # maybe i can set it to one option whatever is the most used.
 
     toggle_menu_last_choice=FullIndexing
-    ML_COLS=2 menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
+    #ML_COLS=2 menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
+    ML_COLS=2 menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase MatchFromStart AutoView" "ihfcsa${ZFM_TOGGLE_MENU_KEY}"
     [[ $menu_text == $ZFM_TOGGLE_MENU_KEY ]] && { menu_text=$toggle_menu_last_choice }
     case "$menu_text" in
         "FullIndexing")
@@ -1224,6 +1142,9 @@ function toggle_options_menu() {
             ;;
         "ApproxMatchToggle")
             approx_match_toggle
+            ;;
+        "MatchFromStart")
+            toggle_match_from_start
             ;;
         "AutoView")
             pinfo "Autoview determines whether file selection automatically opens files for viewing or allow user to decide action"
@@ -1255,9 +1176,6 @@ function zfm_show_menu() {
         [[ $olddir == $PWD ]] || {
             # dir has changed
             post_cd
-            #patt=""
-            #filterstr=${filterstr:-M}
-            #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
         }
     fi
 }
@@ -1265,9 +1183,6 @@ function goto_parent_dir() {
     #cd ..
     $ZFM_CD_COMMAND ..
     post_cd
-    #patt="" # 2012-12-26 - 00:54 
-    #filterstr=${filterstr:-M}
-    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
 }
 function goto_dir() {
     push_pwd
@@ -1278,6 +1193,40 @@ function goto_dir() {
     vared -h -p "Enter path: " GOTO_PATH
     selection=${(Q)GOTO_PATH}  # in case space got quoted, -d etc will all give errors
     PATT="" # 2012-12-26 - 00:54 
+}
+## 
+## find files in current directory
+#
+function zfm_ffind() {
+    # find files with string in filename, uses zsh (ffind)
+    searchpattern=${searchpattern:-""}
+    vared -p "Filename to search for (enter > 2 characters): " searchpattern
+    [[ -z $searchpattern ]] && return 1
+    # recurse and match filename only
+    #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
+    # find is more optimized acco to zsh users guide
+    # this won't work if user puts * in pattern.
+    #files=$( print -rl -- **/*$searchpattern*(.) )
+    files=("${(@f)$(print -rl -- **/*$searchpattern*(.) )}")
+    #I get a blank returned so it passed and does not use find
+    #Earlier it worked but failed on spaces in fiel name
+    if [[ $#files -eq 0 || $files == "" ]]; then
+        perror "Trying with find -iname"
+        files=("${(@f)$(noglob find . -iname *$searchpattern*  )}")
+        #files=$( find . -iname $searchpattern )
+    else
+    fi
+    if [[ $#files -gt 0 ]]; then
+        ## sort so latest come on top
+        #files=$( print -N -- $files | xargs -0 ls -t )
+        files=$( print -N $files | xargs -0 ls -t )
+        handle_files $files
+        #ZFM_FUZZY_MATCH_DIR="1" fuzzyselectrow $files
+        selected_files=
+        selected_file=
+    else
+        perror "No files matching $searchpattern"
+    fi
 }
 function cd_old_new() {
     #$ZFM_CD_OLD_NEW_KEY)
@@ -1337,12 +1286,78 @@ function source_addons() {
 }
 ## 
 ## Apply a filter to the list displayed.
-#  XXX THis needs to reflect in the count etc
 #
 function zfm_filter_list() {
     print
     print  "Add a command to filter file list, e.g. head / grep foo/ "
     vared -c -p "Enter filter: " M_CFILTER
+}
+
+## selects all visible rows
+## Should only select files not dirs, since you can't deselect a dir
+#
+function zfm_select_all_rows() {
+    for line in $vpa
+    do
+        pdebug "line $line"
+        selected_row=("${(s/	/)line}")
+        selected_file=$selected_row[-1]
+        ## reject directories 
+        if [[ -n "$M_SELECT_ALL_NO_DIRS" ]]; then
+            [[ -d $selected_file ]] || selectedfiles+=( $PWD/$selected_file )
+        fi
+    done
+    pinfo "selected files $#selectedfiles. "
+    if [[ -n "$M_SELECTION_MODE" ]]; then
+        pbold "Press $ZFM_SELECTION_MODE_KEY when done selecting"
+    else
+        # this is outside of selection mode
+        [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
+        M_NO_AUTO=1
+        [[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
+        selectedfiles=()
+        M_MESSAGE=
+    fi
+}
+## Go into selection mode, so files selected will be added to list
+#
+function zfm_selection_mode_toggle() {
+    #  This switches on selection so files will be added to a list
+    if [[ -n "$M_SELECTION_MODE" ]]; then
+        M_SELECTION_MODE=
+        pinfo "Selected $#selectedfiles files"
+        [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
+        M_NO_AUTO=1
+        [[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
+        selectedfiles=()
+        pbold "selection mode is off"
+    else
+        M_SELECTION_MODE=1
+        pinfo "selection mode is on. After selecting files, use same key to toggle off and operate on files"
+        pinfo "$ZFM_SELECT_ALL_KEY to select all, $ZFM_MENU_KEY for selection menu, $ZFM_TOGGLE_FILE_KEY to toggle file"
+        aa=( Mode: "[Select]" $ZFM_SELECT_ALL_KEY "Select All" $ZFM_MENU_KEY "Selection Menu" $ZFM_TOGGLE_FILE_KEY "Toggle File"  $ZFM_SELECTION_MODE_KEY "Exit Mode")
+
+        M_MESSAGE=$( print_hash $aa )
+    fi
+}
+function zfm_toggle_file() {
+    #selection=$PWD/$selection
+    local selection="$1"
+    [[ -z $selection ]] && selection=$PWD/$vpa[$CURSOR]
+
+    if [[ -n  ${selectedfiles[(re)$selection]} ]]; then
+        pinfo "File $selection already selected, removing ..."
+        i=$selectedfiles[(ie)$selection]
+        selectedfiles[i]=()
+        pinfo "File $selection unselected"
+        pause
+    else
+        selectedfiles=(
+        $selectedfiles
+        $selection
+        )
+        pinfo "Adding $selection to array, $#selectedfiles "
+    fi
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
