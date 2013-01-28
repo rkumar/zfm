@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-26 00:12
+#  Last update: 2013-01-28 17:13
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -18,30 +18,13 @@ ZFM_MY_DELIM=,
 # usually directory level. They are currently parsed using "read -A" and use IFS.
 #
 #
-ZFM_MY_COMMANDS="ack,ag,tree,ffind,tig stats,git stats,locate,structure,stree,newfile,newdir"
+ZFM_MY_COMMANDS="ag,tree,tig stats,git stats,structure,stree"
 # hotkeys for commands, put space if no hotkey
-ZFM_MY_MNEM="a tfiglse%d"
+ZFM_MY_MNEM="a igse"
 
 #  Now place functions for above commands, otherwise it is expected they
 #  are in path, if ZFM_xxx is first looked for, otherwise xxx in $PATH
 #
-
-ZFM_ack() {
-    # check for whether you have ack installed
-    cpattern=${cpattern:-""}
-    vared -p "Pattern to ack for: " cpattern
-    [[ -z $cpattern ]] && return 1
-    ack "$cpattern"
-    pause
-    files=$( ack -l "$cpattern" )
-    [[ $#files -eq 0 ]] && return 1
-    #handle_files $files
-    fuzzyselectrow $files
-    if [[ $#selected_files -gt 0 ]]; then
-        vim -c /$cpattern $selected_files
-    fi
-}
-
 
 ZFM_ag() {
     # check for whether you have ag installed (the_silver_searcher)
@@ -84,53 +67,6 @@ ZFM_structure() {
     #tree | $PAGER
     pause
 }
-ZFM_ffind() {
-    # find files with string in filename
-    # FAILS if filename contains spaces
-    searchpattern=${searchpattern:-""}
-    pinfo "Pattern entered must match basename not dirname"
-    vared -p "Filename to search for (enter 3 characters): " searchpattern
-    # recurse and match filename only
-    #files=$( print -rl -- **/*(.) | grep -P $searchpattern'[^/]*$' )
-    files=$( print -rl -- **/*$searchpattern*(.) )
-    if [[ $#files -eq 0 ]]; then
-        perror "Trying with find: $searchpattern"
-        files=$( find . -iname $searchpattern )
-    fi
-    #   print ~/**/*.txt
-    if [[ $#files -gt 0 ]]; then
-        files=$( echo $files | xargs ls -t )
-        fuzzyselectrow $files
-
-        if [[ $#selected_files -eq 1 ]]; then
-            fileopt "$selected_file"
-        elif [[ $#selected_files -gt 1 ]]; then
-            multifileopt $selected_files
-        elif [[ -n "$selected_file" ]]; then
-            fileopt "$selected_file"
-        fi
-    else
-        perror "No files matching $searchpattern"
-    fi
-}
-ZFM_locate() {
-    searchpattern=${searchpattern:-""}
-    vared -p "Filename to 'locate' for (enter >= 3 characters): " searchpattern
-    [[ -z $searchpattern ]] && break
-    files=$( locate "$searchpattern" | grep -P $searchpattern'[^/]*$' )
-    if [[ $#files -gt 0 ]]; then
-        # actually if we user -tr then numbering should be reverse too XXX FIXME
-        # next will explode dirs
-        #files=$( echo $files | xargs ls -tr )
-        ZFM_AUTO_COLUMNS="0" fuzzyselectrow $files
-
-        [[ -n "$selected_file" ]] && {
-            fileopt "$selected_file"
-        }
-    else
-        perror "No files matching $searchpattern"
-    fi
-}
 ZFM_mdfind() {
     perror "Not yet implemented, the results are usually too massive to be of use here"
 }
@@ -143,41 +79,4 @@ ZFM_stree() {
         print "$(echo $ct | wc -l) directories"
     fi
     pause
-}
-ZFM_newfile() {
-
-    print -n "Enter filename: "
-    read filename
-    $EDITOR $filename
-    [[ -e $filename ]] && zfm_refresh 
-
-}
-ZFM_newdir() {
-
-    print -n "Enter directory name: "
-    read filename
-    mkdir $filename && pushd $filename
-    [[ -d $filename ]] && zfm_refresh
-
-}
-##
-## take a file list and allow user to select one or more files, and then popup a menu of options
-#  for those files
-#
-handle_files() {
-    files=($@)
-    if [[ $#files -gt 0 ]]; then
-        #files=$( echo $files | xargs ls -t )
-        fuzzyselectrow $files
-
-        if [[ $#selected_files -eq 1 ]]; then
-            fileopt "$selected_file"
-        elif [[ $#selected_files -gt 1 ]]; then
-            multifileopt $selected_files
-        elif [[ -n "$selected_file" ]]; then
-            fileopt "$selected_file"
-        fi
-    else
-        perror "No files matching $searchpattern"
-    fi
 }
