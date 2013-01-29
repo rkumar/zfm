@@ -9,7 +9,7 @@ The first 9 files or dirs in any view are given hotkeys from 1-9. After that wit
 
 The "," key (lower case of "&lt;") is used to go up directory levels. There are many other shortcuts that allow for other usual operations to be done fast such as accessing favorite directories and files, and navigating deep structures quickly.
 
-Paging of long listings is done using the SPACEBAR. If you have dirs with lots of files containing spaces, you may want to change the ZFM_PAGE_KEY to ENTER.
+Paging of long listings is done using the SPACEBAR. If you have dirs with lots of files containing spaces, you may want to change the ZFM_PAGE_KEY to some other key.
 
 The motivation of yet another file manager is to automate as many file-related operations as I can: browsing, operating on multiple files, today's files, filtering file lists. I also use ``z``, ``v``, ``vifm``, and various other great utilities.
 
@@ -45,6 +45,10 @@ Press the colon (":") and type an arbitrary shell command. You can type "q" or "
 
 Currently "q" is never mapped to a file, it quits. This is a feature cum bug. I need to find another quit key and release the "q" so the "qt" guys don't sue me :)
 
+Type "/" (slash), now you can edit the pattern for filtering files, without the characters being interpreted as commands. You can type a number (if your file contains a number), or even characters that form a valid grep regex. Press Enter when done.
+
+Sometimes the file you want to select is within view, but is beyond the firt nine. You can toggle to FULL_INDEXING using the single quote character, or using the Toggle Menu Key (=). Now press the character that indexes the file. If the first few characters are common among many files, then this can be very helpful.
+
 *The Menu*
 
 At present I have a menu triggered by pressing the backtick (lower tilde). This could change based on feedback or be configured. It allows seeing file listings, recursive listings, see just the directories in the current dir or jumping to recently used files etc. These views allow multiple selection of files so that actions can be executed on these files.
@@ -61,7 +65,9 @@ If you wish to change the sort order of your listing, try MENU-s. To filter your
 
 There are some interfaces to ack and ag for viewing files containing some text. MENU-f and MENu-r give you the option to ack for this dir or recursively. File names can then be selected for viewing.
 
-To search for a file in the current heirarchy, press "/"  and enter a pattern. You will see filename containing that pattern and can select one or more for viewing or running a command on.
+To search for a file in the current heirarchy, press MENU-/ or Alt-/  and enter a pattern. You will see filename containing that pattern and can select one or more for viewing or running a command on.
+
+Press MENU-a to search files containing a string using ack. You can select from the matching file list, the selected files will be opened in VIM at the position of the first match.
 
 To toggle various modes, use the TOGGLE_KEY (default =)  you can switch to "all files", "match from start of filename", "ignore case match", "approximate match" and various others.
 
@@ -71,7 +77,7 @@ While navigating a directory which has many files with numbers, you may be unabl
 
 Some dirs such as Downloads may contain very long file names containing the same first 10 or 20 characters. In such case, drilling down is tedious. A quicker option is to have FULL_INDEXING. In this all files are indexed using 1-9, then a-zA-Z. However, this is not the default, since the user has to scan the list to see what the hotkey is. I have found that drilling down is much faster -- the first 2 characters of a file or dir often are all we need to get into a dir or get a file.
 
-Other downloaded files may contain funny or unusual characters such as quotes or brackets that i ignore or use for other purposes. Let me know if this is an issue, or use FULL_INDEXING for these cases. Full indexing is available with the TOGGLE_KEY.
+Other downloaded files may contain funny or unusual characters such as quotes or brackets that i ignore or use for other purposes. Let me know if this is an issue, or use FULL_INDEXING for these cases. Full indexing is available with the TOGGLE_KEY or directly with single quote. You may also use "/" to edit the pattern and use numbers, brackets etc.
 
 ###Match from start or anywhere:###
 
@@ -94,16 +100,23 @@ The second way is from the file manager itself. There is a toggle key for SELECT
 The first method from the menu, allows you to select based on a query such as recent files, todays files,
 files for an extension etc while keeping the file manager as-is. 
 
+Single files may also be selected or deselected using the Ctrl-Spacebar key while positioned on a file. You can use arrow keys to move around the list. 
+
 ### Finding a file based on filename###
 
-This is similar to the `find` command but uses zsh, to find a file given a string. Matches are displayed and can be filtered based on more keys, and files may be selected and edited. Currently, the location of this is MENU-c ("commands") -> "ffind". You can also use the slash "/" in the file lister.
+This is similar to the `find` command but uses zsh, to find a file given a string. Matches are displayed and can be filtered based on more keys, and files may be selected and edited. Currently, the location of this is MENU-/ or Alt-/. 
 
 ###Searching based on file content###
 
 I've interfaced with `ag` and `ack` to provide a list of files from which files may be selected.
 MENU-f 9 (ack) searches current dir, MENU-r 9 (ack) searches recursively.
 
-MENU-c (commands) ack and ag currently only show the output of ack and ag, they do not allow file selection.
+MENU-a now directly uses ack (consequent to some reordering of commands in the menu).
+
+###Using zsh's globbing###
+
+The zsh pattern used for filename globbing may be changed. The default is '*'. Currently, editing this is mapped to "C-e". Note that this pattern persists even after changing directories. You will have to clear it using the same option. You may even change the pattern to "**/*" to get recursive file listing, however try not to do this in your HOME directory, or any directory with thousands of files as it could take a few seconds to generat e a listing.
+
 
 ###Miscellaneous###
 
