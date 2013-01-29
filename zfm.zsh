@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-29 02:01
+#  Last update: 2013-01-29 15:23
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -720,9 +720,13 @@ function numberlines() {
     local patt='.'
     if [[ -n "$ZFM_NO_COLOR" ]]; then
         BOLD='*'
-        BOLD_OFF=''
+        BOLD_OFF=
+        COLOR_STANDOUT=
+        COLOR_STANDOUTOFF=
     else
         BOLD=$COLOR_BOLD
+        COLOR_STANDOUT="\\033[7m"
+        COLOR_STANDOUTOFF="\\033[27m"
         BOLD_OFF=$COLOR_DEFAULT
     fi
     OUTPUT=""
@@ -802,6 +806,7 @@ function numberlines() {
         _line="$sub)$cc $_detail $line $link"
         (( $#_line > width )) && _line=$_line[1,$width] # cut here itself so ANSI not truncated
         (( boldflag == 1 )) && _line="${BOLD}$_line${BOLD_OFF}"
+        (( c == CURSOR )) && _line="${COLOR_STANDOUT}$_line${COLOR_STANDOUTOFF}"
         ### 2013-01-21 - 21:09 trying to do this in same process so hash be updated
         #print -l -- $_line
         OUTPUT+="$_line\n"
@@ -942,6 +947,7 @@ function init_menu_options() {
         l zfm_locate
         M zfm_newdir
         % zfm_newfile
+        / zfm_ffind
         _ edit_last_file
         )
 }
