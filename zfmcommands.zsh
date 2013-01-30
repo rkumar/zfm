@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-26 - 15:13
 #      License: Freeware
-#  Last update: 2013-01-28 17:13
+#  Last update: 2013-01-29 20:28
 # ----------------------------------------------------------------------------- #
 
 # The delim you are using between commands. If commands use a space inside
@@ -18,9 +18,9 @@ ZFM_MY_DELIM=,
 # usually directory level. They are currently parsed using "read -A" and use IFS.
 #
 #
-ZFM_MY_COMMANDS="ag,tree,tig stats,git stats,structure,stree"
+ZFM_MY_COMMANDS="ag,tree,tig stats,git stats,structure,stree,vidir"
 # hotkeys for commands, put space if no hotkey
-ZFM_MY_MNEM="a igse"
+ZFM_MY_MNEM="a igseV"
 
 #  Now place functions for above commands, otherwise it is expected they
 #  are in path, if ZFM_xxx is first looked for, otherwise xxx in $PATH
