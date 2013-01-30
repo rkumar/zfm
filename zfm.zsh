@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-30 19:00
+#  Last update: 2013-01-30 22:10
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -55,6 +55,7 @@ function list_printer() {
     shift
     #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
+    expand_dirs
 
     # using cols to calculate cursor movement right
     LIST_COLS=3
@@ -222,10 +223,14 @@ function list_printer() {
                 #PATT+=$tmpkey
                 vared -p "Edit pattern (valid regex): " PATT
                 ;;
-            $ZFM_PAGE_KEY)
+            $ZFM_FORWARD_KEY)
                 # SPACE space, however may change to ENTER due to spaces in filenames
                 (( sta += $PAGESZ1 ))
                 [[ $fin -gt $tot ]] && fin=$tot
+                ;;
+            $ZFM_BACKWARD_KEY)
+                (( sta -= $PAGESZ1 ))
+                [[ $sta -lt 1 ]] && sta=1
                 ;;
             [1-9])
                 # KEY PRESS key
@@ -385,7 +390,7 @@ function list_printer() {
 
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
         ## was causing the unused error to keep popping up when no rows were returned
-        [[ $sta -ge $tot ]] && { ans= ;  break }
+        [[ $sta -ge $tot ]] && { ans= ;  pinfo "Wrapping around"; break }
         # break takes control back to MARK1 section below
 
     done
@@ -536,6 +541,22 @@ function zfm_refresh() {
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
     myopts=("${(@f)$(print -rl -- $param)}")
+    expand_dirs
+}
+function expand_dirs() {
+    #LOOP THIS - but it is expoding it each time !!!
+    for d in $EXPAND_DIRS ; do
+        if [[ -d "$d" ]]; then
+            _files=( $(print -rl -- $d/*) )
+            #$vpa[$CURSOR]+=($_files)
+            for f in $_files ; do
+                myopts+=($f)
+                pinfo "Expanding $d :: $#_files adding $f at $CURSOR -- $#myopts"
+            done
+        else
+            perror "$d not a directory: [$EXPAND_DIRS[1]]"
+        fi
+    done
 }
 function print_help_keys() {
 
@@ -545,7 +566,8 @@ function print_help_keys() {
     str+=$(cat <<EndHelp
 
     $ZFM_MENU_KEY	- Invoke menu (default: backtick)
-    $ZFM_PAGE_KEY	- Paging of output (default SPACE)
+    $ZFM_FORWARD_KEY	- Paging of output (default C-n)
+    $ZFM_BACKWARD_KEY	- Previous page of listing (default C-p)
     ^	- toggle match from start of filename
     $ZFM_GOTO_DIR_KEY	- Enter directory name to jump to
     $ZFM_SELECTION_MODE_KEY	- Toggle selection mode
@@ -593,9 +615,10 @@ typeset -Ag FILES_HASH
 selectedfiles=()
 #export selectedfiles  # for nl.sh
 #  directory stack for jumping back
-typeset -U ZFM_DIR_STACK ZFM_FILE_STACK
+typeset -U ZFM_DIR_STACK ZFM_FILE_STACK EXPAND_DIRS
 ZFM_DIR_STACK=()
 ZFM_FILE_STACK=()
+EXPAND_DIRS=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
 ZFM_START_DIR="$PWD"
@@ -605,7 +628,8 @@ export last_viewed_files
 
 #  defaults KEYS
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
-ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-'SPACE'}  # trying out enter if files have spaces and i need to type a space
+ZFM_FORWARD_KEY=${ZFM_FORWARD_KEY:-'C-n'}  # trying out enter if files have spaces and i need to type a space
+ZFM_BACKWARD_KEY=${ZFM_BACKWARD_KEY:-'C-p'}  # trying out enter if files have spaces and i need to type a space
 ZFM_OPEN_FILES_KEY=${ZFM_OPEN_FILES_KEY:-'C-o'}  # pressing selects whatever cursor is on
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
@@ -1001,6 +1025,8 @@ function init_key_function_map() {
                     cx_map
                 $ZFM_MAP_LEADER
                     cx_map
+                "SPACE"
+                    zfm_expand_dir
                     )
     zfm_bind_key "M-x" "zfm_views"
     zfm_bind_key "M-o" "settingsmenu"
@@ -1455,6 +1481,19 @@ function zfm_toggle_file() {
     else
         selectedfiles+=( $selection )
         pinfo "Adding $selection to array, $#selectedfiles "
+    fi
+}
+function zfm_expand_dir() {
+    local d _files
+    d=$myopts[$CURSOR]
+    EXPAND_DIRS+=($d)
+    if [[ -d "$d" ]]; then
+        _files=( $(print -rl -- $d/*) )
+        #$vpa[$CURSOR]+=($_files)
+        for f in $_files ; do
+            myopts[$CURSOR]+=($f)
+            pinfo "Expanding $d :: $#_files adding $f at $CURSOR -- $#myopts"
+        done
     fi
 }
 
