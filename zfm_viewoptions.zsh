@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-28 23:06
+# Last update: 2013-01-30 17:40
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -351,6 +351,10 @@ function handle_selection() {
             ;;
         "e"|"v")
             eval "$EDITOR $selected_files"
+            #_files=($PWD/${^selected_files}) # prepend PWD to each element
+            #execute_hooks "fileopen" $_files
+            #_files=
+            execute_hooks "fileopen" $selected_files
             last_viewed_files=$selected_files
             ;;
         "z")
@@ -385,18 +389,13 @@ function handle_files() {
     if [[ $#files -gt 0 ]]; then
         #files=$( echo $files | xargs ls -t )
         fuzzyselectrow $files
+        call_fileoptions
 
-        if [[ $#selected_files -eq 1 ]]; then
-            fileopt "$selected_file"
-        elif [[ $#selected_files -gt 1 ]]; then
-            multifileopt $selected_files
-        elif [[ -n "$selected_file" ]]; then
-            fileopt "$selected_file"
-        fi
     else
         perror "No files matching $searchpattern"
     fi
 }
+
 ## 
 # enter a command and select files from output
 # e.g. output of locate command
@@ -703,6 +702,7 @@ function m_dirstack() {
     ZFM_SINGLE_SELECT=1 fuzzyselectrow $files
     [[ -d $selected_file ]] && {
         $ZFM_CD_COMMAND $selected_file
+        push_pwd
     }
 
 }
@@ -722,6 +722,7 @@ function m_child_dirs() {
     [[ -d $selected_file ]] && {
         [[ -n $ZFM_VERBOSE ]] && print  "file: $selected_file"
         $ZFM_CD_COMMAND $selected_file
+        push_pwd
     }
 }
 function m_recentfiles() {
@@ -758,13 +759,7 @@ function m_recentfiles() {
             $ZFM_FILE_SELECT_FUNCTION $files
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
             #perror "XXX $#selected_files ,, $selected_file,, $selected_files"
-            if [[ $#selected_files -eq 1 ]]; then
-                fileopt "$selected_files[1]"
-            elif [[ $#selected_files -gt 1 ]]; then
-                multifileopt $selected_files
-            elif [[ -e "$selected_file" ]]; then
-                fileopt "$selected_file"
-            fi
+            call_fileoptions
         fi
     }
 }
@@ -806,9 +801,6 @@ function select_menu() {
     moptions=(${(P)1})
     typeset -A myhas
     myhas=(${(Pkv)2})
-    #print $#moptions
-    #print $#myhas
-    #print $#myhas  :: ${(kv)myhas}
     print
     print  "${COLOR_BOLD}${title}${COLOR_DEFAULT}"
     #for o in $moptions
@@ -817,20 +809,28 @@ function select_menu() {
     #done
     M_BOLD_FIRST=1
     columnate $moptions
-    print  -n "Select :"
-    read -k reply
-    print
-    local ret=0
-    if (( ${+myhas[$reply]} )); then
-        #pdebug found $reply in hash as $myhas[$reply]
-        $myhas[$reply]
-        ret=0
-    else
-        #print
-        #print $#myhas :: $myhas
-        ret=1
-        [[ $reply == "q" || $reply == "" ]] && ret=0
-    fi
+    while (true); do
+        print  -n "\rSelect :"
+        #read -k reply
+        _read_keys
+        #[[ -n $ckey ]] && reply=$ckey
+
+        local ret=0
+        if (( ${+myhas[$reply]} )); then
+            print
+            #pdebug found $reply in hash as $myhas[$reply]
+            $myhas[$reply]
+            ret=0
+            break
+        else
+            #print
+            #print $#myhas :: $myhas
+            ret=1
+            [[ $reply == "q" || $reply == "" ]] && { ret=0; break }
+            #perror "$0 nothing found for .$reply."
+            #for f ( ${(k)myhas}) print ".$f. $myhas[$f]"
+        fi
+    done
     print
     return $ret
 }
@@ -1002,7 +1002,10 @@ function zfm_newfile() {
     print -n "Enter filename: "
     read filename
     $EDITOR $filename
-    [[ -e $filename ]] && zfm_refresh 
+    [[ -e $filename ]] && { 
+        execute_hooks "fileopen" $PWD/$filename
+        zfm_refresh 
+        }
 
 }
 function zfm_newdir() {
@@ -1010,7 +1013,7 @@ function zfm_newdir() {
     print
     print -n "Enter directory name: "
     read filename
-    mkdir $filename && pushd $filename
+    mkdir $filename && pushd $filename && push_pwd $filename
     [[ -d $filename ]] && { GOTO_PATH=$filename ; zfm_refresh }
 
 }
