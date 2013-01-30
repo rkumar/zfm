@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-30 19:11
+#  Last update: 2013-01-30 19:59
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -174,6 +174,8 @@ function on_enter_row() {
     fi
 
 }
+## 
+# goto specified line
 function edit_cursor() {
     vared -p "Goto line: " CURSOR
 }
