@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-30 22:10
+#  Last update: 2013-01-31 01:47
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -55,12 +55,12 @@ function list_printer() {
     shift
     #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
-    expand_dirs
+    #expand_dirs
 
     # using cols to calculate cursor movement right
     LIST_COLS=3
     local tot=$#myopts
-    local sta=1
+    #local sta=1
 
 
     # 2012-12-26 - 00:49 trygin this out so after a selection i don't lose what's filtered
@@ -218,9 +218,6 @@ function list_printer() {
                 ## contains or starts with numbers then this key allows you to enter a key
                 ## which will get added to search pattern 2013-01-28
                 #
-                #print -n "Enter a char to add to pattern: "
-                #read -k tmpkey
-                #PATT+=$tmpkey
                 vared -p "Edit pattern (valid regex): " PATT
                 ;;
             $ZFM_FORWARD_KEY)
@@ -358,7 +355,8 @@ function list_printer() {
 
 
             *) 
-                (( sta = 1 ))
+                # commented 2013-01-31 - 01:25  key reverts back to top after C-n
+                #(( sta = 1 ))
                 # 2013-01-24 - 20:38 moved backspace up
 
                         # check something bound to the key
@@ -390,7 +388,7 @@ function list_printer() {
 
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
         ## was causing the unused error to keep popping up when no rows were returned
-        [[ $sta -ge $tot ]] && { ans= ;  pinfo "Wrapping around"; break }
+        [[ $sta -ge $tot ]] && { sta=1; ans= ;  pinfo "Wrapping around"; break }
         # break takes control back to MARK1 section below
 
     done
@@ -536,22 +534,23 @@ function post_cd() {
     FILES_HASH=()
     execute_hooks "chdir"
     CURSOR=1
+    sta=1
 }
 function zfm_refresh() {
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
-    myopts=("${(@f)$(print -rl -- $param)}")
     expand_dirs
+    myopts=("${(@f)$(print -rl -- $param)}")
 }
+
+## This will ensure that when you return to the directory where
+# some dirs were exploded, they will be exploded again
 function expand_dirs() {
-    #LOOP THIS - but it is expoding it each time !!!
     for d in $EXPAND_DIRS ; do
         if [[ -d "$d" ]]; then
-            _files=( $(print -rl -- $d/*) )
-            #$vpa[$CURSOR]+=($_files)
+            _files=("${(@f)$(print -rl -- $d/*)}")
             for f in $_files ; do
-                myopts+=($f)
-                pinfo "Expanding $d :: $#_files adding $f at $CURSOR -- $#myopts"
+                param+=( $f )
             done
         else
             perror "$d not a directory: [$EXPAND_DIRS[1]]"
@@ -674,6 +673,8 @@ M_HELP=$( print_hash $aa )
 #print $M_HELP
 M_MESSAGE="$M_HELP    $M_TITLE"
 param=$(print -rl -- *(M))
+# sta was local in list_printer, tring out belove
+sta=1
     while (true)
     do
         list_printer "${PWD} " $param
@@ -803,7 +804,7 @@ function numberlines() {
                     get_file_details "$line"
                     # above call updates _detail and the hash, so has to be in current process
                 else
-                    _detail="(deleted?)"
+                    _detail="(deleted? $PWD)"
                     # file does not exist so it could be deleted ?
                 fi
             fi
@@ -983,6 +984,7 @@ function init_menu_options() {
 function init_key_function_map() {
     typeset -gA zfm_hook
     add_hook "chdir" chdir_message
+    add_hook "chdir" expand_dirs
     add_hook "fileopen" fileopen_hook
 
     typeset -gA zfm_keymap
@@ -1026,7 +1028,7 @@ function init_key_function_map() {
                 $ZFM_MAP_LEADER
                     cx_map
                 "SPACE"
-                    zfm_expand_dir
+                    zfm_toggle_expanded_state
                     )
     zfm_bind_key "M-x" "zfm_views"
     zfm_bind_key "M-o" "settingsmenu"
@@ -1043,7 +1045,7 @@ function init_key_function_map() {
     zfm_bind_key "ML v" "visited_files"
     zfm_bind_key "$ZFM_SIBLING_DIR_KEY" sibling_dir
 }
-function function init_file_menus() {
+function init_file_menus() {
     # edit these or override in ENV
     ZFM_ZIP_COMMAND=${ZFM_ZIP_COMMAND:-'tar zcvf ${archive} %%'}
     ZFM_RM_COMMAND=${ZFM_RM_COMMAND:-rmtrash}
@@ -1193,8 +1195,12 @@ function execute_hooks() {
     shift
     local params
     params="$@"
-    local hooks=$zfm_hook[$event]
+    local hooks
+    hooks=$zfm_hook[$event]
+    hooks=("${(s/ /)hookhooks}")
+    #perror "executing $hooks..."
     for ev in $hooks; do
+        #pinfo "  executinf $ev"
         if [[ -x "$ev" ]]; then
             $ev $params
         else
@@ -1483,16 +1489,21 @@ function zfm_toggle_file() {
         pinfo "Adding $selection to array, $#selectedfiles "
     fi
 }
-function zfm_expand_dir() {
+## This expands dir under cursor, actually toggles expanded state
+function zfm_toggle_expanded_state() {
     local d _files
     d=$myopts[$CURSOR]
+    # if exists, remove it
+    if [[ $EXPAND_DIRS[(i)$d] -le $#EXPAND_DIRS ]]; then
+        EXPAND_DIRS[(i)$d]=()
+        zfm_refresh
+        return
+    fi
     EXPAND_DIRS+=($d)
     if [[ -d "$d" ]]; then
-        _files=( $(print -rl -- $d/*) )
-        #$vpa[$CURSOR]+=($_files)
+        _files=("${(@f)$(print -rl -- $d/*)}")
         for f in $_files ; do
-            myopts[$CURSOR]+=($f)
-            pinfo "Expanding $d :: $#_files adding $f at $CURSOR -- $#myopts"
+            param+=( $f )
         done
     fi
 }
