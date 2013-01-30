@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-29 15:23
+#  Last update: 2013-01-30 19:00
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -18,16 +18,20 @@
 # header }
 ZFM_DIR=${ZFM_DIR:-~/bin}
 export ZFM_DIR
-export EDITOR=$VISUAL
+export EDITOR=${EDITOR:-vi}
 source ${ZFM_DIR}/zfm_menu.zsh
 source $ZFM_DIR/zfm_viewoptions.zsh
 setopt MARK_DIRS
+## color of current line: use from autocolors red blue white black cyan magenta yellow
+CURSOR_COLOR="red"
 
 export M_FULL_INDEXING=
 export TAB=$'\t'
 set_auto_view
 ## We need C-c for mappings, so we disable it 
 stty intr '^-'
+# this is strangely eating up C-o
+stty flush '^-'
 
 #
 # for printing details 
@@ -190,18 +194,18 @@ function list_printer() {
             ans=''
             #break
         else
-            [[ -n $ckey ]] && reply=$ckey
+            #[[ -n $ckey ]] && reply=$ckey
             ans="${reply}"
             #pdebug "Got ($reply)"
         fi
         #print 2013-01-21 - 00:09 due to \r in print
         #clear # trying this out # commenting out, if we don't reprint then clearing was wrong
-        [[ $ans = "C-i" ]] && ans="TAB" # 2013-01-28 - 13:07 
-        [[ $ans = "C-j" ]] && ans="ENTER" # 2013-01-28 - 13:07 
-        [[ $ans = " " ]] && ans="SPACE" # 2013-01-28 - 13:07 , so that they show up on help clearly
-        ## giving names so easier to find and use
-        [[ $ans = "" ]] && ans="ESCAPE"
-        [[ $ans = "" ]] && ans="BACKSPACE"
+        #[[ $ans = "C-i" ]] && ans="TAB" # 2013-01-28 - 13:07 
+        #[[ $ans = "C-j" ]] && ans="ENTER" # 2013-01-28 - 13:07 
+        #[[ $ans = " " ]] && ans="SPACE" # 2013-01-28 - 13:07 , so that they show up on help clearly
+        ### giving names so easier to find and use
+        #[[ $ans = "" ]] && ans="ESCAPE"
+        #[[ $ans = "" ]] && ans="BACKSPACE"
         case $ans in
             "")
                 # BLANK blank
@@ -326,10 +330,13 @@ function list_printer() {
                 PATT=""
                 ;;
                 # I think this overrides what cursor defines
-            "$ZFM_ACCEPT_FIRST_KEY")
-                ## Accept the first option shown, default is ENTER key
-                ## but if no files shown then what happens ?
-                selection=$vpa[$CURSOR]
+            "$ZFM_OPEN_FILES_KEY")
+                ## Open either selected files or what's under cursor
+                if [[ -n $selectedfiles ]];then 
+                    call_fileoptions $selectedfiles
+                else
+                    selection=$vpa[$CURSOR]
+                fi
                 [[ -n "$selection" ]] && break
                 ;; 
             BACKSPACE)
@@ -430,8 +437,10 @@ function subcommand() {
     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && { QUITTING=1 ; break }
     case "$dcommand" in
         "S"|"save")
+            print "Saving $PWD to bookmarks"
             push_pwd
-            print "$ZFM_DIR_STACK"
+            print "Bookmarks: $ZFM_DIR_STACK"
+            pause
         ;;
         "P"|"pop")
             pop_pwd
@@ -446,22 +455,14 @@ function subcommand() {
             if [[ -n $selectedfiles ]]; then
                 pdebug "selected files: $#selectedfiles"
 
-                if [[ $#selectedfiles -gt 1 ]]; then
-                    multifileopt $selectedfiles
-                else
-                    M_NO_AUTO=1
-                    fileopt $selectedfiles[1]
-                fi
+                M_NO_AUTO=1
+                call_fileoptions $selectedfiles
             else
-                pinfo "No selected files. About $#vpa files on screen"
-                if [[ $#vpa -eq 1 ]]; then
-                    selection=${selection:-$vpa[1]}
-                else
-                    #pinfo "Please try selecting one or more files"
-                fi
+                selection=${selection:-$vpa[$CURSOR]}
                 if [[ -n "$selection" ]]; then
                     M_NO_AUTO=1
                     fileopt $selection
+                    selection=
                 else
                     perror "Please select a file first. Use $ZFM_SELECTION_MODE_KEY key to toggle selection mode"
                 fi
@@ -498,21 +499,21 @@ function subcommand() {
 
 #  add current dir to stack so we can pop back
 #  We add it backwards so i can shift 
+#  Currently aclled only from GOTO_DIR and :S
 function push_pwd() {
-    ZFM_DIR_STACK=(
-    $ZFM_DIR_STACK
-    $PWD:q
-    )
+    local dir
+    dir=${1:-$PWD}
+    ZFM_DIR_STACK+=( $dir:q )
+    #print $ZFM_DIR_STACK 
 }
+## this is only called from :P not from pop, see popd
+#  This does not remove dirs when popping so we always have all visited dirs with us
 function pop_pwd() {
     # remove from end
     newd=$ZFM_DIR_STACK[-1]
     ZFM_DIR_STACK[-1]=()
     # put it back on top (first)
-    ZFM_DIR_STACK=(
-    $newd:q
-    $ZFM_DIR_STACK
-    )
+    ZFM_DIR_STACK[1]+=( $newd:q )
     # XXX maybe should cd to new top dir, not removed one.
     cd $newd
     pwd
@@ -560,7 +561,7 @@ function print_help_keys() {
     $ZFM_FILTER_KEY	- change filter criteria (pref. use menu) **
     $ZFM_SIBLING_DIR_KEY	- view/select sibling directories **
     $ZFM_CD_OLD_NEW_KEY	- cd OLD NEW functionality (visit second cousins) **
-    $ZFM_ACCEPT_FIRST_KEY - open file (selected) or under cursor
+    $ZFM_OPEN_FILES_KEY - open file/s (selected) or under cursor
 
     Most keys are likely to change after getting feedback, the ** ones definitely will
     
@@ -592,8 +593,9 @@ typeset -Ag FILES_HASH
 selectedfiles=()
 #export selectedfiles  # for nl.sh
 #  directory stack for jumping back
-typeset -U ZFM_DIR_STACK
+typeset -U ZFM_DIR_STACK ZFM_FILE_STACK
 ZFM_DIR_STACK=()
+ZFM_FILE_STACK=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
 ZFM_START_DIR="$PWD"
@@ -604,7 +606,7 @@ export last_viewed_files
 #  defaults KEYS
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
 ZFM_PAGE_KEY=${ZFM_PAGE_KEY:-'SPACE'}  # trying out enter if files have spaces and i need to type a space
-ZFM_ACCEPT_FIRST_KEY=${ZFM_ACCEPT_FIRST_KEY:-'C-o'}  # pressing selects whatever cursor is on
+ZFM_OPEN_FILES_KEY=${ZFM_OPEN_FILES_KEY:-'C-o'}  # pressing selects whatever cursor is on
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
 ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
@@ -806,7 +808,8 @@ function numberlines() {
         _line="$sub)$cc $_detail $line $link"
         (( $#_line > width )) && _line=$_line[1,$width] # cut here itself so ANSI not truncated
         (( boldflag == 1 )) && _line="${BOLD}$_line${BOLD_OFF}"
-        (( c == CURSOR )) && _line="${COLOR_STANDOUT}$_line${COLOR_STANDOUTOFF}"
+        #(( c == CURSOR )) && _line="${COLOR_STANDOUT}$_line${COLOR_STANDOUTOFF}"
+        (( c == CURSOR )) && _line="${bg_bold[$CURSOR_COLOR]}$_line${reset_color}"
         ### 2013-01-21 - 21:09 trying to do this in same process so hash be updated
         #print -l -- $_line
         OUTPUT+="$_line\n"
@@ -927,7 +930,7 @@ function selection_menu() {
 # a config file
 function init_menu_options() {
     typeset -gA main_menu_command_hash
-    main_menu_options+=("Directory" "zk dirjump" "d children" "[ Siblings" "] cd OLD NEW" "M mkdir" "% New File" " " "\n")
+    main_menu_options+=("Directory" "zk dirjump" "d children" "[ Siblings" "] cd OLD NEW" "M mkdir" "% New File" "." "\n")
     main_menu_options+=("Commands" "a ack" "/ ffind" "v filejump" "l locate" "u User Commands" "_ Last viewed file" "\n")
     main_menu_options+=("Settings"  "x Exclude Pattern" "F Filter options" "s Sort Options" "o General"  "\n")
     main_menu_options+=("Listings" "f File Listings" "r Recursive Listings" "\n")
@@ -948,13 +951,15 @@ function init_menu_options() {
         M zfm_newdir
         % zfm_newfile
         / zfm_ffind
+        [ sibling_dir
+        ] cd_old_new
         _ edit_last_file
         )
 }
 function init_key_function_map() {
     typeset -gA zfm_hook
-    #add_hook "chdir" "M_MESSAGE='=>   LEFT: popd   UP: Parent dir'"
     add_hook "chdir" chdir_message
+    add_hook "fileopen" fileopen_hook
 
     typeset -gA zfm_keymap
     # testing out key mappings with different kinds of keys
@@ -978,7 +983,7 @@ function init_key_function_map() {
                     toggle_match_from_start
                 $ZFM_TOGGLE_MENU_KEY
                     toggle_options_menu
-                $ZFM_SIBLING_DIR_KEY
+                "$ZFM_SIBLING_DIR_KEY"
                     sibling_dir
                 $ZFM_CD_OLD_NEW_KEY
                     cd_old_new
@@ -1007,6 +1012,10 @@ function init_key_function_map() {
     zfm_bind_key "C-e" "zfm_edit_pattern"
     zfm_bind_key "M-e" "zfm_exclude_pattern"
     zfm_bind_key "M-/" "zfm_ffind"
+    zfm_bind_key "ML '" "visited_dirs"
+    #zfm_bind_key "C-x '" "visited_dirs"
+    zfm_bind_key "ML v" "visited_files"
+    zfm_bind_key "$ZFM_SIBLING_DIR_KEY" sibling_dir
 }
 function function init_file_menus() {
     # edit these or override in ENV
@@ -1102,14 +1111,20 @@ function get_command_for_title() {
 function zfm_bind_key() {
     # should we check for existing and refuse ?
     zfm_keymap[$1]=$2
+    if (( ${+zfm_keymap[$1]} )); then
+    else
+        perror "Unable to bind $1 to keymap "
+        pause
+    fi
 }
 function zfm_unbind_key() {
-    zfm_keymap[$1]=()
+    zfm_keymap["$1"]=()
 }
 function zfm_get_key_binding() {
     binding=$zfm_keymap[$1]
     ret=1
     [[ -n $binding ]] && ret=0
+    [[ -z $binding ]] && pdebug "Nothing bound for $1"
     return $ret
 }
 ## A separate mapping namespace
@@ -1118,18 +1133,24 @@ function zfm_get_key_binding() {
 #
 function cx_map() {
     local kp=$ans
-    local anskey
+    local anskey mapkey
     anskey=$ans
-    [[ $ans == '\' ]] && anskey='\\'
+    mapkey=$ans
+    [[ $ans == '\' ]] && { anskey='\\' ; mapkey="ML"; }
     print -n "$anskey awaiting a key: "
     _read_keys
-    [[ -n $ckey ]] && reply=$ckey
+    #[[ -n $ckey ]] && reply=$ckey
     local key
-    key="$ans $reply"
-    binding=$zfm_keymap[key]
+    key="$mapkey $reply"
+    binding=$zfm_keymap[$key]
     M_MESSAGE="$anskey $reply => $binding"
     ret=1
-    [[ -n $binding ]] && ret=0
+    [[ -n $binding ]] && { $binding ; ret=0 }
+    [[ -z $binding ]] && { 
+        perror "could not find [$key] in keymap" ;
+        #for f ( ${(k)zfm_keymap}) print -l "[$f] ==> $zfm_keymap[$f]"
+        #print -l "${(k)zfm_keymap}"
+    }
     return $ret
 }
 #
@@ -1143,17 +1164,32 @@ function add_hook() {
 }
 function execute_hooks() {
     local event=$1
+    shift
+    local params
+    params="$@"
     local hooks=$zfm_hook[$event]
     for ev in $hooks; do
         if [[ -x "$ev" ]]; then
-            $ev
+            $ev $params
         else
-            eval "$ev"
+            eval "$ev $params"
         fi
     done
 }
 function chdir_message() {
     [[ $#param -gt 0 ]] && M_MESSAGE="$M_HELP   <LEFT>: popd   <UP>: Parent dir"
+}
+function fileopen_hook () {
+    [[ -z $1 ]] && { perror "fileopen_hook got no files. Check caller"; pause; }
+    pinfo "fileopen called with $*"
+    [[ -d $1 ]] && perror "$0 called with directory"
+    local files
+    files=($@)
+    if [[ ${files[1][1]} == '/' ]]; then
+    else
+        files=($PWD/${^files}) # prepend PWD to each element
+    fi
+    ZFM_FILE_STACK+=($files)
 }
 function toggle_options_menu() {
     ## by default or first time pressing toggle key twice will toggle full-indexing
@@ -1199,6 +1235,8 @@ function toggle_options_menu() {
     esac
     toggle_menu_last_choice=$menu_text
 }
+## called by POPD_KEY to pop back to previous dirs
+#
 function zfm_popd() {
     dirs
     popd && post_cd
@@ -1222,14 +1260,35 @@ function goto_parent_dir() {
     post_cd
 }
 function goto_dir() {
+    # push directory before changing
     push_pwd
     #GOTO_PATH="/"
     GOTO_PATH=${GOTO_PATH:-"$HOME/"}
-    #stty erase 
     # FIXME backspace etc issues in vared here, hist not working
     vared -h -p "Enter path: " GOTO_PATH
     selection=${(Q)GOTO_PATH}  # in case space got quoted, -d etc will all give errors
     PATT="" # 2012-12-26 - 00:54 
+    push_pwd $selection
+}
+##
+# directories user has visited in this session
+# These are not all the dirs, only those specifically selected through some options
+# We could save them on exit and read them up
+#
+function visited_dirs() {
+    print
+    menu_loop "Select a dir: " "$ZFM_DIR_STACK"
+    [[ -n "$menu_text" ]] && { 
+        $ZFM_CD_COMMAND $menu_text
+        post_cd
+    }
+}
+function visited_files() {
+    print
+    menu_loop "Select a file: " "$ZFM_FILE_STACK"
+    [[ -n "$menu_text" ]] && { 
+        fileopt $menu_text
+    }
 }
 ## 
 ## find files in current directory
@@ -1349,9 +1408,13 @@ function zfm_select_all_rows() {
         pbold "Press $ZFM_SELECTION_MODE_KEY when done selecting"
     else
         # this is outside of selection mode
-        [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
+
         M_NO_AUTO=1
-        [[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
+        call_fileoptions $selectedfiles
+        # This deals with a separate array -- doesn't have underscore
+        #[[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
+        #M_NO_AUTO=1
+        #[[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
         selectedfiles=()
         M_MESSAGE=
     fi
@@ -1363,9 +1426,10 @@ function zfm_selection_mode_toggle() {
     if [[ -n "$M_SELECTION_MODE" ]]; then
         M_SELECTION_MODE=
         pinfo "Selected $#selectedfiles files"
-        [[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
         M_NO_AUTO=1
-        [[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
+        call_fileoptions $selectedfiles
+        #[[ $#selectedfiles -gt 1 ]] && multifileopt $selectedfiles
+        #[[ $#selectedfiles -eq 1 ]] && fileopt $selectedfiles
         selectedfiles=()
         pbold "selection mode is off"
     else
@@ -1380,19 +1444,16 @@ function zfm_selection_mode_toggle() {
 function zfm_toggle_file() {
     #selection=$PWD/$selection
     local selection="$1"
-    [[ -z $selection ]] && selection=$PWD/$vpa[$CURSOR]
+    ## if the user interactively selected then advance cursor like memacs does
+    [[ -z $selection ]] && { selection=$PWD/$vpa[$CURSOR]; (( CURSOR++ )) ; }
 
     if [[ -n  ${selectedfiles[(re)$selection]} ]]; then
         pinfo "File $selection already selected, removing ..."
         i=$selectedfiles[(ie)$selection]
         selectedfiles[i]=()
         pinfo "File $selection unselected"
-        pause
     else
-        selectedfiles=(
-        $selectedfiles
-        $selection
-        )
+        selectedfiles+=( $selection )
         pinfo "Adding $selection to array, $#selectedfiles "
     fi
 }
