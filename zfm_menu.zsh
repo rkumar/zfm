@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-28 17:57
+#  Last update: 2013-01-30 18:54
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -88,10 +88,9 @@ function print_menu() {
     ## buffer to concat each row so we can print in 2 cols if required
     local _str
     _str=()
-    ML_COLS=${ML_COLS:-1}
     # trying out ML_COLS so called can specify if he wants more than one column
     ## value is always reset to 1 afte printing so be sure to call each time
-    #ML_COLS=${ML_COLS:-1}
+    ML_COLS=${ML_COLS:-1}
     for f in $myopts
     do
         sub=$c
@@ -299,8 +298,12 @@ function fileopt() {
         print "got $act for $_act ($uft)"
         name=${name:q}
         eval "${act} $name"
-        [[ $act == $EDITOR ]] && { last_viewed_files=$name }
-        [[ $act == $EDITOR ]] || pause
+        if [[ $act == $EDITOR || $act =~ ^vi ]]; then
+            last_viewed_files=$name 
+            execute_hooks "fileopen" $PWD/$name
+        else
+            pause
+        fi
         return
     else
         pdebug "$0 got no auto action for $uft"
@@ -345,7 +348,10 @@ function eval_menu_text () {
             vared -c -p "Enter command to automatically execute for $file_type files: " command
             ZFM_AUTO_ACTION[$x]="$command"
             eval "$command $files"
-            [[ $command == $EDITOR ]] && { last_viewed_files=$files }
+            [[ $command == $EDITOR || $command =~ ^vi ]] && { 
+                last_viewed_files=$files 
+                execute_hooks "fileopen" $files
+            }
             ;;
         "")
             [[ "$menu_char" =~ [a-zA-Z0-9] ]] || {
@@ -546,12 +552,35 @@ function multifileopt() {
         *)
 
             evaluate_command "$menu_text" $files
-            [  $? -eq 0 ] && zfm_refresh
+            [  $? -eq 0 ] && { 
+                [[ $menu_text == $EDITOR || $menu_text =~ ^vi ]] && { 
+                    last_viewed_files=$files 
+                    execute_hooks "fileopen" $files
+                }
+                zfm_refresh
+            }
             #[[ -n $ZFM_VERBOSE ]] && perror "213: $menu_text , $files"
             #eval "$menu_text $files"
             #[[ "$menu_text" == "${ZFM_RM_COMMAND}" ]] && zfm_refresh
             ;;
     esac
+}
+##
+# calls either multifile or fileopt depending on number of files.
+#  this was being done in so many places, so moved to one call.
+#
+function call_fileoptions() {
+    local files
+    files=($@)
+    [[ -z $files ]] && files=$selected_files
+    [[ -z $files ]] && perror "$0 got no files, please check caller"
+    if [[ $#files -eq 1 ]]; then
+        fileopt $files[1]
+    elif [[ $#files -gt 1 ]]; then
+        multifileopt $files
+    elif [[ -n "$file" ]]; then
+        fileopt "$selected_file"
+    fi
 }
 ## 
 ## refresh should be done in caller if stat is 0
@@ -561,7 +590,7 @@ function evaluate_command () {
     shift
     #bombs if spaces in files
     #local files="$@"
-    local files
+    local files _cmd
     files="$@"
     local ret=0
 
@@ -608,6 +637,7 @@ function print_hash () {
    print
 }
 function zfm_cmd () {
+    local files
     files=($@)
     #[[ -n $ZFM_VERBOSE ]] && pdebug "PATH is ${PATH}"
     command=${command:-""}
@@ -617,7 +647,10 @@ function zfm_cmd () {
     vared -p "Enter command (second part): " postcommand
     print "$command $files $postcommand"
     eval "$command $files $postcommand" && zfm_refresh
-    [[ $command == $EDITOR ]] && { last_viewed_files=$files }
+    [[ $command == $EDITOR || $command =~ ^vi ]] && { 
+        last_viewed_files=$files 
+        execute_hooks "fileopen" $files
+    }
 }
 function zfm_zip () {
     files=($@)
@@ -648,7 +681,8 @@ function zfm_mv() {
 function zfm_edit () {
     files=($@)
     eval "$EDITOR $files"
-    last_viewed_files=$files
+    last_viewed_files=$files 
+    execute_hooks "fileopen" $files
 }
 ## convert menu options or titles to a string of hotkeys formenu_loop
 function get_hotkeys () {
@@ -662,7 +696,12 @@ function get_hotkeys () {
         if [[ -n "$ii" ]]; then
             str+=$ii
         else
-            str+=$title[1]
+            ## take first letter of title, but what if it exists, then use blank
+            ii=$title[1]
+            if [[ $str[(i)$ii] -le $#str ]]; then
+                ii=" "
+            fi
+            str+=$ii
         fi
     done
     print $str
@@ -736,7 +775,23 @@ function _read_keys() {
         # ctrl keys
         (( ascii == 0 )) && { ckey="C-SPACE" }
         (( ascii > 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
+        case $ckey in
+            "C-i") ckey="TAB" # 2013-01-28 - 13:07 
+                ;;
+            "C-j") ckey="ENTER" # 2013-01-28 - 13:07 
+                ;;
+        esac
     fi
+    [[ -n $ckey ]] && reply=$ckey
+    case $reply in
+        " ") reply="SPACE" # 2013-01-28 - 13:07 , so that they show up on help clearly
+            ;;
+        "") reply="ESCAPE"
+            ;;
+        "") reply="BACKSPACE"
+            ;;
+    esac
+
     return $ret
 }
 function init_key_codes() {
