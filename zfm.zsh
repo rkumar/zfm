@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-31 20:20
+#  Last update: 2013-01-31 22:22
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -1253,7 +1253,6 @@ function chdir_message() {
 }
 function fileopen_hook () {
     [[ -z $1 ]] && { perror "fileopen_hook got no files. Check caller"; pause; }
-    pinfo "fileopen called with $*"
     [[ -d $1 ]] && perror "$0 called with directory"
     local files
     files=($@)
