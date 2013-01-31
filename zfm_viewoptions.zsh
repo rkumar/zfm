@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-31 22:56
+# Last update: 2013-02-01 01:33
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -45,11 +45,14 @@ function fuzzyselectrow() {
     selected_files=
     #local rows= # try to columnate if more than 24 items, based on tput lines
     integer rows=$(tput lines)
+    (( rows-=2 ))
     # should we try printing in 2 columns if items more than $rows
-    ZFM_AUTO_COLUMNS=${ZFM_AUTO_COLUMNS:-"1"}
+    #ZFM_AUTO_COLUMNS=${ZFM_AUTO_COLUMNS:-"1"}
     ZFM_TRUNCATE=${ZFM_TRUNCATE:-"-1"}
 
     ff=("${(@f)$(print -rl -- $files)}")
+    local tot
+    tot=$#ff
     local gpatt="" # grep pattern which user types
 
     local sta fin sortrev
@@ -64,7 +67,8 @@ function fuzzyselectrow() {
     do
 
         ## filter the list on rows (used if more rows than can be viewed
-        fin=$#ff
+        #fin=$#ff
+        (( fin = sta + rows ))
         (( offset > 0 )) && {
             (( fin = $#files - offset ))
             ## setting offset to zero here goes back a bit, but if i don't then sed throws
@@ -76,10 +80,16 @@ function fuzzyselectrow() {
             files=(${(Oa)files})
             sortrev=0
         }
-        viewport=$(print -rl -- $files  | grep "$gpatt" | sed -n "$sta,$fin p")
+        ## we need the count after grep and before sed, sed is only temporary window into grepped data
+        #viewport=$(print -rl -- $files  | grep "$gpatt" )
+        viewport=("${(@f)$(print -rl -- $files | grep $ic "${gpatt}" )}")
+        tot=$#viewport
+        [[ $fin -gt $tot ]] && fin=$tot
+        viewport=(${viewport[$sta, $fin]})
+        #viewport=$(print -rl -- $files  | grep "$gpatt" | sed -n "$sta,$fin p")
         vpa=("${(@f)$(print -rl -- $viewport)}")
-        local _hv=$#vpa # size of result after grep
-        print  "   No.\t  Name"
+        local _hv=$#vpa # size of result after grep and sed
+        #print  "   No.\t  Name"
 
         if [[ $ZFM_AUTO_COLUMNS == "1" && $_hv -gt $rows ]]; then
             # split into 2 columns
@@ -88,10 +98,11 @@ function fuzzyselectrow() {
             print -rl -- $viewport | numbernine | sed "s#$HOME#~#g"
         fi
         # PROMPT prompt
-        print  -n "Select a row [1-$_hv] ? Help, ESC/ENTER ($#deleted/$#vpa)/$gpatt/: "
+        #print  -n "Select a row [$sta-$fin/$tot] ? Help, C-c/ENTER ($#deleted/$#vpa)/$gpatt/: "
+        print  -n "Select row/s [$sta-$fin/$tot] ? Help, C-c/ENTER ($#deleted/$tot)/$gpatt/: "
         _read_numbers $#vpa
-        print
-        pinfo "Got: $reply , $ckey"
+        #print
+        #pdebug "Got: $reply , $ckey"
         clear
 
     #
@@ -126,8 +137,9 @@ function fuzzyselectrow() {
     }
 
 
-    [[ $reply = "ESC" || $reply == "C-c" || $reply == "C-g" ]] && { selected_file=; selected_files=; break }
+    [[ $reply == "C-c" || $reply == "C-g" ]] && { selected_file=; selected_files=; break }
     [[ -z "$reply" ]] && break
+    [[ $reply == "SPACE" ]] && { reply=$_CURSOR }
     #  check for numeric as some values like "o" can cause abort
     if [[ "$reply" == <1-> ]]; then
         line="$vpa[$reply]"
@@ -151,7 +163,7 @@ function fuzzyselectrow() {
         fi
     elif [[ "$reply" == "?" ]]; then
         print -rl  "Keys are <CR> Accept selection"
-        print -rl  "         <ESC> Cancel"
+        print -rl  "         <C-c> Cancel"
         print -rl  "         [a-zA-Z] to narrow down search"
         print -rl  "         [1-9] to add to selection"
         print -rl  "         $ZFM_MENU_KEY menu"
@@ -218,17 +230,21 @@ function fuzzyselectrow() {
                     ;;
             esac
             ff=( $files ) # XXX what if nothign changed above ?
+            tot=$#ff
         elif [[ "$reply" == "^" ]]; then
             fuzzy_match_toggle
             # remove .*s
             gpatt=$(pattern_toggle $gpatt)
         elif [[ $reply == "C-n" ]]; then
             ## scroll list down -- neeeded if more rows than can be seen
-            (( offset += M_SCROLL ))
+            #(( offset += M_SCROLL ))
+            (( sta += rows ))
         elif [[ $reply == "C-p" ]]; then
             #let offset--
-            (( offset -= M_SCROLL ))
-            (( offset < 0 )) && offset=0
+            #(( offset -= M_SCROLL ))
+            #(( offset < 0 )) && offset=0
+            (( sta -= $rows ))
+            (( sta < 0 )) && sta=0
         elif [[  $reply == "UP" ]]; then
             ## scroll list down -- neeeded if more rows than can be seen
             #let offset++
@@ -249,13 +265,13 @@ function fuzzyselectrow() {
             # i chose c-w since C-r not working on my terminal ?? even Alt-x just flashin in
             #  iterm but okay in Terminal.
             let sortrev=1
-        elif [[ -z "$gpatt" ]]; then
-            gpatt="$reply"
         elif [[ -n "$ckey" ]]; then
             ## we don't want complex keys added into buffer
         elif [[ $#reply -gt 1 ]]; then
             ## we don't want complex keys added into buffer such as PgDn etc
             
+        elif [[ -z "$gpatt" ]]; then
+            gpatt="$reply"
         else
             ## maybe we should check that reply is only one char
             if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
@@ -265,6 +281,8 @@ function fuzzyselectrow() {
                 gpatt="${gpatt}.*${reply}"
             fi
         fi
+        (( sta > tot - rows )) && (( sta = tot - rows ))
+        (( sta < 1 )) && (( sta = 1 ))
         pdebug "gpattern is $gpatt"
         if [[ $#files -eq 0 ]] ; then
             perror "No files for $gpatt. Use backspace or try another pattern"
