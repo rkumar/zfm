@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-31 01:47
+#  Last update: 2013-01-31 10:52
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -55,7 +55,7 @@ function list_printer() {
     shift
     #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
-    #expand_dirs
+    #restore_exoanded_state
 
     # using cols to calculate cursor movement right
     LIST_COLS=3
@@ -539,21 +539,24 @@ function post_cd() {
 function zfm_refresh() {
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
-    expand_dirs
+    restore_exoanded_state
     myopts=("${(@f)$(print -rl -- $param)}")
 }
 
 ## This will ensure that when you return to the directory where
 # some dirs were exploded, they will be exploded again
-function expand_dirs() {
-    for d in $EXPAND_DIRS ; do
+function restore_exoanded_state() {
+local td
+    for d in $ZFM_EXPANDED_DIRS ; do
         if [[ -d "$d" ]]; then
-            _files=("${(@f)$(print -rl -- $d/*)}")
+            td=$d:t
+            _files=("${(@f)$(print -rl -- $td/*)}")
             for f in $_files ; do
                 param+=( $f )
             done
         else
-            perror "$d not a directory: [$EXPAND_DIRS[1]]"
+            # This happens when we move to another dir, so don't worry
+            #perror "$d not a directory: [$ZFM_EXPANDED_DIRS[1]]"
         fi
     done
 }
@@ -614,10 +617,10 @@ typeset -Ag FILES_HASH
 selectedfiles=()
 #export selectedfiles  # for nl.sh
 #  directory stack for jumping back
-typeset -U ZFM_DIR_STACK ZFM_FILE_STACK EXPAND_DIRS
+typeset -U ZFM_DIR_STACK ZFM_FILE_STACK ZFM_EXPANDED_DIRS
 ZFM_DIR_STACK=()
 ZFM_FILE_STACK=()
-EXPAND_DIRS=()
+ZFM_EXPANDED_DIRS=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
 ZFM_START_DIR="$PWD"
@@ -984,7 +987,7 @@ function init_menu_options() {
 function init_key_function_map() {
     typeset -gA zfm_hook
     add_hook "chdir" chdir_message
-    add_hook "chdir" expand_dirs
+    add_hook "chdir" restore_exoanded_state
     add_hook "fileopen" fileopen_hook
 
     typeset -gA zfm_keymap
@@ -1490,17 +1493,20 @@ function zfm_toggle_file() {
     fi
 }
 ## This expands dir under cursor, actually toggles expanded state
+#  This places dir name in an array, however, it keeps only final part of dir not complete
+#  path, so if "lib" is expanded in one dir, it will be expanded in others, and toggle off. XXX
 function zfm_toggle_expanded_state() {
-    local d _files
+    local d _files fd
     d=$myopts[$CURSOR]
+    fd=$PWD/$d
     # if exists, remove it
-    if [[ $EXPAND_DIRS[(i)$d] -le $#EXPAND_DIRS ]]; then
-        EXPAND_DIRS[(i)$d]=()
+    if [[ $ZFM_EXPANDED_DIRS[(i)$fd] -le $#ZFM_EXPANDED_DIRS ]]; then
+        ZFM_EXPANDED_DIRS[(i)$fd]=()
         zfm_refresh
         return
     fi
-    EXPAND_DIRS+=($d)
-    if [[ -d "$d" ]]; then
+    ZFM_EXPANDED_DIRS+=($fd)
+    if [[ -d "$fd" ]]; then
         _files=("${(@f)$(print -rl -- $d/*)}")
         for f in $_files ; do
             param+=( $f )
