@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-31 10:52
+#  Last update: 2013-01-31 11:04
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -556,7 +556,7 @@ local td
             done
         else
             # This happens when we move to another dir, so don't worry
-            #perror "$d not a directory: [$ZFM_EXPANDED_DIRS[1]]"
+            perror "$d not a directory: [$ZFM_EXPANDED_DIRS[1]]"
         fi
     done
 }
@@ -1200,10 +1200,10 @@ function execute_hooks() {
     params="$@"
     local hooks
     hooks=$zfm_hook[$event]
-    hooks=("${(s/ /)hookhooks}")
-    #perror "executing $hooks..."
+    hooks=("${(s/ /)hooks}")
+    #perror "Executing $hooks..."
     for ev in $hooks; do
-        #pinfo "  executinf $ev"
+        #pinfo "  :: executing $ev"
         if [[ -x "$ev" ]]; then
             $ev $params
         else
