@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-31 11:04
+#  Last update: 2013-01-31 18:28
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -38,6 +38,7 @@ stty flush '^-'
 zmodload zsh/stat
 zmodload -F zsh/stat b:zstat
 PAGESZ=59     # used for incrementing while paging
+M_SCROLL=${M_SCROLL:-10}
 
 (( PAGESZ1 = PAGESZ + 1 ))
 
@@ -137,15 +138,15 @@ function list_printer() {
             viewport=(${viewport[$sta, $fin]})
             vpa=("${(@f)$(print -rl -- $viewport)}")
             #vpa=("${(f)=viewport}")
-            local ttcount=$#vpa
+            VPACOUNT=$#vpa
             ZFM_LS_L=
-            if (( $ttcount <  (ZFM_LINES -2 ) )); then
+            if (( $VPACOUNT <  (ZFM_LINES -2 ) )); then
                 # need to account for title and read lines at least and message line
                 LIST_COLS=1
                 # this could have the entire listing which contains TABS !!!
                 (( width= ZFM_COLS - 2 ))
                 ZFM_LS_L=1
-            elif [[ $ttcount -lt 40 ]]; then
+            elif [[ $VPACOUNT -lt 40 ]]; then
                 LIST_COLS=2
                 (( width = (ZFM_COLS / LIST_COLS) - 2 ))
             else
@@ -162,7 +163,14 @@ function list_printer() {
             ## This relates to the new cursor functionality. Arrow keys allow us to
             ## move around the file list and press ENTER
             #
-            (( CURSOR == -1 || CURSOR > $tot )) && CURSOR=$tot
+            (( CURSOR == -1 || CURSOR > tot )) && CURSOR=$tot
+            #
+            # If user presses down at last file, and there are more we should
+            #  page down, but that's not working at present, some glitches, so we just
+            #  bring cursor back to 1
+            #(( CURSOR > $VPACOUNT && CURSOR < $tot )) && { sta=$CURSOR ; CURSOR=1 }
+            # this is fine but does not redraw the page until cursor moves
+            (( CURSOR > VPACOUNT && CURSOR < tot )) && { zfm_next_page  }
             ## if there are no rows then CURSOR gets set to 0 and remains there forever, check
             (( CURSOR == 0 )) && CURSOR=1
 
@@ -248,7 +256,7 @@ function list_printer() {
                 # could happen alot if you keep numbered files)
 
                 selection=""
-                if [[ $ttcount -gt 9 ]]; then
+                if [[ $VPACOUNT -gt 9 ]]; then
                     if [[ $PATT = "" ]]; then
                         npatt="${ans}*"
                     else
@@ -388,12 +396,38 @@ function list_printer() {
 
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
         ## was causing the unused error to keep popping up when no rows were returned
-        [[ $sta -ge $tot ]] && { sta=1; ans= ;  pinfo "Wrapping around"; break }
+        [[ $sta -ge $tot ]] && { sta=1; ans= ;  pinfo "...Wrapping around"; break }
         # break takes control back to MARK1 section below
 
     done
 }
 # }
+function zfm_next_page () {
+    local oldsta=$sta
+    (( sta += $PAGESZ1 ))
+    #[[ $sta -ge $tot ]] && { sta=$oldsta; }
+    [[ $sta -ge $tot ]] && { sta=$oldsta; CURSOR=$VPACOUNT; return }
+    ## something wrong with cursor setting to 1 each time, this is only if pagin has happened.
+    CURSOR=1
+}
+function zfm_prev_page () {
+    (( sta -= $PAGESZ1 ))
+    [[ $sta -lt 1 ]] && sta=1
+}
+function zfm_scroll_down () {
+    (( CURSOR += M_SCROLL ))
+}
+function zfm_scroll_up () {
+    (( CURSOR -= M_SCROLL ))
+    (( CURSOR < 1 && sta > 1 )) && { 
+        zfm_prev_page ;
+        ## the next vpa count deals with current page which can be less than
+        # files on prev page
+        (( CURSOR = VPACOUNT ))
+        #(( CURSOR = VPACOUNT - M_SCROLL ))
+    }
+    (( CURSOR < 1 )) && CURSOR=1
+}
 function patt_toggle() {
     local gpatt=$1
     gpatt=${gpatt:gs/*//}
@@ -602,21 +636,20 @@ print -l -- "$str" | $PAGER
 
 # utility }
 # main {
-#   alias this to some signle letter after sourceing this file in .zshrc
+#   alias this to some single letter after sourcing this file in .zshrc
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.5-alpha"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/28"
-#print $M_TITLE
+ZFM_VERSION="0.1.7-alpha"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/01/31"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
 typeset -Ag FILES_HASH
 
 selectedfiles=()
-#export selectedfiles  # for nl.sh
-#  directory stack for jumping back
+
+#  directory stack for jumping back, opened fies, and expanded dirs
 typeset -U ZFM_DIR_STACK ZFM_FILE_STACK ZFM_EXPANDED_DIRS
 ZFM_DIR_STACK=()
 ZFM_FILE_STACK=()
@@ -1030,8 +1063,12 @@ function init_key_function_map() {
                     cx_map
                 $ZFM_MAP_LEADER
                     cx_map
-                "SPACE"
+                "C-x d"
                     zfm_toggle_expanded_state
+                "C-d"
+                    zfm_scroll_down
+                "C-b"
+                    zfm_scroll_up
                     )
     zfm_bind_key "M-x" "zfm_views"
     zfm_bind_key "M-o" "settingsmenu"
