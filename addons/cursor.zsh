@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-30 19:59
+#  Last update: 2013-01-31 16:56
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -13,6 +13,7 @@
 ## we simulate a cursor or current line with arrow keys
 ##  so that user can press ENTER and get the fileopt menu for that file
 function cursor_init() {
+    export M_CURSOR_MOVEMENT_LOADED=1
     export CURSOR_MARK='>'
     CURSOR=1
     zfm_bind_key "DOWN" "cursor_down"
@@ -23,19 +24,23 @@ function cursor_init() {
     zfm_bind_key "PgUp" "cursor_top"
     zfm_bind_key "ENTER" "select_current_line"
     zfm_bind_key "ML g" "edit_cursor"
-    cursor_up_action=_my_goto_parent
+    # goto parent can be confusing and sudden, altho nice to have when you want it
+    #   but i happens when you don't expect it too.
+    #cursor_up_action=_my_goto_parent
     cursor_left_action=_my_popd
     cursor_right_action=_my_cd
     cursor_down_action=
 }
 
-cursor_init
+[[ -z $M_CURSOR_MOVEMENT_LOADED ]] && cursor_init
 
 function cursor_down () {
     PREV_CURSOR=$CURSOR
     $cursor_down_action
     [[ $? -eq 1 ]] && return
     let CURSOR++
+    # if exceeding page, try a page down
+    (( CURSOR > $#vpa )) && { zfm_next_page  }
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
     #selected=$vpa[$CURSOR]
     #if [[ -d "$selected" ]]; then
@@ -49,11 +54,12 @@ function cursor_up () {
     PREV_CURSOR=$CURSOR
     ## -le required for empty dirs
     $cursor_up_action
-    [[ $? -eq 1 ]] && return
+    #[[ $? -eq 1 ]] && return
     let CURSOR--
     M_MESSAGE=
-    (( CURSOR == 1 )) && { M_MESSAGE="=>  <UP>:parent, <LEFT>:popd" }
+    (( CURSOR < 1 )) && zfm_prev_page
     (( CURSOR < 1 )) && CURSOR=1
+    #(( CURSOR == 1 )) && { M_MESSAGE="=>  <UP>:parent, <LEFT>:popd" }
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 function _my_goto_parent() {
