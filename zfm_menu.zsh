@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-31 20:58
+#  Last update: 2013-02-01 01:23
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -797,7 +797,7 @@ function _read_keys() {
 function init_key_codes() {
 # this is for those cases with 3 or 4 keys
     typeset -Ag kh;
-    kh[(27)]="ESC"
+    kh[(27)]="ESCAPE"
     kh[(27 91 54 126)]="PgDn"
     kh[(27 91 53 126)]="PgUp"
     kh[(27 91 65)]="UP"
