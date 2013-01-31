@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-30 17:40
+# Last update: 2013-01-31 20:19
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -61,6 +61,9 @@ function fuzzyselectrow() {
         fin=$#ff
         (( offset > 0 )) && {
             (( fin = $#files - offset ))
+            ## setting offset to zero here goes back a bit, but if i don't then sed throws
+            # an error. TODO what is the correct value to reset offset.
+            (( fin < sta )) && { (( fin = sta + 1)) ; (( offset = 0 )) }
         }
         (( sortrev == 1 )) && { 
             ## reverse sort the list on index order
@@ -82,10 +85,11 @@ function fuzzyselectrow() {
         print  -n "Select a row [1-$_hv] ? Help, ESC/ENTER ($#deleted/$#vpa)/$gpatt/: "
         _read_numbers $#vpa
         print
+        pinfo "Got: $reply , $ckey"
 
     #
     #  pressing ENTER selects first item by default
-    [[ $reply = $'\n'  ]] && {
+    [[ $reply = "ENTER"  ]] && {
         # typically in cases of directories pressing enter selects #1
         if [[ -n "$ZFM_SINGLE_SELECT" ]]; then
             reply=1 # in case of auto selection we need to exit with all select XXX
@@ -114,8 +118,7 @@ function fuzzyselectrow() {
     }
 
 
-    [[ $reply = "" ]] && { selected_file=; selected_files=; break }
-    pdebug "got $reply $ckey"
+    [[ $reply = "ESC" || $reply == "C-c" || $reply == "C-g" ]] && { selected_file=; selected_files=; break }
     [[ -z "$reply" ]] && break
     #  check for numeric as some values like "o" can cause abort
     if [[ "$reply" == <1-> ]]; then
@@ -134,10 +137,6 @@ function fuzzyselectrow() {
                 pinfo "Removing $selected_file from list - $#deleted remaining"
             else
                 deleted+=($selected_file)
-                #deleted=(
-                #$deleted
-                #$selected_file
-                #)
                 pinfo "Adding $selected_file to list - $#deleted selected. Press ENTER when done"
             fi
         fi
@@ -157,7 +156,7 @@ function fuzzyselectrow() {
     else
         # Use chars to drill down
         #  Handling backspace
-        if [[ "$reply" == "" || "$reply" == "" ]]; then
+        if [[ "$reply" == "BACKSPACE" || "$reply" == "" ]]; then
             if [[ -n "$gpatt" ]]; then
                 gpatt=${gpatt[1,-2]}
                 [[ $gpatt[-2,-1] == ".*" ]] && gpatt=${gpatt[1,-3]}
@@ -213,23 +212,32 @@ function fuzzyselectrow() {
             fuzzy_match_toggle
             # remove .*s
             gpatt=$(pattern_toggle $gpatt)
-        elif [[ $ckey == "C-n" ]]; then
+        elif [[ $reply == "C-n" ]]; then
+            ## scroll list down -- neeeded if more rows than can be seen
+            (( offset += M_SCROLL ))
+        elif [[ $reply == "C-p" ]]; then
+            #let offset--
+            (( offset -= M_SCROLL ))
+            (( offset < 0 )) && offset=0
+        elif [[  $reply == "UP" ]]; then
             ## scroll list down -- neeeded if more rows than can be seen
             let offset++
-        elif [[ $ckey == "C-p" ]]; then
+        elif [[ $reply == "DOWN" ]]; then
             let offset--
             (( offset < 0 )) && offset=0
-        elif [[ $ckey == "C-w" ]]; then
+        elif [[ $reply == "C-w" || $reply == "C-r" ]]; then
+            print "got C-w .. $reply"
             # sort reverse order so first comes closest to prompt
             # i chose c-w since C-r not working on my terminal ?? even Alt-x just flashin in
             #  iterm but okay in Terminal.
             let sortrev=1
-        elif [[ -n $ckey ]]; then
-            pdebug "Not trapped $ckey !" 
-            ckey=
         elif [[ -z "$gpatt" ]]; then
             gpatt="$reply"
+        elif [[ -n "$ckey" ]]; then
+            ## we don't want complex keys added into buffer
+            
         else
+            ## maybe we should check that reply is only one char
             if [[ -z "$ZFM_FUZZY_MATCH_DIR" ]]; then
                 # contiguous search
                 gpatt="${gpatt}${reply}"
@@ -389,7 +397,7 @@ function handle_files() {
     if [[ $#files -gt 0 ]]; then
         #files=$( echo $files | xargs ls -t )
         fuzzyselectrow $files
-        call_fileoptions
+        [[ -n $selected_files ]] && call_fileoptions
 
     else
         perror "No files matching $searchpattern"
@@ -759,7 +767,7 @@ function m_recentfiles() {
             $ZFM_FILE_SELECT_FUNCTION $files
             ZFM_FUZZY_MATCH_DIR=$tmpfuzz
             #perror "XXX $#selected_files ,, $selected_file,, $selected_files"
-            call_fileoptions
+            [[ -n $selected_files ]] && call_fileoptions
         fi
     }
 }
@@ -813,7 +821,6 @@ function select_menu() {
         print  -n "\rSelect :"
         #read -k reply
         _read_keys
-        #[[ -n $ckey ]] && reply=$ckey
 
         local ret=0
         if (( ${+myhas[$reply]} )); then
@@ -1025,6 +1032,10 @@ function zfm_newdir() {
 function _read_numbers() {
     local rows=$1
     local ret=0
+    # complex keys are put into ckey and later set into reply so the caller should not need
+    # to check this, but sometimes if you want to explicitly ignore all complex keys
+    # then you can check for these in the case statement before accepting chars
+    ckey=
     read -k reply
     local key=$reply
     # if user enters a numeric and there are double digit values too
@@ -1056,8 +1067,26 @@ function _read_numbers() {
         resolve_key_codes
         # check ckey
     else
+        reply="${key}"
         ascii=$((#key))
         # ctrl keys
-        (( ascii >= 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
+        (( ascii == 0 )) && { ckey="C-SPACE" }
+        (( ascii > 0 && ascii < 27 )) && { (( x = ascii + 96 ));  y=${(#)x}; ckey="C-$y"; }
+        case $ckey in
+            "C-i") ckey="TAB" # 2013-01-28 - 13:07 
+                ;;
+            "C-j") ckey="ENTER" # 2013-01-28 - 13:07 
+                ;;
+        esac
     fi
+    [[ -n $ckey ]] && reply=$ckey
+    case $reply in
+        " ") reply="SPACE" # 2013-01-28 - 13:07 , so that they show up on help clearly
+            ;;
+        "") reply="ESCAPE"
+            ;;
+        "") reply="BACKSPACE"
+            ;;
+    esac
+
 }
