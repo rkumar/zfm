@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-31 19:29
+#  Last update: 2013-01-31 20:58
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -572,7 +572,7 @@ function multifileopt() {
 function call_fileoptions() {
     local files
     files=($@)
-    [[ -z $files ]] && files=$selected_files
+    [[ -z $files ]] && files=( $selected_files )
     [[ -z $files ]] && perror "$0 got no files, please check caller"
     if [[ $#files -eq 1 ]]; then
         fileopt $files[1]
