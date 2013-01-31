@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-01-31 22:22
+#  Last update: 2013-02-01 00:37
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -39,6 +39,7 @@ zmodload zsh/stat
 zmodload -F zsh/stat b:zstat
 PAGESZ=59     # used for incrementing while paging
 M_SCROLL=${M_SCROLL:-10}
+export M_SCROLL
 
 (( PAGESZ1 = PAGESZ + 1 ))
 
