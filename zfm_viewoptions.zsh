@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-01-31 20:19
+# Last update: 2013-01-31 22:56
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -29,11 +29,16 @@ function view_menu() {
 # You could call this fuzzy
 # in that the pattern is not contiguous, if you press abc it matches "a.*b.*c"
 #
+# NOTE: currently caller are checking selected_files or just selected_file for one file
+#  but they should check only one : selected_files. Some new methods only check the latter
+#  and fail if one file selected. Need to make this local and correct all callers.
+#
 function fuzzyselectrow() {
     local files
     files=($@)
     [[ $#files -eq 0 ]] && return
 
+    _CURSOR=1
     typeset -U deleted
     deleted=()
     selected_file=
@@ -53,6 +58,7 @@ function fuzzyselectrow() {
     ## used in scrolling list
     integer offset
     offset=0
+    clear
 
     while (true)
     do
@@ -86,6 +92,7 @@ function fuzzyselectrow() {
         _read_numbers $#vpa
         print
         pinfo "Got: $reply , $ckey"
+        clear
 
     #
     #  pressing ENTER selects first item by default
@@ -103,6 +110,7 @@ function fuzzyselectrow() {
             # split row with tabs into an array
             selected_row=("${(s/	/)line}")
             selected_file=$selected_row[-1]
+            selected_files=( $selected_file ) # 2013-01-31 - 20:53 
             break
         else
             # put all selection in selected_files and break
@@ -129,6 +137,7 @@ function fuzzyselectrow() {
         selected_file=$selected_row[-1]
         if [[ -n "$ZFM_SINGLE_SELECT" ]]; then
             # select as a user presses a number and get out
+            selected_files=( $selected_file ) # 2013-01-31 - 20:53 
             break # 2012-12-26 - 19:05 
         else
             # accumulate selection
@@ -151,7 +160,8 @@ function fuzzyselectrow() {
         print -rl  "         = Toggle auto-view"
         print -rl  "         C-n Scroll List"
         print -rl  "         C-p Scroll List"
-        print -rl  "         C-w Reverse List"
+        print -rl  "         C-w / C-r Reverse List"
+        print -rl  "         Up/Down arrows"
         pause
     else
         # Use chars to drill down
@@ -221,12 +231,20 @@ function fuzzyselectrow() {
             (( offset < 0 )) && offset=0
         elif [[  $reply == "UP" ]]; then
             ## scroll list down -- neeeded if more rows than can be seen
-            let offset++
+            #let offset++
+            # We should only do this movement if there's more than what's visible.
+            (( _CURSOR-- ))
+            (( _CURSOR < 1 )) && _CURSOR=1
         elif [[ $reply == "DOWN" ]]; then
+            (( _CURSOR++ ))
+            (( _CURSOR > $#vpa )) && _CURSOR=$#vpa
             let offset--
             (( offset < 0 )) && offset=0
+        elif [[ $reply == "PgDn" ]]; then
+            _CURSOR=$#vpa
+        elif [[ $reply == "PgUp" ]]; then
+            (( _CURSOR = 1 )) 
         elif [[ $reply == "C-w" || $reply == "C-r" ]]; then
-            print "got C-w .. $reply"
             # sort reverse order so first comes closest to prompt
             # i chose c-w since C-r not working on my terminal ?? even Alt-x just flashin in
             #  iterm but okay in Terminal.
@@ -235,6 +253,8 @@ function fuzzyselectrow() {
             gpatt="$reply"
         elif [[ -n "$ckey" ]]; then
             ## we don't want complex keys added into buffer
+        elif [[ $#reply -gt 1 ]]; then
+            ## we don't want complex keys added into buffer such as PgDn etc
             
         else
             ## maybe we should check that reply is only one char
@@ -250,9 +270,11 @@ function fuzzyselectrow() {
             perror "No files for $gpatt. Use backspace or try another pattern"
        elif [[ $#files -eq 1 ]] ; then
            # if there's only one file than accept it, no confirmation and break
+           # # XXX When does this part come ??? It used to work not now.
            if [[ -n $ZFM_NO_CONFIRM ]]; then
                selected_row=("${(s/	/)files}")
                selected_file=$selected_row[-1]
+               selected_files=( $selected_file )
                break
            fi
        else
@@ -260,6 +282,7 @@ function fuzzyselectrow() {
     fi
     done
     M_MESSAGE=
+    unset _CURSOR
 }
 
 #
@@ -965,6 +988,7 @@ function numbernine() {
         if [[ "$ZFM_TRUNCATE" -eq 1 ]]; then
             line=${line[-40,-1]}
         fi
+        (( c == _CURSOR )) && line="${bg_bold[$CURSOR_COLOR]}$line${reset_color}"
         print -- "$sub ${csel}$line${cres}"
         let c++
     done
