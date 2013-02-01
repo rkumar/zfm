@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-01 15:28
+# Last update: 2013-02-01 18:21
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -130,6 +130,27 @@ function fuzzyselectrow() {
 
     [[ $reply == "C-c" || $reply == "C-g" ]] && { selected_file=; selected_files=; break }
     [[ -z "$reply" ]] && break
+    case $reply in
+        "C-n") reply="DOWN" # 2013-02-01 - 17:07 
+            ;;
+        "C-p") reply="UP"
+            ;;
+    esac
+    #
+    # space selects, sadly this is all a repetition of the main list
+    # and can go out of sync if we change keys.
+    #
+    [[ $reply == "C-SPACE" ]] && { 
+        if [[ -n "$_MARK" ]]; then
+            for (( i = $_MARK; i <= $_CURSOR; i++ )); do
+                deleted+=( $vpa[$i] )
+            done
+            _MARK=
+        else
+            _MARK=$_CURSOR 
+            reply="SPACE" ; 
+        fi
+    }
     [[ $reply == "SPACE" ]] && { reply=$_CURSOR ; (( _CURSOR++ )) }
     #  check for numeric as some values like "o" can cause abort
     if [[ "$reply" == <1-> ]]; then
@@ -162,7 +183,7 @@ function fuzzyselectrow() {
         print -rl  "         ^ Toggle fuzzy mode"
         print -rl  "         | Toggle 2 columns"
         print -rl  "         = Toggle auto-view"
-        print -rl  "         C-n/C-p Scroll List Full Page"
+        print -rl  "         M-n/M-p Scroll List Full Page"
         print -rl  "         C-d/C-b Scroll cursor $M_SCROLL lines"
         print -rl  "         C-w / C-r Reverse List"
         print -rl  "         Up/Down arrows"
@@ -228,10 +249,10 @@ function fuzzyselectrow() {
             fuzzy_match_toggle
             # remove .*s
             gpatt=$(pattern_toggle $gpatt)
-        elif [[ $reply == "C-n" ]]; then
+        elif [[ $reply == "M-n" ]]; then
             ## scroll list down -- neeeded if more rows than can be seen
             (( sta += rows ))
-        elif [[ $reply == "C-p" ]]; then
+        elif [[ $reply == "M-p" ]]; then
             (( sta -= $rows ))
             (( sta < 0 )) && { sta=0 ; _CURSOR=1 }
         elif [[ $reply == "C-d" ]]; then
@@ -272,9 +293,9 @@ function fuzzyselectrow() {
             else
                 (( _CURSOR = 1 ))
             fi
-        elif [[ $reply == "<" ]]; then
+        elif [[ $reply == "{" ]]; then
             (( _CURSOR = 1 ; sta = 1 ))
-        elif [[ $reply == ">" ]]; then
+        elif [[ $reply == "}" ]]; then
             (( _CURSOR = 1 ; sta = tot ))
         elif [[ $reply == "C-w" || $reply == "C-r" ]]; then
             # sort reverse order so first comes closest to prompt
@@ -282,13 +303,17 @@ function fuzzyselectrow() {
             #  iterm but okay in Terminal.
             let sortrev=1
         elif [[ $reply == ":" ]]; then
-            _text=" ($#deleted) selected files"
+            #_text=" ($#deleted) selected files"
             if [[ $#deleted -eq 0 ]]; then
-                _text=" $vpa[$_CURSOR]"
+                local _file="$vpa[$_CURSOR]"
+                pinfo "File is $_file"
+                zfm_cmd $_file
+            else
+                pinfo "$#deleted files selected including $deleted[1]"
+                zfm_cmd $deleted
             fi
-            vared -c -p "Enter command to run on $_text: " command
-            perror " TODO this "
             pause
+
         elif [[ -n "$ckey" ]]; then
             ## we don't want complex keys added into buffer
         elif [[ $#reply -gt 1 ]]; then
