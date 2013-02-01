@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-01 13:45
+# Last update: 2013-02-01 15:28
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -153,16 +153,17 @@ function fuzzyselectrow() {
             fi
         fi
     elif [[ "$reply" == "?" ]]; then
-        print -rl  "Keys are <CR> Accept selection"
-        print -rl  "         <C-c> Cancel"
+        print -rl  "Keys are <ENTER> Accept selection and return"
+        print -rl  "         <C-c> Cancel (return without selection)"
         print -rl  "         [a-zA-Z] to narrow down search"
-        print -rl  "         [1-9] to add to selection"
+        print -rl  "         [1-9] to add to selection/remove"
+        print -rl  "         SPACE to select/deselect"
         print -rl  "         $ZFM_MENU_KEY menu"
         print -rl  "         ^ Toggle fuzzy mode"
         print -rl  "         | Toggle 2 columns"
         print -rl  "         = Toggle auto-view"
-        print -rl  "         C-n Scroll List"
-        print -rl  "         C-p Scroll List"
+        print -rl  "         C-n/C-p Scroll List Full Page"
+        print -rl  "         C-d/C-b Scroll cursor $M_SCROLL lines"
         print -rl  "         C-w / C-r Reverse List"
         print -rl  "         Up/Down arrows"
         pause
@@ -271,12 +272,23 @@ function fuzzyselectrow() {
             else
                 (( _CURSOR = 1 ))
             fi
-
+        elif [[ $reply == "<" ]]; then
+            (( _CURSOR = 1 ; sta = 1 ))
+        elif [[ $reply == ">" ]]; then
+            (( _CURSOR = 1 ; sta = tot ))
         elif [[ $reply == "C-w" || $reply == "C-r" ]]; then
             # sort reverse order so first comes closest to prompt
             # i chose c-w since C-r not working on my terminal ?? even Alt-x just flashin in
             #  iterm but okay in Terminal.
             let sortrev=1
+        elif [[ $reply == ":" ]]; then
+            _text=" ($#deleted) selected files"
+            if [[ $#deleted -eq 0 ]]; then
+                _text=" $vpa[$_CURSOR]"
+            fi
+            vared -c -p "Enter command to run on $_text: " command
+            perror " TODO this "
+            pause
         elif [[ -n "$ckey" ]]; then
             ## we don't want complex keys added into buffer
         elif [[ $#reply -gt 1 ]]; then
