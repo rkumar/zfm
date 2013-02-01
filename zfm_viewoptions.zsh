@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-01 01:33
+# Last update: 2013-02-01 13:45
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -58,9 +58,6 @@ function fuzzyselectrow() {
     local sta fin sortrev
     sta=1
 
-    ## used in scrolling list
-    integer offset
-    offset=0
     clear
 
     while (true)
@@ -69,12 +66,6 @@ function fuzzyselectrow() {
         ## filter the list on rows (used if more rows than can be viewed
         #fin=$#ff
         (( fin = sta + rows ))
-        (( offset > 0 )) && {
-            (( fin = $#files - offset ))
-            ## setting offset to zero here goes back a bit, but if i don't then sed throws
-            # an error. TODO what is the correct value to reset offset.
-            (( fin < sta )) && { (( fin = sta + 1)) ; (( offset = 0 )) }
-        }
         (( sortrev == 1 )) && { 
             ## reverse sort the list on index order
             files=(${(Oa)files})
@@ -139,7 +130,7 @@ function fuzzyselectrow() {
 
     [[ $reply == "C-c" || $reply == "C-g" ]] && { selected_file=; selected_files=; break }
     [[ -z "$reply" ]] && break
-    [[ $reply == "SPACE" ]] && { reply=$_CURSOR }
+    [[ $reply == "SPACE" ]] && { reply=$_CURSOR ; (( _CURSOR++ )) }
     #  check for numeric as some values like "o" can cause abort
     if [[ "$reply" == <1-> ]]; then
         line="$vpa[$reply]"
@@ -180,7 +171,8 @@ function fuzzyselectrow() {
         #  Handling backspace
         if [[ "$reply" == "BACKSPACE" || "$reply" == "" ]]; then
             if [[ -n "$gpatt" ]]; then
-                gpatt=${gpatt[1,-2]}
+                #gpatt=${gpatt[1,-2]}
+                gpatt[-1]=
                 [[ $gpatt[-2,-1] == ".*" ]] && gpatt=${gpatt[1,-3]}
             fi
         elif [[ "$reply" == '|' ]]; then
@@ -237,29 +229,49 @@ function fuzzyselectrow() {
             gpatt=$(pattern_toggle $gpatt)
         elif [[ $reply == "C-n" ]]; then
             ## scroll list down -- neeeded if more rows than can be seen
-            #(( offset += M_SCROLL ))
             (( sta += rows ))
         elif [[ $reply == "C-p" ]]; then
-            #let offset--
-            #(( offset -= M_SCROLL ))
-            #(( offset < 0 )) && offset=0
             (( sta -= $rows ))
-            (( sta < 0 )) && sta=0
+            (( sta < 0 )) && { sta=0 ; _CURSOR=1 }
+        elif [[ $reply == "C-d" ]]; then
+            ## scroll list down -- neeeded if more rows than can be seen
+            (( _CURSOR += M_SCROLL ))
+            (( _CURSOR > $#vpa )) && { 
+                _CURSOR=$#vpa
+                (( sta += M_SCROLL ))
+            }
+        elif [[ $reply == "C-b" ]]; then
+            (( _CURSOR -= M_SCROLL ))
+            (( _CURSOR < 0 )) && { 
+                _CURSOR=1 
+                (( sta -= M_SCROLL ))
+            }
         elif [[  $reply == "UP" ]]; then
             ## scroll list down -- neeeded if more rows than can be seen
-            #let offset++
             # We should only do this movement if there's more than what's visible.
             (( _CURSOR-- ))
             (( _CURSOR < 1 )) && _CURSOR=1
         elif [[ $reply == "DOWN" ]]; then
             (( _CURSOR++ ))
-            (( _CURSOR > $#vpa )) && _CURSOR=$#vpa
-            let offset--
-            (( offset < 0 )) && offset=0
+            (( _CURSOR > $#vpa )) && { 
+                _CURSOR=$#vpa
+                (( sta += rows ))
+            }
         elif [[ $reply == "PgDn" ]]; then
-            _CURSOR=$#vpa
+            if (( _CURSOR < $#vpa )); then
+                _CURSOR=$#vpa
+            else
+                _CURSOR=$#vpa
+                (( sta += rows ))
+            fi
         elif [[ $reply == "PgUp" ]]; then
-            (( _CURSOR = 1 )) 
+            if (( _CURSOR == 1 )); then
+                (( sta -= rows ))
+                (( sta < 0 )) && sta=0
+            else
+                (( _CURSOR = 1 ))
+            fi
+
         elif [[ $reply == "C-w" || $reply == "C-r" ]]; then
             # sort reverse order so first comes closest to prompt
             # i chose c-w since C-r not working on my terminal ?? even Alt-x just flashin in
