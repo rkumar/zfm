@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-01 17:04
+#  Last update: 2013-02-02 01:41
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -199,7 +199,7 @@ function list_printer() {
         #M_MESSAGE=
         if [[ $? != 0 ]]; then
             # maybe ^C
-            pdebug "Got C-c ? $reply, $key"
+            pdebug "Got error from _read_keys: $reply, $key"
             key=''
             ans=''
             #break
@@ -208,14 +208,22 @@ function list_printer() {
             ans="${reply}"
             #pdebug "Got ($reply)"
         fi
-        #print 2013-01-21 - 00:09 due to \r in print
-        #clear # trying this out # commenting out, if we don't reprint then clearing was wrong
-        #[[ $ans = "C-i" ]] && ans="TAB" # 2013-01-28 - 13:07 
-        #[[ $ans = "C-j" ]] && ans="ENTER" # 2013-01-28 - 13:07 
-        #[[ $ans = " " ]] && ans="SPACE" # 2013-01-28 - 13:07 , so that they show up on help clearly
-        ### giving names so easier to find and use
-        #[[ $ans = "" ]] && ans="ESCAPE"
-        #[[ $ans = "" ]] && ans="BACKSPACE"
+        if [[ -n $ZFM_MODE ]]; then
+            if [[ -z $ZFM_MODE_MAP ]]; then
+                local km=keymap_$ZFM_MODE
+                ZFM_MODE_MAP=(${(Pkv)km})
+                pinfo "initialized zfm_mode_map to $ZFM_MODE: $#ZFM_MODE_MAP"
+            else
+            fi
+            binding=$ZFM_MODE_MAP[$ans]
+            if [[ -n $binding ]]; then
+                $binding
+                ans=
+                break
+            else
+                perror "$ans not bound in $ZFM_MODE: $#ZFM_MODE_MAP ${(k)ZFM_MODE_MAP}"
+            fi
+        else
         case $ans in
             "")
                 # BLANK blank
@@ -394,6 +402,7 @@ function list_printer() {
                             break
                         fi
         esac
+        fi
 
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
         ## was causing the unused error to keep popping up when no rows were returned
@@ -655,6 +664,7 @@ M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/01"
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
 typeset -Ag FILES_HASH
+typeset -Ag ZFM_MODE_MAP
 
 selectedfiles=()
 
@@ -1185,6 +1195,13 @@ function zfm_get_key_binding() {
     [[ -n $binding ]] && ret=0
     [[ -z $binding ]] && pdebug "Nothing bound for $1"
     return $ret
+}
+function zfm_set_mode() {
+    export ZFM_MODE=$1
+}
+function zfm_unset_mode() {
+    unset ZFM_MODE
+    ZFM_MODE_MAP=()
 }
 ## A separate mapping namespace
 # If we use a separate hash we can print out mappings for C-x or prompt easily
