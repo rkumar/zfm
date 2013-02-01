@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-01 13:24
+#  Last update: 2013-02-01 17:04
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -364,7 +364,7 @@ function list_printer() {
 
 
             *) 
-                # commented 2013-01-31 - 01:25  key reverts back to top after C-n
+                # commented 2013-01-31 - 01:25  key reverts back to top after 
                 #(( sta = 1 ))
                 # 2013-01-24 - 20:38 moved backspace up
 
@@ -428,6 +428,14 @@ function zfm_scroll_up () {
         #(( CURSOR = VPACOUNT - M_SCROLL ))
     }
     (( CURSOR < 1 )) && CURSOR=1
+}
+function zfm_go_top () {
+    CURSOR=1
+    sta=1
+}
+function zfm_go_bottom () {
+    CURSOR=$VPACOUNT
+    (( sta = tot - VPACOUNT + 1 ))
 }
 function patt_toggle() {
     local gpatt=$1
@@ -603,7 +611,7 @@ function print_help_keys() {
     str+=$(cat <<EndHelp
 
     $ZFM_MENU_KEY	- Invoke menu (default: backtick)
-    $ZFM_FORWARD_KEY	- Paging of output (default C-n)
+    $ZFM_FORWARD_KEY	- Paging of output (default M-n)
     $ZFM_BACKWARD_KEY	- Previous page of listing (default C-p)
     ^	- toggle match from start of filename
     $ZFM_GOTO_DIR_KEY	- Enter directory name to jump to
@@ -664,8 +672,8 @@ export last_viewed_files
 
 #  defaults KEYS
 #ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
-ZFM_FORWARD_KEY=${ZFM_FORWARD_KEY:-'C-n'}  # trying out enter if files have spaces and i need to type a space
-ZFM_BACKWARD_KEY=${ZFM_BACKWARD_KEY:-'C-p'}  # trying out enter if files have spaces and i need to type a space
+ZFM_FORWARD_KEY=${ZFM_FORWARD_KEY:-'M-n'}  # trying out enter if files have spaces and i need to type a space
+ZFM_BACKWARD_KEY=${ZFM_BACKWARD_KEY:-'M-p'}  # trying out enter if files have spaces and i need to type a space
 ZFM_OPEN_FILES_KEY=${ZFM_OPEN_FILES_KEY:-'C-o'}  # pressing selects whatever cursor is on
 ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
 ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
@@ -676,7 +684,7 @@ ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # toggle selection mode
 ZFM_SORT_KEY=${ZFM_SORT_KEY:-"%"}  # change sort options
 ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change filter options
 ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
-ZFM_TOGGLE_FILE_KEY=${ZFM_TOGGLE_FILE_KEY:-"C-SPACE"}  # change toggle options
+ZFM_TOGGLE_FILE_KEY=${ZFM_TOGGLE_FILE_KEY:-"SPACE"}  # change toggle options
 ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
 ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
 ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # quit application
@@ -1066,25 +1074,7 @@ function init_key_function_map() {
                     cx_map
                 "C-x d"
                     zfm_toggle_expanded_state
-                "C-d"
-                    zfm_scroll_down
-                "C-b"
-                    zfm_scroll_up
                     )
-    zfm_bind_key "M-x" "zfm_views"
-    zfm_bind_key "M-o" "settingsmenu"
-    zfm_bind_key "M-s" "sortoptions"
-    zfm_bind_key "M-f" "filteroptions"
-    zfm_bind_key "F1" "print_help_keys"
-    zfm_bind_key "F2" "goto_dir"
-    zfm_bind_key "|" "zfm_filter_list"
-    zfm_bind_key "C-e" "zfm_edit_pattern"
-    zfm_bind_key "M-e" "zfm_exclude_pattern"
-    zfm_bind_key "M-/" "zfm_ffind"
-    zfm_bind_key "ML '" "visited_dirs"
-    #zfm_bind_key "C-x '" "visited_dirs"
-    zfm_bind_key "ML v" "visited_files"
-    zfm_bind_key "$ZFM_SIBLING_DIR_KEY" sibling_dir
 }
 function init_file_menus() {
     # edit these or override in ENV
