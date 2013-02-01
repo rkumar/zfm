@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-01 18:21
+# Last update: 2013-02-01 22:41
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -195,7 +195,9 @@ function fuzzyselectrow() {
             if [[ -n "$gpatt" ]]; then
                 #gpatt=${gpatt[1,-2]}
                 gpatt[-1]=
-                [[ $gpatt[-2,-1] == ".*" ]] && gpatt=${gpatt[1,-3]}
+                ## remove .* from end of pattern
+                #[[ $gpatt[-2,-1] == ".*" ]] && gpatt=${gpatt[1,-3]}
+                gpatt=${gpatt%.*}
             fi
         elif [[ "$reply" == '|' ]]; then
             if [[ $ZFM_AUTO_COLUMNS == "1" ]]; then
