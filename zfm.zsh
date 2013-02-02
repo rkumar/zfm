@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-02 01:41
+#  Last update: 2013-02-02 15:58
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -209,19 +209,40 @@ function list_printer() {
             #pdebug "Got ($reply)"
         fi
         if [[ -n $ZFM_MODE ]]; then
+
+            ## on entering a mode we create the keymap
+            #
             if [[ -z $ZFM_MODE_MAP ]]; then
                 local km=keymap_$ZFM_MODE
                 ZFM_MODE_MAP=(${(Pkv)km})
                 pinfo "initialized zfm_mode_map to $ZFM_MODE: $#ZFM_MODE_MAP"
             else
             fi
+            ZFM_KEY=$ans
             binding=$ZFM_MODE_MAP[$ans]
             if [[ -n $binding ]]; then
                 $binding
                 ans=
                 break
             else
+                # TODO
+                # a mode may want charactuers and numbers to do its thing
+                # so we should call some general method to handle these
+                binding=
+                if [[ "$ans" == <0-9> ]]; then
+                    binding=$ZFM_MODE_MAP[INT]
+                    pinfo "inside int ... $binding"
+                elif [[ $ans =~ ^[a-zA-Z]$ ]]; then
+                    ## should only be one character otherwise C- and M- etc will all come
+                    binding=$ZFM_MODE_MAP[CHAR]
+                    pinfo "inside CHAR ... $binding"
+                elif [[ $#ans -eq 1 ]]; then
+                    binding=$ZFM_MODE_MAP[OTHER]
+                fi
+                [[ -n $binding ]] && $binding $ZFM_KEY
+                [[ -z $binding ]] && {
                 perror "$ans not bound in $ZFM_MODE: $#ZFM_MODE_MAP ${(k)ZFM_MODE_MAP}"
+            }
             fi
         else
         case $ans in
@@ -300,6 +321,10 @@ function list_printer() {
                 [[ -n "$selection" ]] && break
                 ;;
             $ZFM_QUIT_KEY)
+                break
+                ;;
+            "C-q")
+                # sometimes stuff fails to load quit key so i need a way out
                 break
                 ;;
             [a-zA-Z_0\.\ \*])
