@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-01-31 16:56
+#  Last update: 2013-02-02 20:58
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -42,13 +42,6 @@ function cursor_down () {
     # if exceeding page, try a page down
     (( CURSOR > $#vpa )) && { zfm_next_page  }
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
-    #selected=$vpa[$CURSOR]
-    #if [[ -d "$selected" ]]; then
-        #M_MESSAGE="=> Press Enter to cd into directory"
-    #else
-        #M_MESSAGE="=> Press Enter to run command on file"
-        #M_MESSAGE=
-    #fi
 }
 function cursor_up () {
     PREV_CURSOR=$CURSOR
@@ -59,11 +52,10 @@ function cursor_up () {
     M_MESSAGE=
     (( CURSOR < 1 )) && zfm_prev_page
     (( CURSOR < 1 )) && CURSOR=1
-    #(( CURSOR == 1 )) && { M_MESSAGE="=>  <UP>:parent, <LEFT>:popd" }
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 function _my_goto_parent() {
-    [[ $CURSOR -le 1 ]] && { goto_parent_dir ; return 1 }
+    [[ $CURSOR -le 1 ]] && { zfm_goto_parent_dir ; return 1 }
     return 0
 }
 ## goes to files in next column
@@ -168,9 +160,9 @@ function select_current_line () {
 function on_enter_row() {
     selected=$vpa[$CURSOR]
     if [[ -d "$selected" ]]; then
-        M_MESSAGE="=> Press Enter to cd into directory"
+        #M_MESSAGE="=> Press Enter to cd into directory"
     else
-        M_MESSAGE="=> Press Enter to run command on file"
+        #M_MESSAGE="=> Press Enter to run command on file"
         #
         ## only display details in multicol listing when file details are not shown
         if [[ $LIST_COLS -gt 1 ]]; then
