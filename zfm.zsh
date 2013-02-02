@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-02 15:58
+#  Last update: 2013-02-02 17:51
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -32,6 +32,10 @@ set_auto_view
 stty intr '^-'
 # this is strangely eating up C-o
 stty flush '^-'
+# so we can trap C-\ to abort
+stty quit '^-'
+# so we can trap C-q to quit
+stty start '^-'
 
 #
 # for printing details 
@@ -208,7 +212,19 @@ function list_printer() {
             ans="${reply}"
             #pdebug "Got ($reply)"
         fi
-        if [[ -n $ZFM_MODE ]]; then
+        if [[ $ans == "C-q" ]]; then
+            if [[ -n $ZFM_MODE ]]; then
+                zfm_unset_mode
+            else
+                QUITTING=true
+                break
+            fi
+        elif [[ $ans == '' ]]; then
+            print
+            print "Aborting ..."
+            QUITTING=true
+            break
+        elif [[ -n $ZFM_MODE ]]; then
 
             ## on entering a mode we create the keymap
             #
@@ -1225,6 +1241,7 @@ function zfm_set_mode() {
     export ZFM_MODE=$1
 }
 function zfm_unset_mode() {
+    pinfo "Quitting mode $ZFM_MODE"
     unset ZFM_MODE
     ZFM_MODE_MAP=()
 }
