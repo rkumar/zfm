@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-02 17:51
+#  Last update: 2013-02-03 02:10
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -226,40 +226,50 @@ function list_printer() {
             break
         elif [[ -n $ZFM_MODE ]]; then
 
-            ## on entering a mode we create the keymap
-            #
-            if [[ -z $ZFM_MODE_MAP ]]; then
-                local km=keymap_$ZFM_MODE
-                ZFM_MODE_MAP=(${(Pkv)km})
-                pinfo "initialized zfm_mode_map to $ZFM_MODE: $#ZFM_MODE_MAP"
-            else
+            if [[ -z $MODE_KEY_HANDLER ]]; then
+                MODE_KEY_HANDLER=${ZFM_MODE}_key_handler
             fi
             ZFM_KEY=$ans
-            binding=$ZFM_MODE_MAP[$ans]
-            if [[ -n $binding ]]; then
-                $binding
-                ans=
-                break
-            else
-                # TODO
-                # a mode may want charactuers and numbers to do its thing
-                # so we should call some general method to handle these
-                binding=
-                if [[ "$ans" == <0-9> ]]; then
-                    binding=$ZFM_MODE_MAP[INT]
-                    pinfo "inside int ... $binding"
-                elif [[ $ans =~ ^[a-zA-Z]$ ]]; then
-                    ## should only be one character otherwise C- and M- etc will all come
-                    binding=$ZFM_MODE_MAP[CHAR]
-                    pinfo "inside CHAR ... $binding"
-                elif [[ $#ans -eq 1 ]]; then
-                    binding=$ZFM_MODE_MAP[OTHER]
-                fi
-                [[ -n $binding ]] && $binding $ZFM_KEY
-                [[ -z $binding ]] && {
-                perror "$ans not bound in $ZFM_MODE: $#ZFM_MODE_MAP ${(k)ZFM_MODE_MAP}"
-            }
-            fi
+            $MODE_KEY_HANDLER $ZFM_KEY
+            ## on entering a mode we create the keymap
+            #
+            #if [[ -z $ZFM_MODE_MAP ]]; then
+                #local km=keymap_$ZFM_MODE
+                #ZFM_MODE_MAP=(${(Pkv)km})
+                #pinfo "initialized zfm_mode_map to $ZFM_MODE: $#ZFM_MODE_MAP"
+            #else
+            #fi
+            #ZFM_KEY=$ans
+            #binding=$ZFM_MODE_MAP[$ans]
+            #if [[ -n $binding ]]; then
+                #$binding
+                #ans=
+                ## NOTE, i think we should only break if the dir has changed
+                #break
+            #else
+                ## TODO
+                ## a mode may want charactuers and numbers to do its thing
+                ## so we should call some general method to handle these
+                #binding=
+                #if [[ "$ans" == <0-9> ]]; then
+                    #binding=$ZFM_MODE_MAP[INT]
+                    #pinfo "inside int ... $binding"
+                #elif [[ $ans =~ ^[a-zA-Z]$ ]]; then
+                    ### should only be one character otherwise C- and M- etc will all come
+                    #binding=$ZFM_MODE_MAP[CHAR]
+                    #pinfo "inside CHAR ... $binding"
+                #elif [[ $#ans -eq 1 ]]; then
+                    #binding=$ZFM_MODE_MAP[OTHER]
+                    ##pinfo "inside OTHER ... $binding"
+                #fi
+                #[[ -n $binding ]] && { $binding $ZFM_KEY }
+                ## NOTE, i think we should only break if the dir has changed
+                #[[ -z $binding ]] && {
+                    #perror "$ans not bound in $ZFM_MODE: $#ZFM_MODE_MAP ${(k)ZFM_MODE_MAP}"
+                #}
+                #ans=
+                #break
+            #fi
         else
         case $ans in
             "")
@@ -286,6 +296,7 @@ function list_printer() {
             [1-9])
                 # KEY PRESS key
                 if [[ -n "$M_FULL_INDEXING" ]]; then
+                    # use get_full_indexing_filename $ans
                     iix=$MFM_NLIDX[(i)$ans]
                     pdebug "got iix $iix for $ans"
                     [[ -n "$iix" ]] && selection=$vpa[$iix]
@@ -348,6 +359,7 @@ function list_printer() {
                 (( sta = 1 ))
 
                 if [[ -n "$M_FULL_INDEXING" ]]; then
+                    # use get_full_indexing_filename $ans
                     iix=$MFM_NLIDX[(i)$ans]
                     pdebug "iix was $iix for $ans"
                     [[ -n "$iix" ]] && { selection=$vpa[$iix]; break }
@@ -699,8 +711,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.7-c"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/01"
+ZFM_VERSION="0.1.8-alpha"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/02"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -799,31 +811,7 @@ sta=1
             esac
             }
 
-        if [[ -d "$selection" ]]; then
-            [[ -n $ZFM_VERBOSE ]] && print "got a directory $selection"
-            $ZFM_CD_COMMAND $selection
-            post_cd
-        elif [[ -f "$selection" ]]; then
-            # although nice to immediately open, but what if its not a text file
-            # and what if i want to do something else
-            #vim $selection
-            if [[ -n "$M_SELECTION_MODE" ]]; then
-                selection=$PWD/$selection
-                zfm_toggle_file $selection
-            else
-                fileopt $selection
-                #pause 2012-12-26 - 00:01 pauses after vim which is irritating
-                # but pause could be required after cat or similar command
-            fi
-        else
-            [[ -n "$selection" ]] && {
-            # sometimes comes here on a link (esp broken) and fileopt will check for -f and reject
-                pbold "Don't know how to handle $selection"
-                file $selection
-                fileopt $selection
-                pause
-            }
-        fi
+            [[ -n $selection ]] && zfm_open_file $selection
     done
     print "bye"
     # do this only if is different from invoking dir
@@ -833,6 +821,34 @@ sta=1
     }
 } # myzfm
 
+function zfm_open_file() {
+    local selection=$1
+    [[ -z $selection ]] && selection=$vpa[$CURSOR]
+
+    if [[ -d "$selection" ]]; then
+        [[ -n $ZFM_VERBOSE ]] && print "got a directory $selection"
+        $ZFM_CD_COMMAND $selection
+        post_cd
+    elif [[ -f "$selection" ]]; then
+        # although nice to immediately open, but what if its not a text file
+        # and what if i want to do something else
+        #vim $selection
+        if [[ -n "$M_SELECTION_MODE" ]]; then
+            selection=$PWD/$selection
+            zfm_toggle_file $selection
+        else
+            fileopt $selection
+        fi
+    else
+        [[ -n "$selection" ]] && {
+            # sometimes comes here on a link (esp broken) and fileopt will check for -f and reject
+            pbold "Don't know how to handle $selection"
+            file $selection
+            fileopt $selection
+            pause
+        }
+    fi
+}
 ## line numbering function, also takes care of widths and coloring since these are interdependent
 #  and can clobber one another.
 ## Earlier this acted as a filter and read lines and printed back output, But now we cache
@@ -1086,9 +1102,9 @@ function init_key_function_map() {
     typeset -gA zfm_keymap
     # testing out key mappings with different kinds of keys
     zfm_keymap=("$ZFM_GOTO_PARENT_KEY"
-                    goto_parent_dir
+                    zfm_goto_parent_dir
                 "$ZFM_GOTO_DIR_KEY"
-                    goto_dir
+                    zfm_goto_dir
                 $ZFM_SORT_KEY
                     sortoptions
                 $ZFM_FILTER_KEY
@@ -1244,6 +1260,7 @@ function zfm_unset_mode() {
     pinfo "Quitting mode $ZFM_MODE"
     unset ZFM_MODE
     ZFM_MODE_MAP=()
+    MODE_KEY_HANDLER=
 }
 ## A separate mapping namespace
 # If we use a separate hash we can print out mappings for C-x or prompt easily
@@ -1299,7 +1316,7 @@ function execute_hooks() {
     done
 }
 function chdir_message() {
-    [[ $#param -gt 0 ]] && M_MESSAGE="$M_HELP   <LEFT>: popd   <UP>: Parent dir"
+    #[[ $#param -gt 0 ]] && M_MESSAGE="$M_HELP   <LEFT>: popd   <UP>: Parent dir"
 }
 function fileopen_hook () {
     [[ -z $1 ]] && { perror "fileopen_hook got no files. Check caller"; pause; }
@@ -1375,12 +1392,12 @@ function zfm_show_menu() {
         }
     fi
 }
-function goto_parent_dir() {
+function zfm_goto_parent_dir() {
     #cd ..
     $ZFM_CD_COMMAND ..
     post_cd
 }
-function goto_dir() {
+function zfm_goto_dir() {
     # push directory before changing
     push_pwd
     #GOTO_PATH="/"
@@ -1599,6 +1616,13 @@ function zfm_toggle_expanded_state() {
             param+=( $f )
         done
     fi
+}
+function zfm_get_full_indexing_filename() {
+    local ans=$1
+    iix=$MFM_NLIDX[(i)$ans]
+    pdebug "got iix $iix for $ans"
+    [[ -n "$iix" ]] && selection=$vpa[$iix]
+    pdebug "selection was $selection"
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
