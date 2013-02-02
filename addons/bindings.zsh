@@ -6,7 +6,7 @@
     zfm_bind_key "M-s" "sortoptions"
     zfm_bind_key "M-f" "filteroptions"
     zfm_bind_key "F1" "print_help_keys"
-    zfm_bind_key "F2" "goto_dir"
+    zfm_bind_key "F2" "zfm_goto_dir"
     zfm_bind_key "|" "zfm_filter_list"
     zfm_bind_key "C-e" "zfm_edit_pattern"
     zfm_bind_key "M-e" "zfm_exclude_pattern"
