@@ -15,6 +15,13 @@
     #zfm_bind_key "C-x '" "visited_dirs"
     zfm_bind_key "ML v" "visited_files"
     zfm_bind_key "$ZFM_SIBLING_DIR_KEY" sibling_dir
+    zfm_keymap+=(
+        "/"    zfm_edit_regex
+        "M-n"  zfm_next_page
+        "M-p"  zfm_prev_page
+        )
+
+
 
     ## movement related
     #
