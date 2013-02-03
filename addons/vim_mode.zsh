@@ -5,26 +5,10 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-03 02:21
+#  Last update: 2013-02-03 11:29
 # ----------------------------------------------------------------------------- #
 function VIM_key_handler() {
     local key=$1
-    #if [[ -z $ZFM_MODE_MAP ]]; then
-    #local km=keymap_$ZFM_MODE
-    #ZFM_MODE_MAP=(${(Pkv)km})
-    #pinfo "initialized zfm_mode_map to $ZFM_MODE: $#ZFM_MODE_MAP"
-    #else
-    #fi
-    #binding=$keymap_VIM[$key]
-    #if [[ -n $binding ]]; then
-        #$binding
-        #key=
-        ## NOTE, i think we should only break if the dir has changed
-        #return 0
-    #else
-        # TODO
-        # a mode may want charactuers and numbers to do its thing
-        # so we should call some general method to handle these
         if [[ "$key" == <0-9> ]]; then
             vim_int_handler $key
         elif [[ $key =~ ^[a-zA-Z]$ ]]; then
@@ -40,6 +24,8 @@ function VIM_key_handler() {
                 $binding
             else
                 ## TODO poach on global functions
+                zfm_get_key_binding $ZFM_KEY
+                [[ -n $binding ]] && $binding
             fi
         return
     fi
