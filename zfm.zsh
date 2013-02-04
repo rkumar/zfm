@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-03 17:46
+#  Last update: 2013-02-04 18:49
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -137,6 +137,7 @@ function list_printer() {
             ## these lines must come after any filtering, othewise totals displayed
             ## are wrong
             let tot=$#viewport  # store the size of matching rows prior to paging it. 2013-01-09 - 01:37 
+            END=$tot
             [[ $fin -gt $tot ]] && fin=$tot
             
             ## this line replaces the sed filter
@@ -144,6 +145,8 @@ function list_printer() {
             vpa=("${(@f)$(print -rl -- $viewport)}")
             #vpa=("${(f)=viewport}")
             VPACOUNT=$#vpa
+            PAGE_END=$VPACOUNT
+            PAGE_TOP=0
             ZFM_LS_L=
             if (( $VPACOUNT <  (ZFM_LINES -2 ) )); then
                 # need to account for title and read lines at least and message line
@@ -233,10 +236,15 @@ function list_printer() {
                         (( sta = 1 ))
                         PATT=""
                         ;;
+                    $ZFM_QUIT_KEY)
+                        QUITTING=true
+                        break
+                        ;;
                     [1-9])
                         # KEY PRESS key
                         if [[ -n "$M_FULL_INDEXING" ]]; then
                             zfm_get_full_indexing_filename $ans
+                            break
                             #iix=$MFM_NLIDX[(i)$ans]
                             #pdebug "got iix $iix for $ans"
                             #[[ -n "$iix" ]] && selection=$vpa[$iix]
@@ -293,6 +301,7 @@ function list_printer() {
 
                         if [[ -n "$M_FULL_INDEXING" ]]; then
                             zfm_get_full_indexing_filename $ans
+                            break
                             #iix=$MFM_NLIDX[(i)$ans]
                             #pdebug "iix was $iix for $ans"
                             #[[ -n "$iix" ]] && { selection=$vpa[$iix]; break }
@@ -357,6 +366,9 @@ function list_printer() {
                         ;; 
 
                     *)
+                        zfm_exec_key_binding $ans
+                            ans=
+                            break
                         zfm_get_key_binding $ans
                         if [[ -n $binding ]]; then
                             $binding
@@ -382,8 +394,11 @@ function list_printer() {
                 break
             fi
         else
-            zfm_get_key_binding $ans
-            [[ -n $binding ]] && { $binding ; ans= ; break }
+            [[ $ZFM_QUIT_KEY == $ans ]] && { QUITTING=true; ans= ; break; }
+
+            zfm_exec_key_binding $ans
+            [[ -n $binding ]] && {  ans= ; break }
+            #[[ -n $binding ]] && { $binding ; ans= ; break }
         fi
 
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
@@ -640,8 +655,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.8-alpha"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/02"
+ZFM_VERSION="0.1.9-alpha"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/03"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -1072,6 +1087,8 @@ function init_key_function_map() {
                     zfm_toggle_expanded_state
                 "i"
                     zfm_insert_mode_init
+                    "I"
+                    "zfm_set_mode INS"
                     )
 }
 function init_file_menus() {
@@ -1182,6 +1199,48 @@ function zfm_get_key_binding() {
     ret=1
     [[ -n $binding ]] && ret=0
     [[ -z $binding ]] && pdebug "Nothing bound for $1"
+    return $ret
+}
+# fetch and execute binding for a key
+function zfm_exec_key_binding() {
+    binding=$zfm_keymap[$1]
+    ret=1
+    if [[ -n $binding ]]; then
+        ret=0
+        M_MESSAGE=
+        #
+        zfm_exec_binding $binding
+        ret=$?
+    else
+        perror "Nothing bound for $1"
+    fi
+    return $ret
+}
+## executes given binding, so this can be from anywhere, some other keymap too
+function zfm_exec_binding() {
+        ## if the bding is a single word then execute it as is
+        # if there's a space then the first word is the function rest is argument
+        #  so split it and execute it -- eval will not work since it will be in another process
+        #  I could have used a split, but don't want any space issues happening at some point.
+        #   columns=("${(s/ /)binding}")
+    local binding=$1
+    [[ -z $binding ]] && return 1
+    local ret=1
+    local sp=" "
+    ix=$binding[(i)$sp]
+    if [[ $ix -le $#binding ]]; then
+        let ix--
+        b=$binding[1,$ix]
+        # jump space
+        (( ix += 2 ))
+        args=$binding[$ix,-1]
+        M_MESSAGE="exec $b with $args"
+        $b $args
+        ret=$?
+    else
+        $binding
+        ret=$?
+    fi
     return $ret
 }
 function zfm_set_mode() {
@@ -1525,9 +1584,15 @@ function zfm_toggle_file() {
         selectedfiles[i]=()
         pinfo "File $selection unselected"
     else
-        selectedfiles+=( $selection )
+        zfm_add_to_selection $selection
         pinfo "Adding $selection to array, $#selectedfiles "
     fi
+}
+# add given file to selection, $PWD should be prepended to it or it won't highlight
+#
+zfm_add_to_selection() {
+    local selection="$1"
+    selectedfiles+=( $selection )
 }
 ## This expands dir under cursor, actually toggles expanded state
 #  This places dir name in an array, however, it keeps only final part of dir not complete
