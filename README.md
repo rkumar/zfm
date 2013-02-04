@@ -148,6 +148,20 @@ files to interface with autojump or whatever other utility you use. I'd rather u
 
 A summary of version-wise changes. 
 
+###0.1.8###
+
+    * since about 0.1.7 a VIM mode has been introduced. Check bindings to see how to enter it.
+    Currently Leader-z (\-z). You can run your favorite "gg" "12j", "k", "gh", "o" etc.
+    Most mapping are from vim. I am taking some shortcuts from Vimperator such as "f" for hints 
+    (full index toggling in our case), some from gmail ("o" for opening file under cursor, "x"
+    for toggling selection), and some from vifm ("gh" goto parent dir).
+
+    I've made the earlier default mode into INS mode (in which as you type filtering happens). 
+    However, those of us used to vim cannot stop typing j and k.
+
+    I am working out the MODE thing. Should vim shortcuts just be an addition to the existing mode (as in gmails web interface), or should it totally replace the same. At present, I am trying to ensure that VIM mode still respects the earlier 
+    mappings so one does not need to learn a new set of mapping from those in the earlier mode. Should be able to move effortlessly between INS and VIM mode.
+
 ###0.1.1###
 
 	*  Trying to not print if no change, like an unused key -- actually that's 
