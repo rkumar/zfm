@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-04 18:49
+#  Last update: 2013-02-06 01:15
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -146,7 +146,7 @@ function list_printer() {
             #vpa=("${(f)=viewport}")
             VPACOUNT=$#vpa
             PAGE_END=$VPACOUNT
-            PAGE_TOP=0
+            PAGE_TOP=1
             ZFM_LS_L=
             if (( $VPACOUNT <  (ZFM_LINES -2 ) )); then
                 # need to account for title and read lines at least and message line
@@ -590,6 +590,7 @@ function zfm_refresh() {
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
     restore_exoanded_state
     myopts=("${(@f)$(print -rl -- $param)}")
+    sms "Rescanned..."
 }
 
 ## This will ensure that when you return to the directory where
@@ -833,6 +834,22 @@ function numberlines() {
         (( c == CURSOR )) && cc=$CURSOR_MARK
         if [[ -n "$M_FULL_INDEXING" ]]; then
             sub=$nlidx[$c]
+        elif [[ $ZFM_NUMBERING == "ABSOLUTE" ]]; then
+            ## This is triggered by vim when we do a "g"
+            sub=$c
+        elif [[ $ZFM_NUMBERING == "RELATIVE" ]]; then
+            ## This is triggered by vim when we do a j or k
+            #sub=$c
+            if [[ $c -lt $CURSOR ]]; then
+                (( sub = CURSOR - c   ))
+            elif [[ $c -gt $CURSOR ]]; then 
+                (( sub = c - CURSOR  ))
+            else 
+                ## instead of zero show actual pos so some calculations can be done
+                sub=$c
+            fi
+        elif [[ $ZFM_MODE == "VIM" ]]; then
+            sub=$c
         else
             sub=$c
 
@@ -1234,7 +1251,7 @@ function zfm_exec_binding() {
         # jump space
         (( ix += 2 ))
         args=$binding[$ix,-1]
-        M_MESSAGE="exec $b with $args"
+        M_MESSAGE="exec $b with $args, m=$MULTIPLIER, s=$M_SELECTOR"
         $b $args
         ret=$?
     else
@@ -1591,7 +1608,9 @@ function zfm_toggle_file() {
 # add given file to selection, $PWD should be prepended to it or it won't highlight
 #
 zfm_add_to_selection() {
-    local selection="$1"
+    #local selection="$1"
+    local selection
+    selection=($@)
     selectedfiles+=( $selection )
 }
 ## This expands dir under cursor, actually toggles expanded state
@@ -1632,6 +1651,15 @@ function zfm_edit_regex() {
 }
 function zfm_insert_mode_init() {
     zfm_set_mode "INS"
+}
+function mess() {
+    M_MESSAGE=$1
+}
+function clear_mess() {
+    M_MESSAGE=$M_HELP
+}
+function sms() {
+    M_MESSAGE="$M_HELP [$1]"
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
