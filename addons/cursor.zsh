@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-02 20:58
+#  Last update: 2013-02-06 01:31
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -129,14 +129,28 @@ ceiling_divide() {
 # typically mapped to PgUp
 function cursor_top () {
     PREV_CURSOR=$CURSOR
-    CURSOR=1
+    #if [[ $CURSOR -eq 1 ]]; then
+        #(( CURSOR = 0 ))
+    #else
+        #CURSOR=1
+    #fi
+    if [[ $CURSOR -gt 1 ]]; then
+        (( CURSOR = 1 ))
+    else
+    fi
+        zfm_prev_page
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 #
 # typically mapped to PgDn
 function cursor_bottom () {
     PREV_CURSOR=$CURSOR
-    CURSOR=$#vpa
+    #if [[ $CURSOR -eq $VPACOUNT ]]; then
+        #(( CURSOR = VPACOUNT + 1 ))
+    #else
+        #CURSOR=$#vpa
+    #fi
+    zfm_next_page
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 function select_current_line () {
