@@ -5,13 +5,14 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-04 20:39
+#  Last update: 2013-02-06 01:18
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     zfm_set_mode "VIM"
     M_MESSAGE="Welcome to VIM Mode. Quit using q z or C-q"
     MULTIPLIER=""
     PENDING=()
+    PENDING_KEY=
     [[ -n $M_VIMMODE_LOADED ]] && return 1
     export M_VIMMODE_LOADED=1
     typeset -Ag keymap_VIM
@@ -30,15 +31,14 @@ function vimmode_init() {
     # does not do an eval, it executes the method and i don't want an eval happening
     vim_bind_key "g" "vim_set_pending vim_goto_line"
     ## actually G defaults to EOF otherwise it goes to line of MULTI
-    #vim_bind_key "G" "vim_motion END"
     vim_bind_key "G" "vim_goto_end"
+    vim_bind_key "g d" "vim_goto_next_dir"
+    vim_bind_key "g b" "zfm_popd"
+    vim_bind_key "s" "vim_set_selector selected"
+    vim_bind_key "S" "vim_set_selector unselected"
+    vim_bind_key "a" "vim_set_selector all"
     vim_bind_key "H" "vim_motion PAGE_TOP"
     vim_bind_key "L" "vim_motion PAGE_END"
-    #vim_bind_key "g g" "vim_goto_line"
-    #vim_bind_key "G" "zfm_go_bottom"
-    #vim_bind_key "g $" "zfm_go_bottom"
-    #vim_bind_key "y" "vim_set_pending vim_yank"
-    #vim_bind_key "d" "vim_set_pending vim_delete"
     vim_bind_key "y" "vim_set_pending zfm_add_to_selection"
     vim_bind_key "d" "vim_set_pending $ZFM_RM_COMMAND"
     vim_bind_key "o" "vim_set_pending $EDITOR"
@@ -110,40 +110,128 @@ function vim_bind_key() {
 # a motion command or the same char. So we set the command as pending a motion command.
 # If a yy or dd happends then call that same command. Else push that command onto pending stack.
 function vim_set_pending() {
+    ZFM_NUMBERING="ABSOLUTE"
     local f=$1
+    local k=$ZFM_KEY
+    ## selector comes at end only must clear off earlier
+    #M_SELECTOR=
     if [[ -n $PENDING ]]; then
         if [[ $PENDING[-1] == $f ]]; then
             PENDING[-1]=()
+            PENDING_KEY=
+            M_MESSAGE="$M_HELP"
             #zfm_exec_binding $f
             vim_exec $f
             return
         fi
     fi
+    M_MESSAGE="$M_HELP [$ans PENDING either $ans or motion $MULTIPLIER, $M_SELECTOR]"
     PENDING+=( $f )
+    PENDING_KEY=$k
 }
 function vim_exec() {
     # first check mult
     # then check range
     # else current cursor
     local f=$1
+    ## goto line requires only multiplier not file names
+    # This was preventing gg from working
+    # But this means this can't work with selectors
+    [[ $f == "vim_goto_line" ]] && { $f ; return 0 }
+
     local n=$MULTIPLIER
     if [[ -n $MULTIPLIER ]]; then
         RANGE_START=$CURSOR
         (( RANGE_END = CURSOR + MULTIPLIER - 1 ))
-        MULTIPLIER=
+        ## cannot do this for vim_goto_line uses MULTIPLIER
+        #MULTIPLIER=
     fi
     # what if I want to send file names together
     # such as to vim, so they open in one process 
     if [[ -n $RANGE_START ]]; then
-        for (( i = $RANGE_START; i <= $RANGE_END; i++ )); do
-            ## this will not work in the case of vim_goto_line which expect number not filename
-            # actually we need to send this to zfm_exec_binding and not just execit straight
-            $f $PWD/$vpa[$i] 
-        done
+        ## Some commands expect file names one by one such as zfm_add_to_selection
+        # at least at present, but for some such as vim it can be a pain to open 
+        # vim multiple times, maybe we can ensure that all commands can handle multiple
+        # files
+        ## this will not work in the case of vim_goto_line which expect number not filename
+        # actually we need to send this to zfm_exec_binding and not just execit straight
+        #if [[ $f =~ ^vi ]]; then
+            #slice=($vpa[$RANGE_START,$RANGE_END])
+            #slice=( $PWD/$^slice )
+            #$f $slice
+        #else
+
+        ## !!! XXX vim_goto_line wants the MULTIPLER not something else
+        #
+        if [[ -n "$M_FILES_1b1" ]]; then
+            for (( i = $RANGE_START; i <= $RANGE_END; i++ )); do
+                $f $PWD/$vpa[$i] 
+            done
+        else
+            ## best to pass files together so commands like vim can open in one process
+            slice=($vpa[$RANGE_START,$RANGE_END])
+            slice=( $PWD/$^slice )
+            pinfo "CALLING $f with $#slice ($RANGE_START , $RANGE_END : $slice[1]"
+            $f $slice
+        fi
+
+    elif [[ -n $M_SELECTOR ]]; then
+        case $M_SELECTOR in
+            selected)
+                if [[ $#selectedfiles -gt 0 ]]; then
+                    $f $selectedfiles
+                else
+                    perror "$0: No selected files."
+                fi
+                ;;
+            unselected)
+                if [[ $#selectedfiles -gt 0 ]]; then
+                    local vp
+                    vp=($PWD/${^viewport}) # prepend PWD to each element 2013-01-10 - 00:17
+                    unselectedfiles=( ${vp:|selectedfiles} )
+                    $f $unselectedfiles
+                else
+                    perror "$0: No selected files."
+                fi
+                ;;
+            all)
+                vp=($PWD/${^viewport}) # prepend PWD to each element 2013-01-10 - 00:17
+                $f $vp
+                ;;
+        esac
+        M_SELECTOR=
+        ## s S a
+        #
     else
         # take cursor pos
         # actually we need to send this to zfm_exec_binding and not just execit straight
+        #
+        pinfo "$0 calling $f with $PWD/$vpa[$CURSOR]"
         $f $PWD/$vpa[$CURSOR]
+    fi
+        RANGE_START=
+        RANGE_END=
+}
+##  returns first visible selection, however this will not page to other pages
+#   I mean it will only show from current page
+function vim_ix_first_selection() {
+    [[ $#selectedfiles -eq 0 ]] && { print $CURSOR; return 1}
+
+    local vp c ix first
+    let c=1
+    let ix=0
+    vp=($PWD/${^viewport}) # prepend PWD to each element 2013-01-10 - 00:17
+    for ff in $vp ; do
+        if [[ $selectedfiles[(i)$ff] -le $#selectedfiles ]]; then
+            first=${first:-$c}
+            [[ $c -gt $CURSOR ]] && { ix=$c ; break }
+        fi
+        (( c++ ))
+    done
+    if [[ $ix -eq 0 ]]; then
+        print $first
+    else
+        print $ix
     fi
 }
 
@@ -159,6 +247,19 @@ function vim_motion() {
     ## if pos is a constant then we expect it to be defined as a variable and having that value
     if [[ $_pos =~ [A-Z] ]]; then
         pos=${(P)_pos}
+        # in these cases MULT has no meaning and needs to be cleared
+        # maybe in cases here
+        MULTIPLIER=
+
+        [[ -z $pos ]] && { 
+            # UNTESTED UNUSED XXX
+            perror "$0 blank $_pos "
+            pause
+            if [[ -e $_pos ]]; then
+                ix=file_index($_pos)
+                pos=$ix
+            fi
+        }
         [[ -z $pos ]] && { perror "$0:: Constant $_pos not defined"; pause; return 1 }
     else
         pos=$_pos
@@ -180,7 +281,14 @@ function vim_motion() {
         }
         ## what if there's a multiplier thre, should we not unset it ? XXX 5yG
         # vim exec takes care of mult and range etc
+        #if [[ $f == "vim_goto_line" ]]; then
+            ## other commands need filenames but this needs only multiplier
+            #$f
+        #else
         vim_exec $f
+        #fi
+        RANGE_START=
+        RANGE_END=
         return
     else
         ## make the move
@@ -188,11 +296,73 @@ function vim_motion() {
         CURSOR=$pos
         if [[ $CURSOR -lt 1 ]]; then
             zfm_prev_page
-        elif [[ $CURSOR -gt $#vpa ]]; then
-            zfm_next_page 
+        elif [[ $CURSOR -gt VPACOUNT ]]; then
+            ## TODO need to calc correct page
+            (( diff = CURSOR - VPACOUNT ))
+            M_MESSAGE="$0 diff $diff : page $PAGESZ cur $CURSOR - vpa $VPACOUNT tot: $tot END=$END, "
+            if [[ $diff -le $PAGESZ1 ]]; then
+                zfm_next_page 
+            else
+                sta=$CURSOR
+                CURSOR=1
+                (( sta == END && END > PAGESZ1 )) && {
+                    (( sta  = END - PAGESZ )) 
+                    (( CURSOR = PAGESZ1 ))
+                }
+            fi
         fi
         (( CURSOR < 1 )) && CURSOR=1
     fi
+}
+function file_index() {
+    local files file
+    files=($@)
+    file=$files[1]
+    file=${file:t}
+    ix=$vpa[(i)$file]
+    print $ix
+}
+function vim_set_selector() {
+    local sel=$1
+    M_SELECTOR=$sel
+    ## check for pending method
+    if [[ -n $PENDING ]]; then
+        f=$PENDING[-1]
+        PENDING[-1]=()
+        ## the command called will check for CURSOR being current spot
+        #  and CURSOR_TARGET as other spot
+        #  or should we put START and END to make backward commands easy
+        ## what if there's a multiplier thre, should we not unset it ? XXX 5yG
+        # vim exec takes care of mult and range etc
+
+        ## set some flag for command to use selected files
+        # or put them in a array
+        M_SELECTOR=$sel
+        vim_exec $f
+        M_SELECTOR=
+        RANGE_START=
+        RANGE_END=
+        return
+    else
+        ## no command, go to first selected file using vim motion
+        ## make the move
+        case $M_SELECTOR in
+            selected)
+                # goto first selected file
+                # TODO if its on a selected file, then go ot next
+                if [[ $#selectedfiles -gt 0 ]]; then
+                    offset=$(vim_ix_first_selection)
+                    vim_motion $offset
+                else
+                    perror "$0: No selected files"
+                fi
+                ;;
+            unselected)
+                # keep going til file unders cursor is not selected
+                ;;
+        esac
+    fi
+    M_SELECTOR=
 }
 function vim_resolve () {
     local key=$ZFM_KEY
@@ -215,10 +385,11 @@ function vim_int_handler() {
     if [[ -n "$M_FULL_INDEXING" ]]; then
         zfm_get_full_indexing_filename $key
         zfm_open_file $selection
+        selection=
         full_indexing_toggle
     else
         MULTIPLIER+=$1
-        pinfo "multiplier is : $MULTIPLIER"
+        sms "multiplier is : $MULTIPLIER"
     fi
 }
 function vim_char_handler() {
@@ -226,17 +397,37 @@ function vim_char_handler() {
     if [[ -n "$M_FULL_INDEXING" ]]; then
         zfm_get_full_indexing_filename $key
         zfm_open_file $selection
+        selection=
         full_indexing_toggle
     else
+        ## check if pending and whether there's a key combo for that
+        # That allows us to overload acommand as a selector like g d for goto next dir
+        [[ -n $PENDING_KEY ]] && {
+           ckey="$PENDING_KEY $key"
+           binding=$keymap_VIM[$ckey]
+           [[ -n $binding ]] && { 
+               key=$ckey
+               PENDING=()
+               PENDING_KEY=
+           }
+       }
+
         binding=$keymap_VIM[$key]
         if [[ -n $binding ]]; then
+            # we could be in pending mode at this point going into some command
+            # that does not know that and should not work XXX
             zfm_exec_binding $binding
+            # trying clearing 2013-02-05 - 20:15 so gxg goes not work
+            #vim_clear_pending
+        else 
+            vim_clear_pending
         fi
     fi
 }
 function vim_other_handler() {
     ## this gives us unhandled punctuation and other chars which can be routed back to the main map
 
+    vim_clear_pending
     zfm_get_key_binding $ZFM_KEY
     if [[ -n $binding ]]; then
         zfm_exec_binding $binding
@@ -246,11 +437,21 @@ function vim_other_handler() {
 }
 ## escape pressed clear stuff or pending commands if possible
 function vim_escape() {
+    [[ -n "$M_FULL_INDEXING" ]] && full_indexing_toggle
+    clear_mess
+    vim_clear_pending
+}
+vim_clear_pending() {
+
     MULTIPLIER=
-    M_FULL_INDEXING=
     PENDING=()
+    PENDING_KEY=
+    RANGE_START=
+    RANGE_END=
+    M_SELECTOR=
 }
 function vim_cursor_down() {
+    ZFM_NUMBERING="RELATIVE"
     PREV_CURSOR=$CURSOR
     local n=$1
     n=${n:-$MULTIPLIER}
@@ -263,6 +464,7 @@ function vim_cursor_down() {
     #(( CURSOR > $#vpa )) && { zfm_next_page  }
 }
 function vim_cursor_up() {
+    ZFM_NUMBERING="RELATIVE"
     PREV_CURSOR=$CURSOR
     local n=$1
     n=${n:-$MULTIPLIER}
@@ -284,8 +486,22 @@ function vim_goto_line() {
     # what if it is sent a file name by mistake and not a number
     local n=$1
     if [[ $n =~ [a-zA-Z] ]]; then
+        ## XXX if file list then go to filest file that is in this dir (vpa)
         perror "$0 sent wrong argument $1"
         n=
+    fi
+    if [[ -n "$M_SELECTOR" ]]; then
+        case $M_SELECTOR in
+            selected)
+                n=$(vim_ix_first_selection)
+                ;;
+            unselected)
+                ## TODO take current position and go to first unselected item after this one
+                ;;
+            all)
+                ;;
+        esac
+        M_SELECTOR=
     fi
     n=${n:-$MULTIPLIER}
     n=${n:-1}
@@ -304,8 +520,9 @@ function vim_goto_end() {
     local n
     n=$MULTIPLIER
     n=${n:-$END}
-    vim_motion $n
     MULTIPLIER=
+    M_SELECTOR=
+    vim_motion $n
 }
 function vim_goto_last_position(){
     CURSOR=$PREV_CURSOR
