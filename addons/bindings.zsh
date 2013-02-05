@@ -29,4 +29,5 @@
     zfm_bind_key "}" "zfm_go_bottom"
     zfm_bind_key "C-d" zfm_scroll_down
     zfm_bind_key "C-b" zfm_scroll_up
-    zfm_bind_key "ML z" vimmode_init
+    zfm_bind_key 'ML \' vimmode_init
+    zfm_bind_key '"' zfm_refresh
