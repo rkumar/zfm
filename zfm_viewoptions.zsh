@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-03 22:24
+# Last update: 2013-02-06 22:39
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -525,6 +525,7 @@ function zfm_locate() {
 #  toggle between full-indexing and drill down mode.
 #  I think full-indexing will be useful in selection mode
 #
+#  XXX i think we have now to set the mode and not just do this.
 function full_indexing_toggle() {
     if [[ -z "$M_FULL_INDEXING" ]]; then
         M_FULL_INDEXING=1
