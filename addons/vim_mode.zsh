@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-06 21:15
+#  Last update: 2013-02-06 22:58
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     M_MESSAGE="VIM Mode: Quit using q or C-q, i: insert, ': HINTS"
@@ -384,46 +384,32 @@ function DEPRECATED_vim_resolve () {
 }
 function vim_int_handler() {
     local key=$1
-    if [[ -n "$M_FULL_INDEXING" ]]; then
-        zfm_get_full_indexing_filename $key
-        zfm_open_file $selection
-        selection=
-        full_indexing_toggle
-    else
         MULTIPLIER+=$1
         sms "multiplier is : $MULTIPLIER"
-    fi
 }
 function vim_char_handler() {
     local key=$1
-    if [[ -n "$M_FULL_INDEXING" ]]; then
-        zfm_get_full_indexing_filename $key
-        zfm_open_file $selection
-        selection=
-        full_indexing_toggle
-    else
-        ## check if pending and whether there's a key combo for that
-        # That allows us to overload acommand as a selector like g d for goto next dir
-        [[ -n $PENDING_KEY ]] && {
-           ckey="$PENDING_KEY $key"
-           binding=$keymap_VIM[$ckey]
-           [[ -n $binding ]] && { 
-               key=$ckey
-               PENDING=()
-               PENDING_KEY=
-           }
-       }
+    ## check if pending and whether there's a key combo for that
+    # That allows us to overload acommand as a selector like g d for goto next dir
+    [[ -n $PENDING_KEY ]] && {
+        ckey="$PENDING_KEY $key"
+        binding=$keymap_VIM[$ckey]
+        [[ -n $binding ]] && { 
+            key=$ckey
+            PENDING=()
+            PENDING_KEY=
+        }
+    }
 
-        binding=$keymap_VIM[$key]
-        if [[ -n $binding ]]; then
-            # we could be in pending mode at this point going into some command
-            # that does not know that and should not work XXX
-            zfm_exec_binding $binding
-            # trying clearing 2013-02-05 - 20:15 so gxg goes not work
-            #vim_clear_pending
-        else 
-            vim_clear_pending
-        fi
+    binding=$keymap_VIM[$key]
+    if [[ -n $binding ]]; then
+        # we could be in pending mode at this point going into some command
+        # that does not know that and should not work XXX
+        zfm_exec_binding $binding
+        # trying clearing 2013-02-05 - 20:15 so gxg goes not work
+        #vim_clear_pending
+    else 
+        vim_clear_pending
     fi
 }
 function vim_other_handler() {
