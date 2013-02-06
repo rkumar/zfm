@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-06 19:11
+#  Last update: 2013-02-06 21:10
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -219,183 +219,26 @@ function list_printer() {
             #pdebug "Got ($reply)"
         fi
         if [[ $ans == "C-q" ]]; then
-            QUITTING=true
-            break
-            #if [[ $ZFM_MODE == $ZFM_DEFAULT_MODE ]]; then
-                #QUITTING=true
-                #break
-            #else
-                #zfm_set_mode $ZFM_DEFAULT_MODE
-            #fi
+            if [[ $ZFM_MODE == $ZFM_DEFAULT_MODE ]]; then
+                QUITTING=true
+                break
+            else
+                zfm_set_mode $ZFM_DEFAULT_MODE
+            fi
         elif [[ $ans == '' ]]; then
             QUITTING=true
             break
         elif [[ -n $ZFM_MODE ]]; then
 
-            if [[ $ZFM_MODE == "INS" ]]; then
-                case $ans in
-                    "")
-                        # BLANK blank
-                        (( sta = 1 ))
-                        PATT=""
-                        ;;
-                    $ZFM_QUIT_KEY)
-                        QUITTING=true
-                        break
-                        ;;
-                    [1-9])
-                        # KEY PRESS key
-                        if [[ -n "$M_FULL_INDEXING" ]]; then
-                            zfm_get_full_indexing_filename $ans
-                            break
-                            #iix=$MFM_NLIDX[(i)$ans]
-                            #pdebug "got iix $iix for $ans"
-                            #[[ -n "$iix" ]] && selection=$vpa[$iix]
-                            #pdebug "selection was $selection"
-                        else
-
-                            # actix needs to be consistent in 2 cases:
-                            #   - when paging - correct is from myopts
-                            #   - when filtering. (in this case the correct is from viewport/vpa
-                            #   - there is a third case of paging after filtering GAAH
-                            (( ix = sta + $ans - 1))
-                            #
-                            # NEW now check if 2 files satisfy this key (edge case but
-                            # could happen alot if you keep numbered files)
-
-                            selection=""
-                            if [[ $VPACOUNT -gt 9 ]]; then
-                                if [[ $PATT = "" ]]; then
-                                    npatt="${ans}*"
-                                else
-                                    npatt="$PATT$ans"
-                                fi
-                                lines=
-                                if [[ -n "$M_SWITCH_OFF_DUPL_CHECK" ]]; then
-                                    lines=$(check_patt $npatt)
-                                    ## XXX why not ct=$#lines 2013-01-24 - 20:05 
-                                    ct=$(print -rl -- $lines | wc -l)
-                                else
-                                    ct=0
-                                fi
-                                [[ -n $lines ]] || ct=0
-                                [[ -n $ZFM_VERBOSE ]] && pdebug "comes here $ct , ($lines)"
-                                if [[ $ct -eq 1 ]]; then
-                                    [[ -n "$lines" ]] && { selection=$lines; break }
-                                elif [[ $ct -eq 0 ]]; then
-                                    selection=$vpa[$ans]
-                                    #selection=$myopts[$ix] # fails on filtering
-                                    [[ -n $ZFM_VERBOSE ]] && print " selected $selection"
-                                else
-                                    PATT=$npatt
-                                fi
-                            else
-                                # there are only 9 or less so just use mnemonics, don't check
-                                # earlier
-                                selection=$vpa[$ans]
-                                print " 1. selected $selection"
-                            fi
-                        fi # M_FULL
-                        [[ -n "$selection" ]] && break
-                        ;;
-                    [a-zA-Z_0\.\ \*])
-                        ## UPPER CASE upper section alpha characters
-                        (( sta = 1 ))
-
-                        if [[ -n "$M_FULL_INDEXING" ]]; then
-                            zfm_get_full_indexing_filename $ans
-                            break
-                            #iix=$MFM_NLIDX[(i)$ans]
-                            #pdebug "iix was $iix for $ans"
-                            #[[ -n "$iix" ]] && { selection=$vpa[$iix]; break }
-                            #pdebug "selection was $selection"
-
-                        else
-
-                            if [[ $PATT = "" ]]; then
-                                [[ $ans = '.' ]] && { 
-                                    # i will be doing this each time dot is pressed
-                                    # ad changing setting for calling shell too ! XXX
-                                    pdebug "I should only set and do this if nothing is showing or glob dots is off"
-                                    #pbold "Setting glob_dots ..."
-                                    #setopt GLOB_DOTS
-                                    show_hidden_toggle
-                                    #setopt globdots
-                                    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
-                                    myopts=("${(@f)$(print -rl -- $param)}")
-                                    pbold "count is $#myopts"
-                                }
-                                PATT="${ans}"
-                            else
-                                [[ -n $ZFM_VERBOSE ]] && pdebug "comes here 1"
-
-                                ## Fpatt is either unset or contains .*
-                                PATT+="${FPATT}$ans"
-                            fi
-                            ## if there's only one file for that char then just jump to it
-                            lines=$(check_patt $PATT)
-                            ct=$(print -rl -- $lines | wc -l)
-                            if [[ $ct -eq 1 ]]; then
-                                [[ -n "$lines" ]] && { selection=$lines; break }
-                            fi
-                        fi # M_FULL
-                        ;;
-                    BACKSPACE)
-                        # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
-                        if [[ $PATT = "" ]]; then
-                            M_NO_REPRINT=1
-                        else
-                            # backspace if we are filtering, remove last char from pattern
-                            #patt=${patt[1,${#patt}-1]}
-                            PATT[-1]=
-                            PATT=${PATT%.*}
-                        fi
-                        ;;
-                    $ZFM_REFRESH_KEY)
-                        zfm_refresh
-                        ;;
-                    "$ZFM_RESET_PATTERN_KEY")
-                        PATT=""
-                        ;;
-                    "$ZFM_OPEN_FILES_KEY")
-                        # I think this overrides what cursor.zsh defines
-                        ## Open either selected files or what's under cursor
-                        if [[ -n $selectedfiles ]];then 
-                            call_fileoptions $selectedfiles
-                        else
-                            selection=$vpa[$CURSOR]
-                        fi
-                        [[ -n "$selection" ]] && break
-                        ;; 
-
-                    *)
-                        zfm_exec_key_binding $ans
-                            ans=
-                            break
-                        zfm_get_key_binding $ans
-                        if [[ -n $binding ]]; then
-                            $binding
-                            ans=
-                            break
-                        else
-
-                            pdebug "Key $ans unhandled and swallowed, pattern cleared. Use ? for key help"
-
-                            break
-                        fi
-                esac
-
-                ## above this line is insert mode
-            else
-
                 if [[ -z $MODE_KEY_HANDLER ]]; then
-                    MODE_KEY_HANDLER=${ZFM_MODE}_key_handler
+                    MODE_KEY_HANDLER=${ZFM_MODE:l}_key_handler
                 fi
                 ZFM_KEY=$ans
                 $MODE_KEY_HANDLER $ZFM_KEY
                 ans=
+                # should be not break only if selection has been set XXX
                 break
-            fi
+            # above is for modes
         else
             [[ $ZFM_QUIT_KEY == $ans ]] && { QUITTING=true; ans= ; break; }
 
@@ -854,7 +697,7 @@ function numberlines() {
             fi
         elif [[ $ZFM_MODE == "VIM" ]]; then
             sub=$c
-        else
+        elif [[ $ZFM_MODE == "INS" ]]; then
             sub=$c
 
             [[ $c -gt 9 ]] && {
@@ -871,6 +714,8 @@ function numberlines() {
                     sub=$line[$ix,$ix] ;  
                 fi
             }
+        else
+            sub=$c
         fi
         link=
         _detail=
@@ -1246,7 +1091,7 @@ function zfm_exec_binding() {
         #   columns=("${(s/ /)binding}")
     local binding=$1
     [[ -z $binding ]] && return 1
-    local ret=1
+    local ix ret=1
     local sp=" "
     ix=$binding[(i)$sp]
     if [[ $ix -le $#binding ]]; then
@@ -1255,7 +1100,7 @@ function zfm_exec_binding() {
         # jump space
         (( ix += 2 ))
         args=$binding[$ix,-1]
-        M_MESSAGE="exec $b with $args, m=$MULTIPLIER, s=$M_SELECTOR"
+        M_MESSAGE="$0 exec $b with $args, m=$MULTIPLIER, s=$M_SELECTOR"
         $b $args
         ret=$?
     else
@@ -1268,8 +1113,13 @@ function zfm_set_mode() {
     [[ -n $ZFM_MODE ]] && ZFM_PREV_MODE=$ZFM_MODE
 
     export ZFM_MODE=$1
+    [[ -z "$ZFM_MODE" ]] && { print "Error: ZFM_MODE blank." 1>&2; exit 1; }
+    MODE_KEY_HANDLER=
+    ZFM_NUMBERING=
     mode="[$ZFM_MODE]"
-    [[ $ZFM_MODE == "VIM" ]] && { vimmode_init }
+    #[[ $ZFM_MODE == "VIM" ]] && { vimmode_init }
+    initf="${ZFM_MODE:l}mode_init"
+    $initf
 }
 function zfm_unset_mode() {
     ## UNUSED NOW
@@ -1296,9 +1146,9 @@ function cx_map() {
     local key
     key="$mapkey $reply"
     binding=$zfm_keymap[$key]
-    M_MESSAGE="$anskey $reply => $binding"
+    M_MESSAGE="$0: $anskey $reply => $binding"
     ret=1
-    [[ -n $binding ]] && { $binding ; ret=0 }
+    [[ -n $binding ]] && { zfm_exec_binding $binding ; ret=0 }
     [[ -z $binding ]] && { 
         perror "could not find [$key] in keymap" ;
         #for f ( ${(k)zfm_keymap}) print -l "[$f] ==> $zfm_keymap[$f]"
