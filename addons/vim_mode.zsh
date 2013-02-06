@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-06 22:58
+#  Last update: 2013-02-07 01:37
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     M_MESSAGE="VIM Mode: Quit using q or C-q, i: insert, ': HINTS"
@@ -15,6 +15,7 @@ function vimmode_init() {
     [[ -n $M_VIMMODE_LOADED ]] && return 1
     export M_VIMMODE_LOADED=1
     typeset -Ag keymap_VIM
+    typeset -Ag vim_selector
 
     ## can use x for selecting as gmail and o for open
     ## can use ' or whatever for hints as in vimperator, it uses 'f' but f has naother meaning here
@@ -31,9 +32,9 @@ function vimmode_init() {
     vim_bind_key "G" "vim_goto_end"
     vim_bind_key "g d" "vim_goto_next_dir"
     vim_bind_key "g b" "zfm_popd"
-    vim_bind_key "s" "vim_set_selector selected"
-    vim_bind_key "S" "vim_set_selector unselected"
-    vim_bind_key "a" "vim_set_selector all"
+    #vim_bind_key "s" "vim_set_selector selected"
+    #vim_bind_key "S" "vim_set_selector unselected"
+    #vim_bind_key "a" "vim_set_selector all"
     vim_bind_key "H" "vim_motion PAGE_TOP"
     vim_bind_key "L" "vim_motion PAGE_END"
     vim_bind_key "y" "vim_set_pending zfm_add_to_selection"
@@ -53,6 +54,8 @@ function vimmode_init() {
     #   else it moves to that position.
     #   "y" "vim_resolve zfm_add_to_selection"
     #vim_bind_key "'" "vim_resolve"
+
+    ## XXX won't work since ' is mapped already and ' is not in vim
     vim_bind_key "' '" "vim_goto_last_position"
     vim_bind_key "ESCAPE" "vim_escape"
     vim_bind_key "C-c" "vim_escape"
@@ -61,12 +64,22 @@ function vimmode_init() {
     vim_bind_key "g h" "zfm_goto_parent_dir"
     vim_bind_key "t" "zfm_goto_dir"
     vim_bind_key "f" "full_indexing_toggle"
-    vim_bind_key "INT" "vim_int_handler"
-    vim_bind_key "CHAR" "vim_char_handler"
-    vim_bind_key "OTHER" "vim_other_handler"
     vim_bind_key "ENTER" "select_current_line"
     vim_bind_key "g l" "select_current_line"
     vim_bind_key "i" "zfm_set_mode INS"
+
+    vim_def_selector "s" "selected"
+    vim_def_selector "S" "unselected"
+    vim_def_selector "a" "all"
+}
+## these are selectors that can be placed after a pending command such as g or y or d
+#  They need not correspond to another command, thus you can have a selector "s" and no command
+#  "s" or an unrelated command "s". We could further specify motion selectors and filelist selectors
+#  so we can be more precise and keep programming simpler. motions selectros will return a location
+#  (file location or curpos, wherease the other will return a filelist to operate on.
+#
+function vim_def_selector () {
+    vim_selector[$1]=$2
 }
 function vim_key_handler() {
     local key=$1
@@ -324,6 +337,9 @@ function file_index() {
     ix=$vpa[(i)$file]
     print $ix
 }
+
+## now only calling if this if pending operator
+# so we free the key from having to be defined
 function vim_set_selector() {
     local sel=$1
     M_SELECTOR=$sel
@@ -331,6 +347,7 @@ function vim_set_selector() {
     if [[ -n $PENDING ]]; then
         f=$PENDING[-1]
         PENDING[-1]=()
+        PENDING_KEY=
         ## the command called will check for CURSOR being current spot
         #  and CURSOR_TARGET as other spot
         #  or should we put START and END to make backward commands easy
@@ -361,6 +378,7 @@ function vim_set_selector() {
                 ;;
             unselected)
                 # keep going til file unders cursor is not selected
+                # TODO
                 ;;
         esac
     fi
@@ -394,11 +412,20 @@ function vim_char_handler() {
     [[ -n $PENDING_KEY ]] && {
         ckey="$PENDING_KEY $key"
         binding=$keymap_VIM[$ckey]
-        [[ -n $binding ]] && { 
+        if [[ -n $binding ]]; then
             key=$ckey
             PENDING=()
             PENDING_KEY=
-        }
+        else
+            ## check for a selector and call it else let this continue
+            # if not a selector either most likely an error - unless its a motion command
+            _x=$vim_selector[$key]
+            if [[ -n "$_x" ]]; then
+                mess "found a selector $_x : $#PENDING :: $PENDING"
+                vim_set_selector $_x
+                return
+            fi
+        fi
     }
 
     binding=$keymap_VIM[$key]
