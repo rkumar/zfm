@@ -5,10 +5,10 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-06 01:18
+#  Last update: 2013-02-06 15:12
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
-    zfm_set_mode "VIM"
+    #zfm_set_mode "VIM"
     M_MESSAGE="Welcome to VIM Mode. Quit using q z or C-q"
     MULTIPLIER=""
     PENDING=()
@@ -24,8 +24,6 @@ function vimmode_init() {
     vim_bind_key "k" "vim_cursor_up"
     vim_bind_key "l" "cursor_right"
     vim_bind_key "h" "cursor_left"
-    vim_bind_key "PgDn" "cursor_bottom"
-    vim_bind_key "PgUp" "cursor_top"
     vim_bind_key "ENTER" "select_current_line"
     # i could have put the name of the fucntion to call here itself but the caller
     # does not do an eval, it executes the method and i don't want an eval happening
@@ -55,12 +53,11 @@ function vimmode_init() {
     #   checks if operator pending then calls "y" with range, or just sets range and returns
     #   else it moves to that position.
     #   "y" "vim_resolve zfm_add_to_selection"
-    vim_bind_key "'" "vim_resolve"
+    #vim_bind_key "'" "vim_resolve"
     vim_bind_key "' '" "vim_goto_last_position"
     vim_bind_key "ESCAPE" "vim_escape"
     vim_bind_key "C-c" "vim_escape"
     vim_bind_key "C-g" "vim_escape"
-    vim_bind_key "z" "exit_vim"
     vim_bind_key "q" "exit_vim"
     vim_bind_key "g h" "zfm_goto_parent_dir"
     vim_bind_key "t" "zfm_goto_dir"
@@ -70,6 +67,7 @@ function vimmode_init() {
     vim_bind_key "OTHER" "vim_other_handler"
     vim_bind_key "ENTER" "select_current_line"
     vim_bind_key "g l" "select_current_line"
+    vim_bind_key "i" "zfm_set_mode INS"
 }
 function VIM_key_handler() {
     local key=$1
@@ -95,7 +93,11 @@ function VIM_key_handler() {
     fi
 }
 function exit_vim() {
-    zfm_unset_mode
+   if [[ $ZFM_DEFAULT_MODE == "VIM" ]]; then
+       QUITTING=true
+   else
+       zfm_set_mode $ZFM_DEFAULT_MODE
+   fi
 }
 function vim_bind_key() {
     # should we check for existing and refuse ?
@@ -199,6 +201,7 @@ function vim_exec() {
                 $f $vp
                 ;;
         esac
+        [[ "$f" == $ZFM_RM_COMMAND ]] && zfm_refresh
         M_SELECTOR=
         ## s S a
         #
@@ -364,7 +367,7 @@ function vim_set_selector() {
     fi
     M_SELECTOR=
 }
-function vim_resolve () {
+function DEPRECATED_vim_resolve () {
     local key=$ZFM_KEY
     local binding _key ret=0
 
