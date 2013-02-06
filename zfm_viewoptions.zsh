@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-06 22:39
+# Last update: 2013-02-06 22:48
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -529,10 +529,10 @@ function zfm_locate() {
 function full_indexing_toggle() {
     if [[ -z "$M_FULL_INDEXING" ]]; then
         M_FULL_INDEXING=1
-        mode="[HINT]"
+        zfm_set_mode HINT
     else
         M_FULL_INDEXING=
-        mode="[$ZFM_MODE]"
+        zfm_set_mode $ZFM_PREV_MODE
     fi
     export M_FULL_INDEXING
 }
