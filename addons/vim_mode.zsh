@@ -5,11 +5,10 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-06 15:12
+#  Last update: 2013-02-06 21:15
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
-    #zfm_set_mode "VIM"
-    M_MESSAGE="Welcome to VIM Mode. Quit using q z or C-q"
+    M_MESSAGE="VIM Mode: Quit using q or C-q, i: insert, ': HINTS"
     MULTIPLIER=""
     PENDING=()
     PENDING_KEY=
@@ -69,7 +68,7 @@ function vimmode_init() {
     vim_bind_key "g l" "select_current_line"
     vim_bind_key "i" "zfm_set_mode INS"
 }
-function VIM_key_handler() {
+function vim_key_handler() {
     local key=$1
         if [[ "$key" == <0-9> ]]; then
             vim_int_handler $key
