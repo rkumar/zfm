@@ -5,14 +5,14 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-02-06 - 22:31
 #      License: GPL
-#  Last update: 2013-02-06 22:41
+#  Last update: 2013-02-06 22:52
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
 function hintmode_init() {
     mess "HINT Mode: C-c: Exit mode"
     M_FULL_INDEXING=1
-    ZFM_PREV_MODE=$ZFM_MODE
+    [[ $ZFM_PREV_MODE == "HINT" ]] || ZFM_PREV_MODE=$ZFM_MODE
 }
 function hint_key_handler() {
     local ans=$1
@@ -43,7 +43,11 @@ function hint_key_handler() {
             ;;
         "C-c")
             M_FULL_INDEXING=
-            zfm_set_mode $ZFM_PREV_MODE
+            local mo=$ZFM_PREV_MODE
+            if [[ $ZFM_PREV_MODE == "HINT" ]]; then
+                mo=$ZFM_DEFAULT_MODE
+            fi
+            zfm_set_mode $mo
             ;;
 
         *)
