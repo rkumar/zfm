@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-06 22:29
+#  Last update: 2013-02-06 22:55
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -1110,7 +1110,7 @@ function zfm_exec_binding() {
     return $ret
 }
 function zfm_set_mode() {
-    [[ -n $ZFM_MODE ]] && ZFM_PREV_MODE=$ZFM_MODE
+    [[ -n $ZFM_MODE && $ZFM_MODE != $ZFM_PREV_MODE ]] && ZFM_PREV_MODE=$ZFM_MODE
 
     export ZFM_MODE=$1
     [[ -z "$ZFM_MODE" ]] && { print "Error: ZFM_MODE blank." 1>&2; exit 1; }
