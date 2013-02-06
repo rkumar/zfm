@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-02-06 - 19:51
 #      License: GPL
-#  Last update: 2013-02-06 21:12
+#  Last update: 2013-02-06 22:47
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -24,10 +24,6 @@ function ins_key_handler() {
             ;;
         [1-9])
             # KEY PRESS key
-            if [[ -n "$M_FULL_INDEXING" ]]; then
-                zfm_get_full_indexing_filename $ans
-                break
-            else
 
                 # actix needs to be consistent in 2 cases:
                 #   - when paging - correct is from myopts
@@ -69,18 +65,11 @@ function ins_key_handler() {
                     # earlier
                     selection=$vpa[$ans]
                 fi
-            fi # M_FULL
             [[ -n "$selection" ]] && break
             ;;
         [a-zA-Z_0\.\ \*])
             ## UPPER CASE upper section alpha characters
             (( sta = 1 ))
-
-            if [[ -n "$M_FULL_INDEXING" ]]; then
-                zfm_get_full_indexing_filename $ans
-                break
-
-            else
 
                 if [[ $PATT = "" ]]; then
                     [[ $ans = '.' ]] && { 
@@ -108,7 +97,6 @@ function ins_key_handler() {
                 if [[ $ct -eq 1 ]]; then
                     [[ -n "$lines" ]] && { selection=$lines; break }
                 fi
-            fi # M_FULL
             ;;
         BACKSPACE)
             # BACKSPACE backspace if we are filtering, if blank and still backspace then put start of line char
