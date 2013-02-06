@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-06 01:15
+#  Last update: 2013-02-06 19:11
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -19,6 +19,9 @@
 ZFM_DIR=${ZFM_DIR:-~/bin}
 export ZFM_DIR
 export EDITOR=${EDITOR:-vi}
+## This is the startup mode, also whenever escaping from another mode such as HINTs
+#  app will come back to this mode
+export ZFM_DEFAULT_MODE=${ZFM_DEFAULT_MODE:-VIM}
 source ${ZFM_DIR}/zfm_menu.zsh
 source $ZFM_DIR/zfm_viewoptions.zsh
 setopt MARK_DIRS
@@ -216,15 +219,15 @@ function list_printer() {
             #pdebug "Got ($reply)"
         fi
         if [[ $ans == "C-q" ]]; then
-            if [[ -n $ZFM_MODE ]]; then
-                zfm_unset_mode
-            else
-                QUITTING=true
-                break
-            fi
+            QUITTING=true
+            break
+            #if [[ $ZFM_MODE == $ZFM_DEFAULT_MODE ]]; then
+                #QUITTING=true
+                #break
+            #else
+                #zfm_set_mode $ZFM_DEFAULT_MODE
+            #fi
         elif [[ $ans == '' ]]; then
-            print
-            print "Aborting ..."
             QUITTING=true
             break
         elif [[ -n $ZFM_MODE ]]; then
@@ -656,8 +659,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.9-alpha"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/03"
+ZFM_VERSION="0.1.11-alpha"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/06"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -719,6 +722,7 @@ init_key_function_map
 init_menu_options
 init_file_menus
 source_addons
+zfm_set_mode $ZFM_DEFAULT_MODE
 # at this point read up users bindings
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
 aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
@@ -1103,8 +1107,8 @@ function init_key_function_map() {
                 "C-x d"
                     zfm_toggle_expanded_state
                 "i"
-                    zfm_insert_mode_init
-                    "I"
+                    "zfm_set_mode INS"
+                "I"
                     "zfm_set_mode INS"
                     )
 }
@@ -1261,16 +1265,21 @@ function zfm_exec_binding() {
     return $ret
 }
 function zfm_set_mode() {
+    [[ -n $ZFM_MODE ]] && ZFM_PREV_MODE=$ZFM_MODE
+
     export ZFM_MODE=$1
     mode="[$ZFM_MODE]"
+    [[ $ZFM_MODE == "VIM" ]] && { vimmode_init }
 }
 function zfm_unset_mode() {
+    ## UNUSED NOW
     pinfo "Quitting mode $ZFM_MODE"
     unset ZFM_MODE
     ZFM_MODE_MAP=()
     MODE_KEY_HANDLER=
     mode="[NIL]"
 }
+
 ## A separate mapping namespace
 # If we use a separate hash we can print out mappings for C-x or prompt easily
 # Generalized this for C-x and mapleader
@@ -1648,9 +1657,6 @@ function zfm_edit_regex() {
     ## which will get added to search pattern 2013-01-28
     #
     vared -p "Edit pattern (valid regex): " PATT
-}
-function zfm_insert_mode_init() {
-    zfm_set_mode "INS"
 }
 function mess() {
     M_MESSAGE=$1
