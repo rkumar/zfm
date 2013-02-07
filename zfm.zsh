@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-06 22:55
+#  Last update: 2013-02-07 20:18
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -205,7 +205,12 @@ function list_printer() {
         # prompt for key PROMPT
         #read -k -r ans
         # see zfm_menu.zsh for _read moved there
-        _read_keys
+
+        ## check for pending key - should be integrate this with read_k so it works everywhre
+        reply=
+        pop_key_stack
+        [[ -z $reply ]] && _read_keys
+
         #M_MESSAGE=
         if [[ $? != 0 ]]; then
             # maybe ^C
@@ -1516,6 +1521,60 @@ function clear_mess() {
 }
 function sms() {
     M_MESSAGE="$M_HELP [$1]"
+}
+function zfm_goto_end() {
+    ## if you are on last page already then don't adjust sta, just move cursor
+    (( sta > END - PAGESZ1 )) && {
+        CURSOR=$VPACOUNT
+        return
+    }
+    sta=$END
+    CURSOR=1
+    (( sta == END && END > PAGESZ1 )) && {
+        (( sta  = END - PAGESZ )) 
+        (( CURSOR = PAGESZ1 ))
+    }
+}
+function zfm_goto_start() {
+    sta=1
+    CURSOR=1
+}
+function zfm_goto_line() {
+    # when splitting output into multple pages, we are not showing absolute numbers
+    # when going to a line, we need to page accordingly.
+    ##
+    # if cursor < sta 
+    #   cursor = sta 
+    # if cursor > sta + VPACOUNT
+    #   cursor = sta
+    #    but check for end in which case we reduce by PAGESZ1
+    # if cursor is between sta and sta + VPACOUNT
+    #   then just change cursro to given value
+      
+    local ln=$1
+    [[ -z $ln ]] && {
+
+        print
+        print -n "Enter line: "
+        read ln
+    }
+    local pageend
+    (( pageend = sta + VPACOUNT ))
+
+    if [[ $ln -lt $sta ]]; then
+        CURSOR=$ln
+        sta=$ln
+    elif [[ $ln -gt $pageend ]]; then
+        CURSOR=1
+        sta=$ln
+        (( lp = END - PAGESZ1 ))
+        if [[ $ln -gt $lp ]]; then
+            (( sta  = END - PAGESZ )) 
+            (( CURSOR = PAGESZ1 - (END - ln ) ))
+        fi
+    else
+        CURSOR=$ln
+    fi
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
