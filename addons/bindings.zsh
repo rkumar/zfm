@@ -19,6 +19,9 @@
         "/"    zfm_edit_regex
         "M-n"  zfm_next_page
         "M-p"  zfm_prev_page
+        "Home" zfm_goto_start
+        "End" zfm_goto_end
+        "ML l" zfm_goto_line
         )
 
 
