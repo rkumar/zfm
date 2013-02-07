@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-01 01:23
+#  Last update: 2013-02-07 18:35
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -26,6 +26,8 @@ ZFM_RM_COMMAND=${ZFM_RM_COMMAND:-rmtrash}
 ZFM_UNZIP_COMMAND=${ZFM_UNZIP_COMMAND:-dtrx}
 # stores autoaction per filetype
 typeset -A ZFM_AUTO_ACTION
+## for ungetting keys
+Z_KEY_STACK=()
 
 #  Print error to stderr so it doesn't mingle with output of method
 #  M_MESSAGE is a global we are using to print since we clear the screen each time we display
@@ -804,6 +806,7 @@ function init_key_codes() {
     kh[(27 91 66)]="DOWN"
     kh[(27 91 67)]="RIGHT"
     kh[(27 91 68)]="LEFT"
+    kh[(27 91 72)]="Home"
     kh[(27 91 70)]="End"
     kh[(27 79 80)]="F1"
     kh[(27 79 81)]="F2"
@@ -847,3 +850,18 @@ function resolve_key_codes() {
         #fi
     fi
 }
+## puts the first element into reply
+#  This is used as an ungetc stack
+function pop_key_stack(){
+    [[ $#Z_KEY_STACK -eq 0 ]] && return 1
+    reply=$Z_KEY_STACK[1]
+    Z_KEY_STACK[1]=()
+    return 0
+}
+function push_key_stack(){
+    [[ -z $1 ]] && return 1
+    Z_KEY_STACK+=($1)
+    return 0
+}
+
+
