@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-07 20:18
+#  Last update: 2013-02-08 01:36
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -209,12 +209,13 @@ function list_printer() {
         ## check for pending key - should be integrate this with read_k so it works everywhre
         reply=
         pop_key_stack
-        [[ -z $reply ]] && _read_keys
+        ret=0
+        [[ -z $reply ]] && { _read_keys; ret=$? }
 
         #M_MESSAGE=
-        if [[ $? != 0 ]]; then
+        if [[ $ret != 0 ]]; then
             # maybe ^C
-            pdebug "Got error from _read_keys: $reply, $key"
+            perror "$ret: Got error from _read_keys: r=$reply , k=$key"
             key=''
             ans=''
             #break
@@ -463,14 +464,25 @@ local td
 }
 function print_help_keys() {
 
+    local str
+    str=""
+
+    # first print mode related help
+    local f
+    f=${ZFM_MODE:l}_help
+    str=$(eval "$f")
     print
-    str="$fg_bold[white]$ZFM_APP_NAME some keys$reset_color"
+    str+=" \n"
+    str+="$fg_bold[white]$ZFM_APP_NAME some keys$reset_color"
     str+=" \n"
     str+=$(cat <<EndHelp
 
+    = General application keys =
+       * Note: These may have been overriden by individual modes
+
     $ZFM_MENU_KEY	- Invoke menu (default: backtick)
     $ZFM_FORWARD_KEY	- Paging of output (default M-n)
-    $ZFM_BACKWARD_KEY	- Previous page of listing (default C-p)
+    $ZFM_BACKWARD_KEY	- Previous page of listing (default M-p)
     ^	- toggle match from start of filename
     $ZFM_GOTO_DIR_KEY	- Enter directory name to jump to
     $ZFM_SELECTION_MODE_KEY	- Toggle selection mode
@@ -525,6 +537,13 @@ ZFM_EXPANDED_DIRS=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
 ZFM_START_DIR="$PWD"
+
+## If user has passed in any keystrokes read them from here
+#  passed in keys will only work in our own read here, not in other
+# reads or vareds. They will be passed as a string, but we weill put into our array
+[[ -n $Z_KEY_STACK ]] && {
+    Z_KEY_STACK=("${(s/ /)Z_KEY_STACK}")
+}
 ZFM_FILE_SELECT_FUNCTION=fuzzyselectrow
 export ZFM_FILE_SELECT_FUNCTION
 export last_viewed_files
@@ -721,6 +740,11 @@ function numberlines() {
             }
         else
             sub=$c
+        fi
+        ## pad it to prevent the wiggle/dance
+        ## CRASHES IN INS MODE if you type t* in work folder saying bad math expression
+        if [[ $ZFM_MODE == "VIM" && $sub -le 9 ]]; then
+            sub=" $sub"
         fi
         link=
         _detail=
