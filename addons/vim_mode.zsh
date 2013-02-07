@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-07 01:37
+#  Last update: 2013-02-08 01:31
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     M_MESSAGE="VIM Mode: Quit using q or C-q, i: insert, ': HINTS"
@@ -309,6 +309,8 @@ function vim_motion() {
         ## make the move
         PREV_CURSOR=$CURSOR
         CURSOR=$pos
+        zfm_goto_line $pos
+        return
         if [[ $CURSOR -lt 1 ]]; then
             zfm_prev_page
         elif [[ $CURSOR -gt VPACOUNT ]]; then
@@ -581,5 +583,18 @@ function vim_delete() {
         $ZFM_RM_COMMAND $vpa[$CURSOR]
     fi
 }
+function vim_help() {
+    local str key
+    str=" VIM MODE Help"
+    str+=" \n"
+    str+=" set_pending implies that a motion or selector key is pending, e.g. dG d2k gs ds"
+    for key in ${(k)keymap_VIM} ; do
+        #print $key  : $zfm_keymap[$key]
+        str+=$(print "    $key  : $keymap_VIM[$key]")"\n"
+    done
+    print -l -- $str
+    
+}
+
 
 #[[ -z $M_VIMMODE_LOADED ]] && vimmode_init
