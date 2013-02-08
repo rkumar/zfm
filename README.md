@@ -1,7 +1,15 @@
 zfm
 ===
 
-zsh file explorer/manager for fast navigation
+zsh file explorer/manager for fast navigation and running commands on files or groups of files.
+
+##WARNING!!##
+
+A lot has changed since the last update of this doc. Now we go directly into VIM mode (and yeah there is a vim mode, I  got sick of typing j and k) and I promoted it to the default startup mode. There;s an INS mode and a HINT mode (like Vimperator or Pentadactyl).
+
+I sorely need to update this doc.
+
+*End of Warning*
 
 This is a file navigator or explorer that attempts to make as many operations as possible on single keys so that a user can quickly navigate and execute commands. It is hoped that such paths will become second nature.
 
