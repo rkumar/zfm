@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-08 01:36
+#  Last update: 2013-02-08 15:15
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -196,7 +196,6 @@ function list_printer() {
             numberlines -p "$PATT" -w $width $viewport
             print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
 
-            #mode=  # 2013-02-03 - 17:41 
             [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
         fi # M_NO_REPRINT
         M_NO_REPRINT=
@@ -593,7 +592,9 @@ zfm_set_mode $ZFM_DEFAULT_MODE
 # at this point read up users bindings
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
 aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
-M_HELP=$( print_hash $aa )
+M_HELP_GEN=$( print_hash $aa )
+ab="M_HELP_$ZFM_MODE"
+M_HELP="$M_HELP_GEN | ${(P)ab}"
 #print $M_HELP
 M_MESSAGE="$M_HELP    $M_TITLE"
 param=$(print -rl -- *(M))
@@ -703,7 +704,8 @@ function numberlines() {
         # read from viewport now TODO
         cc=' '
         (( c == CURSOR )) && cc=$CURSOR_MARK
-        if [[ -n "$M_FULL_INDEXING" ]]; then
+        #if [[ -n "$M_FULL_INDEXING" ]]; then
+        if [[ $ZFM_MODE ==  "HINT" ]]; then
             sub=$nlidx[$c]
         elif [[ $ZFM_NUMBERING == "ABSOLUTE" ]]; then
             ## This is triggered by vim when we do a "g"
@@ -1143,6 +1145,8 @@ function zfm_set_mode() {
 
     export ZFM_MODE=$1
     [[ -z "$ZFM_MODE" ]] && { print "Error: ZFM_MODE blank." 1>&2; exit 1; }
+    ab="M_HELP_$ZFM_MODE"
+    M_HELP="$M_HELP_GEN | ${(P)ab}"
     MODE_KEY_HANDLER=
     ZFM_NUMBERING=
     mode="[$ZFM_MODE]"
@@ -1461,6 +1465,7 @@ function zfm_selection_mode_toggle() {
     #  This switches on selection so files will be added to a list
     if [[ -n "$M_SELECTION_MODE" ]]; then
         M_SELECTION_MODE=
+        mode="[$ZFM_MODE]"
         pinfo "Selected $#selectedfiles files"
         M_NO_AUTO=1
         call_fileoptions $selectedfiles
@@ -1525,10 +1530,9 @@ function zfm_toggle_expanded_state() {
 function zfm_get_full_indexing_filename() {
     local ans=$1
     iix=$MFM_NLIDX[(i)$ans]
-    pdebug "got iix $iix for $ans"
     [[ -n "$iix" ]] && selection=$vpa[$iix]
-    pdebug "selection was $selection"
 }
+
 function zfm_edit_regex() {
     #$ZFM_EDIT_REGEX_KEY
     ## character like number cause automatic selection, but if your file name
@@ -1599,6 +1603,13 @@ function zfm_goto_line() {
     else
         CURSOR=$ln
     fi
+}
+function zfm_escape () {
+    # vim has its binding for escape but the other two should go to vim if ESC pressed
+    if [[ $ZFM_MODE == "VIM" ]]; then
+        return
+    fi
+    zfm_set_mode VIM
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
