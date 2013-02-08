@@ -5,17 +5,21 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-08 01:31
+#  Last update: 2013-02-08 15:05
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
-    M_MESSAGE="VIM Mode: Quit using q or C-q, i: insert, ': HINTS"
-    MULTIPLIER=""
+    #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
+    MULTIPLIER=
     PENDING=()
     PENDING_KEY=
+
     [[ -n $M_VIMMODE_LOADED ]] && return 1
     export M_VIMMODE_LOADED=1
     typeset -Ag keymap_VIM
     typeset -Ag vim_selector
+    local aa
+    aa=(i INS \' HINT o Open)
+    M_HELP_VIM=$( print_hash $aa )
 
     ## can use x for selecting as gmail and o for open
     ## can use ' or whatever for hints as in vimperator, it uses 'f' but f has naother meaning here
@@ -454,6 +458,7 @@ function vim_other_handler() {
 }
 ## escape pressed clear stuff or pending commands if possible
 function vim_escape() {
+    # now that HINT is a separate mode next line won't work
     [[ -n "$M_FULL_INDEXING" ]] && full_indexing_toggle
     clear_mess
     vim_clear_pending
@@ -589,7 +594,6 @@ function vim_help() {
     str+=" \n"
     str+=" set_pending implies that a motion or selector key is pending, e.g. dG d2k gs ds"
     for key in ${(k)keymap_VIM} ; do
-        #print $key  : $zfm_keymap[$key]
         str+=$(print "    $key  : $keymap_VIM[$key]")"\n"
     done
     print -l -- $str
