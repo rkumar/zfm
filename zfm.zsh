@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-08 17:43
+#  Last update: 2013-02-08 20:55
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -1578,17 +1578,14 @@ function zfm_goto_start() {
     sta=1
     CURSOR=1
 }
+## takes an absolute line number not relative CURSOR value
+#  Value has to be between 1 and $tot
+#  Typically value is sta + CURSOR - 1
+#
 function zfm_goto_line() {
     # when splitting output into multple pages, we are not showing absolute numbers
     # when going to a line, we need to page accordingly.
     ##
-    # if cursor < sta 
-    #   cursor = sta 
-    # if cursor > sta + VPACOUNT
-    #   cursor = sta
-    #    but check for end in which case we reduce by PAGESZ1
-    # if cursor is between sta and sta + VPACOUNT
-    #   then just change cursro to given value
       
     local ln=$1
     [[ -z $ln ]] && {
@@ -1597,23 +1594,19 @@ function zfm_goto_line() {
         print -n "Enter line: "
         read ln
     }
-    local pageend
-    (( pageend = sta + VPACOUNT ))
+    ## first some sanity checks
+    #
+    (( ln > tot )) && ln=$tot
+    (( ln < 1 && sta == 1 )) && ln=1
 
-    if [[ $ln -lt $sta ]]; then
-        CURSOR=$ln
-        sta=$ln
-    elif [[ $ln -gt $pageend ]]; then
-        CURSOR=1
-        sta=$ln
-        (( lp = END - PAGESZ1 ))
-        if [[ $ln -gt $lp ]]; then
-            (( sta  = END - PAGESZ )) 
-            (( CURSOR = PAGESZ1 - (END - ln ) ))
-        fi
-    else
-        CURSOR=$ln
-    fi
+    (( pages = ln / PAGESZ1 ))
+    # ceiling_divide is in cursor.zsh, this is reqd for edge cases such as last item on page
+    pages=$(ceiling_divide $ln $PAGESZ1)
+    (( pages = pages - 1 ))
+    (( sta = pages * PAGESZ1 + 1 ))
+    (( CURSOR = ln - sta + 1 ))
+    return
+
 }
 function zfm_escape () {
     # vim has its binding for escape but the other two should go to vim if ESC pressed
