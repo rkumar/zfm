@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-08 21:11
+#  Last update: 2013-02-09 00:33
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -64,7 +64,7 @@ function list_printer() {
     shift
     #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
-    #restore_exoanded_state
+    
 
     # using cols to calculate cursor movement right
     LIST_COLS=3
@@ -148,8 +148,10 @@ function list_printer() {
             vpa=("${(@f)$(print -rl -- $viewport)}")
             #vpa=("${(f)=viewport}")
             VPACOUNT=$#vpa
-            PAGE_END=$VPACOUNT
-            PAGE_TOP=1
+            #PAGE_END=$VPACOUNT
+            #PAGE_TOP=1
+            (( PAGE_END= VPACOUNT + sta - 1 ))
+            (( PAGE_TOP = sta ))
             ZFM_LS_L=
             if (( $VPACOUNT <  (ZFM_LINES -2 ) )); then
                 # need to account for title and read lines at least and message line
