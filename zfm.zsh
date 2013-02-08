@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-09 00:33
+#  Last update: 2013-02-09 00:49
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -144,9 +144,18 @@ function list_printer() {
             [[ $fin -gt $tot ]] && fin=$tot
             
             ## this line replaces the sed filter
-            viewport=(${viewport[$sta, $fin]})
-            vpa=("${(@f)$(print -rl -- $viewport)}")
-            #vpa=("${(f)=viewport}")
+            #  2013-02-09 - 00:38 I am trying to separate viewport and vpa
+            #  viewport will have data prior to grep so "yG" etc can work. I am losing the entire
+            #  list which is paged. I only have the slice shown, or the entire myopts.
+            #  ------------- operation code commaneted out START ----
+            #viewport=(${viewport[$sta, $fin]})
+            #vpa=("${(@f)$(print -rl -- $viewport)}")
+            #  ------------- operation code commaneted out END ----
+            vpa=(${viewport[$sta, $fin]})
+            #vpa=("${(@f)$(print -rl -- $viewport[$sta, $fin])}")
+            # -------- end of new code -----
+
+
             VPACOUNT=$#vpa
             #PAGE_END=$VPACOUNT
             #PAGE_TOP=1
@@ -195,7 +204,9 @@ function list_printer() {
             ## time a call is made, since it is in another process
             #
             #print -rC$LIST_COLS "${(@f)$(print -rl -- $viewport | numberlines -p "$PATT" -w $width)}"
-            numberlines -p "$PATT" -w $width $viewport
+            # 2013-02-09 - 00:49 replaced viewport with vpa
+            #numberlines -p "$PATT" -w $width $viewport
+            numberlines -p "$PATT" -w $width $vpa
             print -rC$LIST_COLS "${(@f)$(print -l -- $OUTPUT)}"
 
             [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
