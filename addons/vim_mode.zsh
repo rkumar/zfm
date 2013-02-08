@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-08 19:49
+#  Last update: 2013-02-08 22:25
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -184,6 +184,7 @@ function vim_exec() {
         #
         if [[ -n "$M_FILES_1b1" ]]; then
             for (( i = $RANGE_START; i <= $RANGE_END; i++ )); do
+                ## can only go till end of viewport not complete list XXX
                 $f $PWD/$vpa[$i] 
             done
         else
