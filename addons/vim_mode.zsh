@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-08 15:05
+#  Last update: 2013-02-08 17:52
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -18,7 +18,7 @@ function vimmode_init() {
     typeset -Ag keymap_VIM
     typeset -Ag vim_selector
     local aa
-    aa=(i INS \' HINT o Open)
+    aa=(i INS $ZFM_HINT_KEY HINT o Open)
     M_HELP_VIM=$( print_hash $aa )
 
     ## can use x for selecting as gmail and o for open
@@ -67,7 +67,8 @@ function vimmode_init() {
     vim_bind_key "q" "exit_vim"
     vim_bind_key "g h" "zfm_goto_parent_dir"
     vim_bind_key "t" "zfm_goto_dir"
-    vim_bind_key "f" "full_indexing_toggle"
+    # optional for those who like pentadactyl vimperator
+    vim_bind_key "f" "vim_jump_to_hint"
     vim_bind_key "ENTER" "select_current_line"
     vim_bind_key "g l" "select_current_line"
     vim_bind_key "i" "zfm_set_mode INS"
@@ -459,7 +460,7 @@ function vim_other_handler() {
 ## escape pressed clear stuff or pending commands if possible
 function vim_escape() {
     # now that HINT is a separate mode next line won't work
-    [[ -n "$M_FULL_INDEXING" ]] && full_indexing_toggle
+    #[[ -n "$M_FULL_INDEXING" ]] && full_indexing_toggle
     clear_mess
     vim_clear_pending
 }
@@ -598,6 +599,12 @@ function vim_help() {
     done
     print -l -- $str
     
+}
+function vim_jump_to_hint() {
+    M_HINT_EXIT_IMMED=1
+    M_HINT_POSITION_CURSOR_ONLY=1
+    zfm_set_mode HINT
+
 }
 
 
