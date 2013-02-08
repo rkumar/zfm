@@ -34,3 +34,4 @@
     zfm_bind_key "C-b" zfm_scroll_up
     zfm_bind_key 'ML \' "zfm_set_mode VIM"
     zfm_bind_key 'C-r' zfm_refresh
+    zfm_bind_key 'ESCAPE' zfm_escape
