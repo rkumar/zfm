@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-08 22:25
+#  Last update: 2013-02-09 01:29
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -160,8 +160,7 @@ function vim_exec() {
 
     local n=$MULTIPLIER
     if [[ -n $MULTIPLIER ]]; then
-        RANGE_START=$CURSOR
-        (( RANGE_END = CURSOR + MULTIPLIER - 1 ))
+        calc_range
         ## cannot do this for vim_goto_line uses MULTIPLIER
         #MULTIPLIER=
     fi
@@ -185,11 +184,13 @@ function vim_exec() {
         if [[ -n "$M_FILES_1b1" ]]; then
             for (( i = $RANGE_START; i <= $RANGE_END; i++ )); do
                 ## can only go till end of viewport not complete list XXX
-                $f $PWD/$vpa[$i] 
+                #$f $PWD/$vpa[$i] 
+                $f $PWD/$viewport[$i] 
             done
         else
             ## best to pass files together so commands like vim can open in one process
-            slice=($vpa[$RANGE_START,$RANGE_END])
+            #slice=($vpa[$RANGE_START,$RANGE_END])
+            slice=($viewport[$RANGE_START,$RANGE_END])
             slice=( $PWD/$^slice )
             pinfo "CALLING $f with $#slice ($RANGE_START , $RANGE_END : $slice[1]"
             $f $slice
@@ -245,7 +246,8 @@ function vim_ix_first_selection() {
     for ff in $vp ; do
         if [[ $selectedfiles[(i)$ff] -le $#selectedfiles ]]; then
             first=${first:-$c}
-            [[ $c -gt $CURSOR ]] && { ix=$c ; break }
+            abs_cursor
+            [[ $c -gt $ABS_CURSOR ]] && { ix=$c ; break }
         fi
         (( c++ ))
     done
@@ -294,11 +296,12 @@ function vim_motion() {
         #  and CURSOR_TARGET as other spot
         #  or should we put START and END to make backward commands easy
         CURSOR_TARGET=$pos
-        RANGE_START=$CURSOR
+        #RANGE_START=$CURSOR
+        (( RANGE_START = CURSOR + sta - 1 ))
         RANGE_END=$CURSOR_TARGET
-        (( CURSOR_TARGET < CURSOR )) && { 
+        (( CURSOR_TARGET < RANGE_START )) && { 
+            RANGE_END=$RANGE_START
             RANGE_START=$CURSOR_TARGET
-            RANGE_END=$CURSOR
         }
         ## what if there's a multiplier thre, should we not unset it ? XXX 5yG
         # vim exec takes care of mult and range etc
@@ -561,13 +564,16 @@ function vim_yank() {
     # else current cursor
     local n=$MULTIPLIER
     if [[ -n $MULTIPLIER ]]; then
-        RANGE_START=$CURSOR
-        (( RANGE_END = CURSOR + MULTIPLIER ))
+        #RANGE_START=$CURSOR
+        calc_range
+        #(( RANGE_START = CURSOR + sta - 1 ))
+        #(( RANGE_END = RANGE_START + MULTIPLIER ))
         MULTIPLIER=
     fi
     if [[ -n $RANGE_START ]]; then
         for (( i = $RANGE_START; i <= $RANGE_END; i++ )); do
-            zfm_add_to_selection $PWD/$vpa[$i] 
+            #zfm_add_to_selection $PWD/$vpa[$i] 
+            zfm_add_to_selection $PWD/$viewport[$i] 
         done
     else
         # take cursor pos
@@ -581,13 +587,13 @@ function vim_delete() {
     # else current cursor
     local n=$MULTIPLIER
     if [[ -n $MULTIPLIER ]]; then
-        RANGE_START=$CURSOR
-        (( RANGE_END = CURSOR + MULTIPLIER ))
+        calc_range
         MULTIPLIER=
     fi
     if [[ -n $RANGE_START ]]; then
         for (( i = $RANGE_START; i <= $RANGE_END; i++ )); do
-            $ZFM_RM_COMMAND $vpa[$i] 
+            #$ZFM_RM_COMMAND $vpa[$i] 
+            $ZFM_RM_COMMAND $viewport[$i] 
         done
     else
         # take cursor pos
@@ -611,6 +617,14 @@ function vim_jump_to_hint() {
     zfm_set_mode HINT
 
 }
+function calc_range() {
+    (( RANGE_START = CURSOR + sta - 1 ))
+    (( RANGE_END = RANGE_START + MULTIPLIER - 1 ))
+}
+function abs_cursor() {
+    (( ABS_CURSOR = CURSOR + sta - 1 ))
+}
+
 
 
 #[[ -z $M_VIMMODE_LOADED ]] && vimmode_init
