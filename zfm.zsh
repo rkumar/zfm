@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-09 00:49
+#  Last update: 2013-02-09 01:52
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -1506,7 +1506,9 @@ function zfm_toggle_file() {
     #selection=$PWD/$selection
     local selection="$1"
     ## if the user interactively selected then advance cursor like memacs does
-    [[ -z $selection ]] && { selection=$PWD/$vpa[$CURSOR]; (( CURSOR++ )) ; }
+    # cursor++ fine in single page but screwed on multipage when turning over page
+    #[[ -z $selection ]] && { selection=$PWD/$vpa[$CURSOR]; (( CURSOR++ )) ; }
+    [[ -z $selection ]] && { selection=$PWD/$vpa[$CURSOR]; vim_cursor_down; }
 
     if [[ -n  ${selectedfiles[(re)$selection]} ]]; then
         pinfo "File $selection already selected, removing ..."
