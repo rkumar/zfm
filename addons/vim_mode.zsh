@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-08 17:52
+#  Last update: 2013-02-08 19:49
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -480,7 +480,7 @@ function vim_cursor_down() {
     n=${n:-$MULTIPLIER}
     n=${n:-1}
     local newpos
-    (( newpos = CURSOR + n ))
+    (( newpos = ( sta + CURSOR - 1) + n ))
     MULTIPLIER=
     vim_motion $newpos
     #(( CURSOR += n ))
@@ -493,7 +493,11 @@ function vim_cursor_up() {
     n=${n:-$MULTIPLIER}
     n=${n:-1}
     local newpos
-    (( newpos = CURSOR - n ))
+    ## the next calc is fine when we are on a single page, and CURSO is absolute position
+    #  but in multiple page listings sta also gets moved since we have begun calling zfm_goto_line
+    #   This change may affect the set_pending code which uses CURSOR, it should use ABSO position.
+    #(( newpos = CURSOR - n ))
+    (( newpos = ( sta + CURSOR - 1 ) - n ))
     MULTIPLIER=
     vim_motion $newpos
     #(( CURSOR -= n ))
