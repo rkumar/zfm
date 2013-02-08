@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-02-06 - 19:51
 #      License: GPL
-#  Last update: 2013-02-06 22:47
+#  Last update: 2013-02-08 15:12
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -125,7 +125,7 @@ function ins_key_handler() {
             fi
             [[ -n "$selection" ]] && break
             ;; 
-        "C-g" | "ESCAPE")
+        "C-g" )
             PATT=
             ;;
         "C-c")
