@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-08 15:15
+#  Last update: 2013-02-08 17:43
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -570,6 +570,7 @@ ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-"M-a"}  # select all files on screen
 ZFM_EDIT_REGEX_KEY=${ZFM_EDIT_REGEX_KEY:-"/"}  # edit PATT used to filter
 export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
 ZFM_MAP_LEADER=${ZFM_MAP_LEADER:-'\'}
+ZFM_HINT_KEY=${ZFM_HINT_KEY:-';'}
 #export ZFM_NO_COLOR   # use to swtich off color in selection
 M_SWITCH_OFF_DUPL_CHECK=
 MFM_LISTORDER=${MFM_LISTORDER:-""}
@@ -974,7 +975,7 @@ function init_key_function_map() {
                     zfm_selection_mode_toggle
                 $ZFM_TOGGLE_FILE_KEY
                     zfm_toggle_file
-                "'"
+                "$ZFM_HINT_KEY"
                     full_indexing_toggle
                 "C-x"
                     cx_map
@@ -1145,14 +1146,16 @@ function zfm_set_mode() {
 
     export ZFM_MODE=$1
     [[ -z "$ZFM_MODE" ]] && { print "Error: ZFM_MODE blank." 1>&2; exit 1; }
-    ab="M_HELP_$ZFM_MODE"
-    M_HELP="$M_HELP_GEN | ${(P)ab}"
     MODE_KEY_HANDLER=
     ZFM_NUMBERING=
     mode="[$ZFM_MODE]"
     #[[ $ZFM_MODE == "VIM" ]] && { vimmode_init }
     initf="${ZFM_MODE:l}mode_init"
     $initf
+    local ab
+    ab="M_HELP_$ZFM_MODE"
+    M_HELP="$M_HELP_GEN | ${(P)ab}"
+    clear_mess
 }
 function zfm_unset_mode() {
     ## UNUSED NOW
@@ -1530,7 +1533,15 @@ function zfm_toggle_expanded_state() {
 function zfm_get_full_indexing_filename() {
     local ans=$1
     iix=$MFM_NLIDX[(i)$ans]
-    [[ -n "$iix" ]] && selection=$vpa[$iix]
+    [[ -n "$iix" ]] && { 
+        # from vim or other modes we may want to use this only to position the cursor
+        # like on f or some key, not open a file
+        if [[ -z $M_HINT_POSITION_CURSOR_ONLY ]]; then
+            selection=$vpa[$iix]
+        else
+        fi
+        (( CURSOR = iix ))
+    }
 }
 
 function zfm_edit_regex() {
@@ -1610,6 +1621,17 @@ function zfm_escape () {
         return
     fi
     zfm_set_mode VIM
+}
+function zfm_bs () {
+
+    # BACKSPACE backspace if we are filtering
+    if [[ $PATT = "" ]]; then
+        M_NO_REPRINT=1
+    else
+        # backspace if we are filtering, remove last char from pattern
+        PATT[-1]=
+        PATT=${PATT%.*}
+    fi
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
