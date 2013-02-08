@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-08 20:55
+#  Last update: 2013-02-08 21:11
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -518,7 +518,7 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.12-alpha"
+ZFM_VERSION="0.1.13-alpha"
 M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/06"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -674,6 +674,9 @@ function zfm_open_file() {
 # it stored details in OUTPUT string. And reads from viewport.
 function numberlines() {
     let c=1
+        #if [[ $ZFM_NUMBERING == "ABSOLUTE" ]]; then
+            #(( c = sta ))
+        #fi
     local patt='.'
     if [[ -n "$ZFM_NO_COLOR" ]]; then
         BOLD='*'
@@ -702,7 +705,6 @@ function numberlines() {
     nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     #while IFS= read -r line; do
     for line in $*; do
-        # read from viewport now TODO
         cc=' '
         (( c == CURSOR )) && cc=$CURSOR_MARK
         #if [[ -n "$M_FULL_INDEXING" ]]; then
@@ -710,7 +712,9 @@ function numberlines() {
             sub=$nlidx[$c]
         elif [[ $ZFM_NUMBERING == "ABSOLUTE" ]]; then
             ## This is triggered by vim when we do a "g"
-            sub=$c
+            #sub=$c
+            # moved to absolute numbering not just cursor which was page relative
+            (( sub = c + sta - 1 ))
         elif [[ $ZFM_NUMBERING == "RELATIVE" ]]; then
             ## This is triggered by vim when we do a j or k
             #sub=$c
