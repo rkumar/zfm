@@ -1,18 +1,25 @@
 #!/usr/bin/env zsh
 # ----------------------------------------------------------------------------- #
 #         File: hintmode.zsh
-#  Description: hint mode
-#       Author: rkumar http://github.com/rkumar/rbcurse/
+#  Description: hint mode, like vimperator, each file has a shortcut
+#       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-06 - 22:31
 #      License: GPL
-#  Last update: 2013-02-08 15:14
+#  Last update: 2013-02-08 17:50
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
 function hintmode_init() {
-    mess "HINT Mode: C-c: Exit mode"
+    #mess "HINT Mode: C-c: Exit mode"
+    clear_mess
     M_FULL_INDEXING=1
     [[ $ZFM_PREV_MODE == "HINT" ]] || ZFM_PREV_MODE=$ZFM_MODE
+
+
+    # do once 
+    local aa
+    aa=(C-c Cancel C-g "Clear Pattern" Esc "Vim Mode")
+    M_HELP_HINT=$( print_hash $aa )
 }
 function hint_key_handler() {
     local ans=$1
@@ -21,6 +28,8 @@ function hint_key_handler() {
     case $ans in
         [1-9a-zA-Z])
             zfm_get_full_indexing_filename $ans
+            ## in case caller wishes to use once and exit
+            [[ -n $M_HINT_EXIT_IMMED ]] && hint_exit_mode
             ;;
         $ZFM_REFRESH_KEY)
             zfm_refresh
@@ -42,12 +51,7 @@ function hint_key_handler() {
             PATT=
             ;;
         "C-c")
-            M_FULL_INDEXING=
-            local mo=$ZFM_PREV_MODE
-            if [[ $ZFM_PREV_MODE == "HINT" ]]; then
-                mo=$ZFM_DEFAULT_MODE
-            fi
-            zfm_set_mode $mo
+            hint_exit_mode
             ;;
 
         *)
@@ -57,4 +61,15 @@ function hint_key_handler() {
     esac
 
     ## above this line is insert mode
+}
+function hint_exit_mode() {
+    M_FULL_INDEXING=
+    M_HINT_EXIT_IMMED=
+    M_HINT_POSITION_CURSOR_ONLY=
+    local mo=$ZFM_PREV_MODE
+    if [[ $ZFM_PREV_MODE == "HINT" ]]; then
+        mo=$ZFM_DEFAULT_MODE
+    fi
+    zfm_set_mode $mo
+
 }
