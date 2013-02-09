@@ -3,7 +3,7 @@ zfm
 
 zsh file explorer/manager for fast navigation and running commands on files or groups of files.
 
-##WARNING!!##
+##DOCUMENTATION OUTDATE WARNING!!##
 
 A lot has changed since the last update of this doc. Now we go directly into VIM mode (and yeah there is a vim mode, I  got sick of typing j and k) and I promoted it to the default startup mode. There;s an INS mode and a HINT mode (like Vimperator or Pentadactyl).
 
@@ -13,11 +13,13 @@ I sorely need to update this doc.
 
 This is a file navigator or explorer that attempts to make as many operations as possible on single keys so that a user can quickly navigate and execute commands. It is hoped that such paths will become second nature.
 
-The first 9 files or dirs in any view are given hotkeys from 1-9. After that with each successive key the files are reduced. This actually makes file navigation very fast.
+The first 9 files or dirs in any view are given hotkeys from 1-9. After that with each successive key the files are reduced. This actually makes file navigation very fast. (This is in INS mode and in HINT mode.) In VIM mode numbers will mean a count. Jump to HINT mode using ; or use count-j or count-k to move and hit ENTER or "o" or "e".
+
+In VIM mode, you can also jump to a file without opening it, using "f". This is like EasyMotion and will give the same HINT for each file, but instead of opening it, will position the cursor at that point.
 
 The "," key (lower case of "&lt;") is used to go up directory levels. There are many other shortcuts that allow for other usual operations to be done fast such as accessing favorite directories and files, and navigating deep structures quickly.
 
-Paging of long listings is done using the SPACEBAR. If you have dirs with lots of files containing spaces, you may want to change the ZFM_PAGE_KEY to some other key.
+Paging of long listings is done using Alt-n and Alt-p (earlier SPACEBAR, now SPACE selects). If you have dirs with lots of files containing spaces, you may want to change the ZFM_PAGE_KEY to some other key.
 
 The motivation of yet another file manager is to automate as many file-related operations as I can: browsing, operating on multiple files, today's files, filtering file lists. I also use ``z``, ``v``, ``vifm``, and various other great utilities.
 
