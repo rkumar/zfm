@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-02-06 - 19:51
 #      License: GPL
-#  Last update: 2013-02-08 15:12
+#  Last update: 2013-02-09 19:35
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -55,6 +55,7 @@ function ins_key_handler() {
                         [[ -n "$lines" ]] && { selection=$lines; break }
                     elif [[ $ct -eq 0 ]]; then
                         selection=$vpa[$ans]
+                        ins_set_cursor $ans
                         #selection=$myopts[$ix] # fails on filtering
                         [[ -n $ZFM_VERBOSE ]] && print " selected $selection"
                     else
@@ -64,6 +65,7 @@ function ins_key_handler() {
                     # there are only 9 or less so just use mnemonics, don't check
                     # earlier
                     selection=$vpa[$ans]
+                    ins_set_cursor $ans
                 fi
             [[ -n "$selection" ]] && break
             ;;
@@ -140,4 +142,8 @@ function ins_key_handler() {
     esac
 
     ## above this line is insert mode
+}
+function ins_set_cursor() {
+    local ins=$1
+    (( CURSOR = ins ))
 }
