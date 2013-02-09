@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-09 16:03
+#  Last update: 2013-02-10 00:25
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -649,6 +649,7 @@ sta=1
             [[ -n $selection ]] && zfm_open_file $selection
     done
     print "bye"
+    stty intr ''
     # do this only if is different from invoking dir
     [[ "$PWD" == "$ZFM_START_DIR" ]] || {
         print "sending $PWD to pbcopy"
@@ -691,10 +692,8 @@ function zfm_open_file() {
 # it stored details in OUTPUT string. And reads from viewport.
 function numberlines() {
     let c=1
-        #if [[ $ZFM_NUMBERING == "ABSOLUTE" ]]; then
-            #(( c = sta ))
-        #fi
     local patt='.'
+    #nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     if [[ -n "$ZFM_NO_COLOR" ]]; then
         BOLD='*'
         BOLD_OFF=
@@ -719,14 +718,13 @@ function numberlines() {
     #patt=${patt:s/^//}
     local w=$#patt
     #let w++
-    nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     #while IFS= read -r line; do
     for line in $*; do
         cc=' '
         (( c == CURSOR )) && cc=$CURSOR_MARK
         #if [[ -n "$M_FULL_INDEXING" ]]; then
         if [[ $ZFM_MODE ==  "HINT" ]]; then
-            sub=$nlidx[$c]
+            sub=$MFM_NLIDX[$c]
         elif [[ $ZFM_NUMBERING == "ABSOLUTE" ]]; then
             ## This is triggered by vim when we do a "g"
             #sub=$c
@@ -744,7 +742,14 @@ function numberlines() {
                 sub=$c
             fi
         elif [[ $ZFM_MODE == "VIM" ]]; then
-            sub=$c
+            # print absolute number by default, see note below why i do it differently
+            (( _c = c + sta - 1 ))
+            sub=$_c
+
+            ## for some strange reason if i put the next line here
+            #then HINT starts printing a 0 for all indices after 9 and it prints a 12 for 12
+            #(( sub = c + sta - 1 ))
+
         elif [[ $ZFM_MODE == "INS" ]]; then
             sub=$c
 
@@ -1531,10 +1536,14 @@ function zfm_toggle_file() {
 # add given file to selection, $PWD should be prepended to it or it won't highlight
 #
 zfm_add_to_selection() {
-    #local selection="$1"
     local selection
     selection=($@)
     selectedfiles+=( $selection )
+}
+zfm_remove_from_selection() {
+    local selection
+    selection=($@)
+    selectedfiles=(${selectedfiles:|selection})
 }
 ## This expands dir under cursor, actually toggles expanded state
 #  This places dir name in an array, however, it keeps only final part of dir not complete
