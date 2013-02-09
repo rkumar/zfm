@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-08 17:36
+# Last update: 2013-02-09 18:54
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -471,6 +471,7 @@ function handle_selection() {
             vared -p "Enter command to place after filenames (e.g. target) :" commandpost
             pdebug "$commandpre $selected_files $commandpost"
             eval "$commandpre $selected_files $commandpost"
+            pause
         }
         ;;
     esac
