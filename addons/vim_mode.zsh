@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-09 19:00
+#  Last update: 2013-02-09 19:03
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -444,11 +444,17 @@ function vim_char_handler() {
         binding=$keymap_VIM[$ckey]
         if [[ -n $binding ]]; then
             key=$ckey
+
+            ## XXX This clearing means something like ygd will not work
+            # since we have removed y and g. and do only "g d". 
+            # If i comment this then it becomes just like 1yy.
+
             PENDING=()
             PENDING_KEY=
         else
             ## check for a selector and call it else let this continue
             # if not a selector either most likely an error - unless its a motion command
+
             _x=$vim_selector[$key]
             if [[ -n "$_x" ]]; then
                 mess "found a selector $_x : $#PENDING :: $PENDING"
