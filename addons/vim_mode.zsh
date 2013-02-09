@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-09 01:29
+#  Last update: 2013-02-09 13:55
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -319,25 +319,6 @@ function vim_motion() {
         PREV_CURSOR=$CURSOR
         CURSOR=$pos
         zfm_goto_line $pos
-        return
-        if [[ $CURSOR -lt 1 ]]; then
-            zfm_prev_page
-        elif [[ $CURSOR -gt VPACOUNT ]]; then
-            ## TODO need to calc correct page
-            (( diff = CURSOR - VPACOUNT ))
-            M_MESSAGE="$0 diff $diff : page $PAGESZ cur $CURSOR - vpa $VPACOUNT tot: $tot END=$END, "
-            if [[ $diff -le $PAGESZ1 ]]; then
-                zfm_next_page 
-            else
-                sta=$CURSOR
-                CURSOR=1
-                (( sta == END && END > PAGESZ1 )) && {
-                    (( sta  = END - PAGESZ )) 
-                    (( CURSOR = PAGESZ1 ))
-                }
-            fi
-        fi
-        (( CURSOR < 1 )) && CURSOR=1
     fi
 }
 function file_index() {
