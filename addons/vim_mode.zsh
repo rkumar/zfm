@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-09 18:38
+#  Last update: 2013-02-09 19:00
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
