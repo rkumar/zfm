@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-10 00:33
+#  Last update: 2013-02-10 01:33
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -42,11 +42,16 @@ function vimmode_init() {
     vim_bind_key "H" "vim_motion PAGE_TOP"
     vim_bind_key "L" "vim_motion PAGE_END"
     # temp using y to select, coud make it t meaning tag
-    vim_bind_key "y" "vim_set_pending zfm_add_to_selection"
+    #vim_bind_key "y" "vim_set_pending zfm_add_to_selection"
+    #vim_bind_key "Y" "vim_exec zfm_add_to_selection"
+    vim_bind_pair "y" "zfm_add_to_selection"
     # temporarily using C to clear selection as opposite of y
-    vim_bind_key "c" "vim_set_pending zfm_remove_from_selection"
-    vim_bind_key "d" "vim_set_pending $ZFM_RM_COMMAND"
-    vim_bind_key "o" "vim_set_pending $EDITOR"
+    #vim_bind_key "c" "vim_set_pending zfm_remove_from_selection"
+    vim_bind_pair "c" "zfm_remove_from_selection"
+    #vim_bind_key "d" "vim_set_pending $ZFM_RM_COMMAND"
+    vim_bind_pair "d" "$ZFM_RM_COMMAND"
+    vim_bind_pair "o" "$EDITOR"
+    # directly open the file, no count etc
     vim_bind_key "e" "zfm_open_file"
     vim_bind_key "x" "zfm_toggle_file"
     #vim_bind_key "y y" "zfm_add_to_selection"
@@ -127,6 +132,13 @@ function vim_bind_key() {
         perror "Unable to bind $1 to vim keymap "
         pause
     fi
+}
+function vim_bind_pair() {
+    local ch=$1
+    local fn=$2
+    chu=${ch:u}
+    vim_bind_key $ch "vim_set_pending $fn"
+    vim_bind_key $chu "vim_exec $fn"
 }
 ## some operations like y and d cannot work without a second character which could be 
 # a motion command or the same char. So we set the command as pending a motion command.
