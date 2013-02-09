@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-09 01:52
+#  Last update: 2013-02-09 15:56
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -274,30 +274,34 @@ function list_printer() {
 }
 # }
 function zfm_next_page () {
-    local oldsta=$sta
-    (( sta += $PAGESZ1 ))
-    #[[ $sta -ge $tot ]] && { sta=$oldsta; }
-    [[ $sta -ge $tot ]] && { sta=$oldsta; CURSOR=$VPACOUNT; return }
-    ## something wrong with cursor setting to 1 each time, this is only if pagin has happened.
-    CURSOR=1
+    local pos
+    curpos pos 
+    (( pos += PAGESZ1 ))
+    zfm_goto_line $pos
+    return
 }
 function zfm_prev_page () {
-    (( sta -= $PAGESZ1 ))
-    [[ $sta -lt 1 ]] && sta=1
+    local pos
+    curpos pos 
+    (( pos -= PAGESZ1 ))
+    zfm_goto_line $pos
 }
+## currently called by C-d
+#  scrolls using value of M_SCROLL
+#
 function zfm_scroll_down () {
-    (( CURSOR += M_SCROLL ))
+    local pos
+    curpos pos 
+    (( pos += M_SCROLL ))
+    zfm_goto_line $pos
 }
+## currently called by C-b
+#  scrolls using value of M_SCROLL
 function zfm_scroll_up () {
-    (( CURSOR -= M_SCROLL ))
-    (( CURSOR < 1 && sta > 1 )) && { 
-        zfm_prev_page ;
-        ## the next vpa count deals with current page which can be less than
-        # files on prev page
-        (( CURSOR = VPACOUNT ))
-        #(( CURSOR = VPACOUNT - M_SCROLL ))
-    }
-    (( CURSOR < 1 )) && CURSOR=1
+    local pos
+    curpos pos 
+    (( pos -= M_SCROLL ))
+    zfm_goto_line $pos
 }
 function zfm_go_top () {
     CURSOR=1
@@ -531,8 +535,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.13-alpha"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/06"
+ZFM_VERSION="0.1.13-beta"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/09"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -1088,7 +1092,7 @@ function init_file_menus() {
     COMMANDS[gitcom]='git commit'
     ## convert selected flv file to m4a using ffmpeg
     COMMANDS[ffmp]='ffmpeg -i %% -vn ${${:-%%}:r}.m4a'
-    COMMANDS[clip]='print %% | pbcopy && print "Copied filename to clipboard"'
+    COMMANDS[clip]='print -r -- %% | pbcopy && print "Copied filename to clipboard"'
     COMMANDS[tvf]='tar ztvf'
     # pdftohtml -stdout %% | links -stdin
     #FT_DEFAULT_PDF="pdftohtml"
@@ -1453,14 +1457,18 @@ function zfm_filter_list() {
 ## Should only select files not dirs, since you can't deselect a dir
 #
 function zfm_select_all_rows() {
-    for line in $vpa
+    for line in $viewport
     do
         pdebug "line $line"
         selected_row=("${(s/	/)line}")
         selected_file=$selected_row[-1]
         ## reject directories 
         if [[ -n "$M_SELECT_ALL_NO_DIRS" ]]; then
+            ## don;t select dirs
             [[ -d $selected_file ]] || selectedfiles+=( $PWD/$selected_file )
+        else
+            # select files and dirs, everything
+            selectedfiles+=( $PWD/$selected_file )
         fi
     done
     pinfo "selected files $#selectedfiles. "
@@ -1581,17 +1589,8 @@ function sms() {
     M_MESSAGE="$M_HELP [$1]"
 }
 function zfm_goto_end() {
-    ## if you are on last page already then don't adjust sta, just move cursor
-    (( sta > END - PAGESZ1 )) && {
-        CURSOR=$VPACOUNT
-        return
-    }
-    sta=$END
-    CURSOR=1
-    (( sta == END && END > PAGESZ1 )) && {
-        (( sta  = END - PAGESZ )) 
-        (( CURSOR = PAGESZ1 ))
-    }
+    # XXX this should just do a zfm_goto_line $END
+    zfm_goto_line $END
 }
 function zfm_goto_start() {
     sta=1
@@ -1623,6 +1622,9 @@ function zfm_goto_line() {
     pages=$(ceiling_divide $ln $PAGESZ1)
     (( pages = pages - 1 ))
     (( sta = pages * PAGESZ1 + 1 ))
+    ## This sets cursor to be relative to page.
+    # Once we call this from all motion places then we can make it absolute and do away 
+    # with using vpa from everwhere except for numberlines
     (( CURSOR = ln - sta + 1 ))
     return
 
@@ -1644,6 +1646,19 @@ function zfm_bs () {
         PATT[-1]=
         PATT=${PATT%.*}
     fi
+}
+## saves both start and curpos
+#  We need to move to using correct cursor position and not this page relative position
+function save_curpos() {
+    PREV_CURSOR=$CURSOR
+    PREV_STA=$sta
+}
+## calculates absolute position for given relative CURSOR position
+## pass variable name and it will update absolute curpos in var name
+function curpos() {
+    # convert current cursor to abso
+    local result_name=$1
+    (( ${result_name} = sta + CURSOR - 1 ))
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
