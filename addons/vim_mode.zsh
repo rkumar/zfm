@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-09 13:55
+#  Last update: 2013-02-09 18:38
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -234,8 +234,8 @@ function vim_exec() {
         RANGE_START=
         RANGE_END=
 }
-##  returns first visible selection, however this will not page to other pages
-#   I mean it will only show from current page
+##  returns next selected element.
+#   
 function vim_ix_first_selection() {
     [[ $#selectedfiles -eq 0 ]] && { print $CURSOR; return 1}
 
@@ -245,6 +245,38 @@ function vim_ix_first_selection() {
     vp=($PWD/${^viewport}) # prepend PWD to each element 2013-01-10 - 00:17
     for ff in $vp ; do
         if [[ $selectedfiles[(i)$ff] -le $#selectedfiles ]]; then
+            first=${first:-$c}
+            abs_cursor
+            [[ $c -gt $ABS_CURSOR ]] && { ix=$c ; break }
+        fi
+        (( c++ ))
+    done
+    if [[ $ix -eq 0 ]]; then
+        print $first
+    else
+        print $ix
+    fi
+}
+function vim_goto_next_dir() {
+    offset=$(return_next_match is_dir)
+    vim_motion $offset
+}
+function is_dir() {
+    local file=$1
+    [[ -d $1 ]] && return 0
+    return 1
+}
+function return_next_match() {
+    #[[ $#selectedfiles -eq 0 ]] && { print $CURSOR; return 1}
+
+    local vp c ix first binding
+    binding=$1
+    let c=1
+    let ix=0
+    vp=($PWD/${^viewport}) # prepend PWD to each element 2013-01-10 - 00:17
+    for ff in $vp ; do
+        #if [[ $selectedfiles[(i)$ff] -le $#selectedfiles ]]; then
+        if eval "$binding $ff"; then
             first=${first:-$c}
             abs_cursor
             [[ $c -gt $ABS_CURSOR ]] && { ix=$c ; break }
@@ -303,6 +335,12 @@ function vim_motion() {
             RANGE_END=$RANGE_START
             RANGE_START=$CURSOR_TARGET
         }
+        #pinfo "$0: $RANGE_START to $RANGE_END : $f"
+        #pause
+        ## 2013-02-09 - 18:37 seems in cases like y8gg 8gg correclt calculates 
+        # backward range, but y recalculates 8 as multiplier, so we need to unset it
+        MULTIPLIER=
+
         ## what if there's a multiplier thre, should we not unset it ? XXX 5yG
         # vim exec takes care of mult and range etc
         #if [[ $f == "vim_goto_line" ]]; then
@@ -540,6 +578,8 @@ function vim_goto_last_position(){
     CURSOR=$PREV_CURSOR
 }
 function vim_yank() {
+    perror "$0 : is this called ?"
+    pause
     # first check mult
     # then check range
     # else current cursor
@@ -563,6 +603,8 @@ function vim_yank() {
 }
 ## this is identical to vim_yank except for the command called
 function vim_delete() {
+    perror "$0 : is this called ?"
+    pause
     # first check mult
     # then check range
     # else current cursor
@@ -602,6 +644,8 @@ function calc_range() {
     (( RANGE_START = CURSOR + sta - 1 ))
     (( RANGE_END = RANGE_START + MULTIPLIER - 1 ))
 }
+## I just made something called curpos in zfm.zsh which does same thing 
+#  calculate absolute cursor and put in ABS_CURSOR
 function abs_cursor() {
     (( ABS_CURSOR = CURSOR + sta - 1 ))
 }
