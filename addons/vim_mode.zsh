@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-09 19:03
+#  Last update: 2013-02-10 00:33
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -41,7 +41,10 @@ function vimmode_init() {
     #vim_bind_key "a" "vim_set_selector all"
     vim_bind_key "H" "vim_motion PAGE_TOP"
     vim_bind_key "L" "vim_motion PAGE_END"
+    # temp using y to select, coud make it t meaning tag
     vim_bind_key "y" "vim_set_pending zfm_add_to_selection"
+    # temporarily using C to clear selection as opposite of y
+    vim_bind_key "c" "vim_set_pending zfm_remove_from_selection"
     vim_bind_key "d" "vim_set_pending $ZFM_RM_COMMAND"
     vim_bind_key "o" "vim_set_pending $EDITOR"
     vim_bind_key "e" "zfm_open_file"
@@ -162,7 +165,7 @@ function vim_exec() {
     if [[ -n $MULTIPLIER ]]; then
         calc_range
         ## cannot do this for vim_goto_line uses MULTIPLIER
-        #MULTIPLIER=
+        MULTIPLIER=
     fi
     # what if I want to send file names together
     # such as to vim, so they open in one process 
