@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-10 00:57
+#  Last update: 2013-02-10 20:18
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -605,6 +605,16 @@ export ZFM_STRING
 init_key_function_map
 init_menu_options
 init_file_menus
+if [[ -f $ZFM_DIR/bindings.zsh ]]; then
+    source ${ZFM_DIR}/bindings.zsh
+else
+    perror  "Can't find bindings.zsh"
+    exit 1
+fi
+for ff in ${ZFM_DIR}/modes/*
+do
+    source $ff
+done
 source_addons
 zfm_set_mode $ZFM_DEFAULT_MODE
 # at this point read up users bindings
@@ -690,10 +700,12 @@ function zfm_open_file() {
 ## Earlier this acted as a filter and read lines and printed back output, But now we cache
 # file details to avoid screen flicker, so the hash must be in the same shell/process, thus 
 # it stored details in OUTPUT string. And reads from viewport.
+#
+# NOTE: Avoid app specific code in here, i can see PWD already and perhaps get_file_details
+#       Keep it general and simple so we can reuse for other apps.
 function numberlines() {
     let c=1
     local patt='.'
-    #nlidx="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
     if [[ -n "$ZFM_NO_COLOR" ]]; then
         BOLD='*'
         BOLD_OFF=
@@ -1338,6 +1350,25 @@ function zfm_goto_dir() {
     PATT="" # 2012-12-26 - 00:54 
     push_pwd $selection
 }
+## a wrapper over dir change command -- we should move to using this
+# to localize changes.
+# This takes a position to open on.
+# Use cases: 
+#   - open a dir
+#   - open a dir at n position
+#   - open a dir on some file TODO if reqd
+#   - open a dir on first occu of pattern TODO if reqd
+function zfm_open_dir() {
+    local dir=$1
+    local pos=$2
+    # push directory before changing
+    push_pwd $dir
+    $ZFM_CD_COMMAND $dir
+    post_cd
+    if [[ -n $pos ]]; then
+        calc_sta_offset $pos
+    fi
+}
 ##
 # directories user has visited in this session
 # These are not all the dirs, only those specifically selected through some options
@@ -1622,10 +1653,25 @@ function zfm_goto_line() {
         read ln
     }
     ## first some sanity checks
-    #
-    (( ln > tot )) && ln=$tot
+    # Thre are cases where we can programmatically call this after changing a dir
+    # In such cases, tot has the value of prev dir. Thus check fails and sets tot to lower 
+    # value. e.g. jump_to_mark
+    (( ln > tot )) && { perror "$0: correcting $ln to $tot"; ln=$tot }
     (( ln < 1 && sta == 1 )) && ln=1
 
+    calc_sta_offset $ln
+    return
+
+}
+## calculate start and offset given a absolute position of file in dir
+# I separated this from zfm_goto_line since that does sanity checks and here
+# we have not yet got tot calculated.
+# NOTE: no validation is to be done on line number passed in since the 
+# directory totals have not been calculated yet. It is assumed they are correct
+# and these values will come into play once the dir is displayed.
+function calc_sta_offset() {
+    local pages ln
+    ln=$1
     (( pages = ln / PAGESZ1 ))
     # ceiling_divide is in cursor.zsh, this is reqd for edge cases such as last item on page
     pages=$(ceiling_divide $ln $PAGESZ1)
@@ -1635,8 +1681,7 @@ function zfm_goto_line() {
     # Once we call this from all motion places then we can make it absolute and do away 
     # with using vpa from everwhere except for numberlines
     (( CURSOR = ln - sta + 1 ))
-    return
-
+    mess "$0 got $ln: setting CURS to $CURSOR and sta to $sta "
 }
 function zfm_escape () {
     # vim has its binding for escape but the other two should go to vim if ESC pressed
