@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-10 23:43
+#  Last update: 2013-02-11 00:56
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -421,10 +421,11 @@ function subcommand() {
             print "'a'  ack (search string) in files"
             print "'q' 'quit' - quit application"
             print "You may enter any other command too such as 'git status'"
-            print "TODO : update with M_SUBCOMMANDS keys and values"
+            print 
+            pbold "Subcommands: "
             for kk in ${(k)M_SUBCOMMAND} ; do
-                val=$M_SUBCOMMAND[kk]
-                print "$kk  - $val "
+                val=$M_SUBCOMMAND[$kk]
+                print "$fg_bold[white]$kk$reset_color  - $val "
             done
         ;;
     "pipe")
