@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-10 01:33
+#  Last update: 2013-02-10 18:58
 # ----------------------------------------------------------------------------- #
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
@@ -21,9 +21,11 @@ function vimmode_init() {
     aa=(i INS $ZFM_HINT_KEY HINT o Open)
     M_HELP_VIM=$( print_hash $aa )
 
+    #vim_bind_key "m" "zfm_mark"
     ## can use x for selecting as gmail and o for open
     ## can use ' or whatever for hints as in vimperator, it uses 'f' but f has naother meaning here
     # jump to hints for one selection
+    vim_bind_key "m" "zfm_mark"
     vim_bind_key "j" "vim_cursor_down"
     vim_bind_key "k" "vim_cursor_up"
     vim_bind_key "l" "cursor_right"
@@ -125,6 +127,7 @@ function exit_vim() {
    fi
 }
 function vim_bind_key() {
+    print "$0 gets :$1, :$2."
     # should we check for existing and refuse ?
     keymap_VIM[$1]=$2
     if (( ${+keymap_VIM[$1]} )); then
