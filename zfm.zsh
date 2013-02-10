@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-10 20:18
+#  Last update: 2013-02-10 23:43
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -351,15 +351,37 @@ function check_patt() {
     # need to account for match from start
     print $lines
 }
+## triggered upon pressing :.
+#  Allows user to type in command such as help, marks etc
+#  Someday we will allow history and completion
+#
 function subcommand() {
     dcommand=${dcommand:-""}
+    [[ $dcommand == "?" ]] && dcommand=""
+
     vared -p "Enter command (? - help): " dcommand
+
     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && { QUITTING=1 ; break }
+
+    if [[ $dcommand[1] == '!' ]]; then
+        dcommand=${dcommand[2,-1]}
+        eval "$dcommand"
+        pause
+        return
+    else
+        binding=$M_SUBCOMMAND[$dcommand]
+        if [[ -n $binding ]]; then
+            zfm_exec_binding $binding
+            pause
+            return
+        fi
+    fi
+
     case "$dcommand" in
         "S"|"save")
-            print "Saving $PWD to bookmarks"
+            print "Saving $PWD to directory stack"
             push_pwd
-            print "Bookmarks: $ZFM_DIR_STACK"
+            print "Dir Stack: $ZFM_DIR_STACK"
             pause
         ;;
         "P"|"pop")
@@ -399,7 +421,11 @@ function subcommand() {
             print "'a'  ack (search string) in files"
             print "'q' 'quit' - quit application"
             print "You may enter any other command too such as 'git status'"
-            print
+            print "TODO : update with M_SUBCOMMANDS keys and values"
+            for kk in ${(k)M_SUBCOMMAND} ; do
+                val=$M_SUBCOMMAND[kk]
+                print "$kk  - $val "
+            done
         ;;
     "pipe")
         # accept a command and pass the result to selectrows
@@ -409,6 +435,7 @@ function subcommand() {
         zfm_locate
         ;;
     *)
+        # actually it should have had a ! before it. We should not allow this.
         eval "$dcommand"
         ;;
     esac
@@ -535,13 +562,15 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.13-delphi"
+ZFM_VERSION="0.1.13-eridanus"
 M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/10"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
 typeset -Ag FILES_HASH
-typeset -Ag ZFM_MODE_MAP
+## M_SUBCOMMAND keeps a map of command shortname and function
+#  These are commands typed in on : prompt
+typeset -Ag ZFM_MODE_MAP M_SUBCOMMAND
 
 selectedfiles=()
 
@@ -550,6 +579,7 @@ typeset -U ZFM_DIR_STACK ZFM_FILE_STACK ZFM_EXPANDED_DIRS
 ZFM_DIR_STACK=()
 ZFM_FILE_STACK=()
 ZFM_EXPANDED_DIRS=()
+M_SUBCOMMAND=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
 ZFM_START_DIR="$PWD"
@@ -1178,6 +1208,15 @@ function zfm_exec_binding() {
         ret=$?
     fi
     return $ret
+}
+function zfm_bind_subcommand() {
+    # should we check for existing and refuse ?
+    M_SUBCOMMAND[$1]=$2
+    if (( ${+M_SUBCOMMAND[$1]} )); then
+    else
+        perror "Unable to bind $1 to M_SUBCOMMAND "
+        pause
+    fi
 }
 function zfm_set_mode() {
     [[ -n $ZFM_MODE && $ZFM_MODE != $ZFM_PREV_MODE ]] && ZFM_PREV_MODE=$ZFM_MODE
