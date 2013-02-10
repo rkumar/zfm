@@ -5,17 +5,21 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-10 20:19
+#  Last update: 2013-02-11 00:41
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
-# Vim will not execute a char binding in the main binding, it will get
-# swallowed. This has to go in vim's binding, but vim has not go loaded
-# yet since it's in addons and comes later in order.
-# Even when vim is sourced, the structures have only loaded when the mode is started first time.
+# Vim_mode will not execute a char binding in the main binding, it will get
+# swallowed. This has to go in vim's binding, but vim has not go loaded until mode is set.
+#
+# MARK stores the cursor position not the filename, this means that if the directory
+#  listing is sorted or filtered, then the marks will not land on the correct file.
+#  THus we do not keep file names although we can. This hold true also if files are added or deleted
+#   but do NOTE that sorting will affect this. However, you can still jump to the directroy easily.
 #
 #vim_bind_key "m" zfm_mark
 zfm_bind_key "'" zfm_jump_to_mark
+zfm_bind_subcommand "marks" zfm_print_marks
 
 # also :marks to list marks
 # NOTE: TODO These are also selectors so one should be able to do d'a or y'b etc
@@ -79,4 +83,42 @@ function zfm_jump_to_mark () {
         #pinfo "$0: Got $dir, $pos for $reply"
         zfm_open_dir $dir $pos
     fi
+}
+## Print marks set 
+#  Ideally I need to print only local marks for current folder, not all local marks
+#
+function zfm_print_marks() {
+    clear
+    pbold "Marks set"
+    print
+    # first print global ones
+    pbold "Global marks"
+    print
+    for key in ${(k)M_MARKS} ; do
+        if [[ $key =~ ^[A-Z]$ ]]; then
+            val=$M_MARKS[$key]
+            columns=("${(s/:/)val}")
+            dir=$columns[1]
+            pos=$columns[2]
+            print -rl -- " $fg_bold[white]$key$reset_color = $dir $pos"
+        fi
+    done
+    print
+    pbold "Local marks"
+    print
+    for key in ${(k)M_MARKS} ; do
+        if [[ $key =~ ^[A-Z]$ ]]; then
+            #print "ignoring $key"
+        else
+            columns=("${(s/:/)key}")
+            dir=$columns[1]
+            ch=$columns[2]
+            if [[ $dir == $PWD ]]; then
+                pos=$M_MARKS[$key]
+                print -rl -- " $fg_bold[white]$ch$reset_color = $pos $fg[green]($dir)$reset_color"
+            else
+                #print "rejected $dir ($PWD)"
+            fi
+        fi
+    done
 }
