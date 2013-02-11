@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-11 20:34
+# Last update: 2013-02-12 01:16
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -683,7 +683,7 @@ function unset_auto_view(){
     #done
 }
 function filteroptions() {
-    menu_loop "Filter Options " "Pattern Today Files Dirs Recent Old Large Small Hidden Links Clear" "ptfdrolshLc"
+    menu_loop "Filter Options " "Pattern Today Files Dirs Recent Old Large Small Hidden Links Clear Edit" "ptfdrolshLce"
     # XXX usage of o or O clashes with sort order and gives error, FIXME
     case $menu_text in
         "Files")
@@ -695,6 +695,7 @@ function filteroptions() {
         "Recent")
             filterstr=".om[1,15]"
             filterstr=".m-7"
+            [[ $M_EDIT == 1 ]] && vared -p "Edit modified less than (days): " filterstr
             ;;
         "Today")
             filterstr=".m0"
@@ -702,10 +703,12 @@ function filteroptions() {
         "Old")
             filterstr="Om[1,15]"
             filterstr="m+365"
+            [[ $M_EDIT == 1 ]] && vared -p "Edit older than (days): " filterstr
             ;;
         "Large")
             filterstr="OL[1,15]"
             filterstr="Lm+2"
+            [[ $M_EDIT == 1 ]] && vared -p "Edit Size (>MB): " filterstr
             ;;
         "Pattern")
             zfm_edit_pattern
@@ -713,6 +716,7 @@ function filteroptions() {
         "Small")
             filterstr="oL[1,15]"
             filterstr="L-1024"
+            [[ $M_EDIT == 1 ]] && vared -p "Edit Size (<bytes): " filterstr
             ;;
         "Hidden")
             filterstr="D${filterstr}"
@@ -722,6 +726,11 @@ function filteroptions() {
             ;;
         "Clear")
             filterstr="M"
+            ;;
+        "Edit")
+            [[ -z $M_EDIT ]] && (( M_EDIT = -1 ))
+            (( M_EDIT = M_EDIT * -1 ))
+            pinfo "Toggling edit of some filters such as size and modification time."
             ;;
     esac
     filterstr=${filterstr:-M}
@@ -1036,7 +1045,8 @@ function numbernine() {
     integer maxct=99
 
     while IFS= read -r line; do
-        sub="$c)"
+        sub="${(l:2:)c})"
+        #sub="$c)"
         if [[ $c -gt $maxct ]]; then
             sub="  "
             #print -r -- "  ${tabd}$line"
