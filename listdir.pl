@@ -67,7 +67,8 @@ foreach(@dir){
      }
      else
      {
-         printf "%d\t%s\t%s\n", $sb->size, $timestamp, $filename;
+         # 2013-02-12 - 01:11 trying to pad size so display not too ugly
+         printf "%10d\t%s\t%s\n", $sb->size, $timestamp, $filename;
          #printf "%s\t%d\t%s\t%s\n", $filename, $sb->size, $timestamp, $type;
      }
 }
