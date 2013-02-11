@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-11 15:41
+#  Last update: 2013-02-11 22:06
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
@@ -88,6 +88,11 @@ function zfm_jump_to_mark () {
         pos=${pos:-1}
         #pinfo "$0: Got $dir, $pos for $reply"
         zfm_open_dir $dir $pos
+    else
+        ## allow user to map combination with ' outside of chars such as ' '
+        # perhaps first look in mode binding and then global
+        key="' $reply"
+        zfm_exec_key_binding $key
     fi
 }
 ## Print marks set 
