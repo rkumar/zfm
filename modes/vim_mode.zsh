@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-11 18:59
+#  Last update: 2013-02-11 22:09
 # ----------------------------------------------------------------------------- #
     typeset -Ag keymap_VIM
     typeset -Ag vim_selector
@@ -70,8 +70,6 @@ function vimmode_init() {
     #   "y" "vim_resolve zfm_add_to_selection"
     #vim_bind_key "'" "vim_resolve"
 
-    ## XXX won't work since ' is mapped already and ' is not in vim
-    vim_bind_key "' '" "vim_goto_last_position"
     vim_bind_key "ESCAPE" "vim_escape"
     vim_bind_key "C-c" "vim_escape"
     vim_bind_key "C-g" "vim_escape"
@@ -87,6 +85,10 @@ function vimmode_init() {
     vim_def_selector "s" "selected"
     vim_def_selector "S" "unselected"
     vim_def_selector "a" "all"
+
+    # ' will curently look in zfm bindings since it doesn not know where to look
+    #  We could first look in mode and then global.
+    zfm_bind_key "' '" "vim_goto_last_position"
 }
 ## these are selectors that can be placed after a pending command such as g or y or d
 #  They need not correspond to another command, thus you can have a selector "s" and no command
@@ -384,8 +386,9 @@ function vim_motion() {
         return
     else
         ## make the move
-        PREV_CURSOR=$CURSOR
-        CURSOR=$pos
+        #PREV_CURSOR=$CURSOR
+        #save_cursor
+        pos=${pos:-1}
         zfm_goto_line $pos
     fi
 }
@@ -534,7 +537,7 @@ vim_clear_pending() {
 }
 function vim_cursor_down() {
     ZFM_NUMBERING="RELATIVE"
-    PREV_CURSOR=$CURSOR
+    #PREV_CURSOR=$CURSOR
     local n=$1
     n=${n:-$MULTIPLIER}
     n=${n:-1}
@@ -611,7 +614,12 @@ function vim_goto_end() {
     vim_motion $n
 }
 function vim_goto_last_position(){
-    CURSOR=$PREV_CURSOR
+    local x y
+    x=${PREV_CURSOR:-CURSOR}
+    y=${OLD_STA:-1}
+    save_cursor
+    CURSOR=$x
+    sta=$y
 }
 function vim_yank() {
     perror "$0 : is this called ?"
