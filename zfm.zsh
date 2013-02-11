@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-11 00:56
+#  Last update: 2013-02-11 19:04
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -549,7 +549,10 @@ function print_help_keys() {
 EndHelp
 )
     str+=" \n"
-for key in ${(k)zfm_keymap} ; do
+    local keys
+    keys=(${(k)zfm_keymap})
+    keys=(${(o)keys})
+for key in ${keys} ; do
     #print $key  : $zfm_keymap[$key]
     str+=$(print "    $key  : $zfm_keymap[$key]")"\n"
 done
@@ -650,7 +653,7 @@ source_addons
 zfm_set_mode $ZFM_DEFAULT_MODE
 # at this point read up users bindings
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
-aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle "$ZFM_SELECTION_MODE_KEY" "Selection Mode")
+aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle)
 M_HELP_GEN=$( print_hash $aa )
 ab="M_HELP_$ZFM_MODE"
 M_HELP="$M_HELP_GEN | ${(P)ab}"
@@ -724,6 +727,15 @@ function zfm_open_file() {
             fileopt $selection
             pause
         }
+    fi
+}
+## temporary func name for C-o key open selected files or what's under cursor
+#
+function zfm_selected_file_options() {
+    if [[ -n $selectedfiles ]];then 
+        call_fileoptions $selectedfiles
+    else
+        selection=$vpa[$CURSOR]
     fi
 }
 ## line numbering function, also takes care of widths and coloring since these are interdependent
@@ -978,8 +990,8 @@ function selection_menu() {
 # a config file
 function init_menu_options() {
     typeset -gA main_menu_command_hash
-    main_menu_options+=("Directory" "zk dirjump" "d children" "[ Siblings" "] cd OLD NEW" "M mkdir" "% New File" "." "\n")
-    main_menu_options+=("Commands" "a ack" "/ ffind" "v filejump" "l locate" "u User Commands" "_ Last viewed file" "\n")
+    main_menu_options+=("Directory" "zk dirjump" "d children" "[ Siblings" "] cd OLD NEW" "M mkdir" "% New File" "." "." "\n")
+    main_menu_options+=("Commands" "a ack" "/ ffind" "v filejump" "l locate" "u User Commands" "_ Last viewed file" "2 Selected files" "1 File under cursor" "\n")
     main_menu_options+=("Settings"  "x Exclude Pattern" "F Filter options" "s Sort Options" "o General"  "\n")
     main_menu_options+=("Listings" "f File Listings" "r Recursive Listings" "\n")
     main_menu_command_hash=(
@@ -1002,6 +1014,8 @@ function init_menu_options() {
         [ sibling_dir
         ] cd_old_new
         _ edit_last_file
+        1 select_current_line
+        2 zfm_selected_file_options
         )
 }
 function init_key_function_map() {
@@ -1721,7 +1735,7 @@ function calc_sta_offset() {
     # Once we call this from all motion places then we can make it absolute and do away 
     # with using vpa from everwhere except for numberlines
     (( CURSOR = ln - sta + 1 ))
-    mess "$0 got $ln: setting CURS to $CURSOR and sta to $sta "
+    #mess "$0 got $ln: setting CURS to $CURSOR and sta to $sta "
 }
 function zfm_escape () {
     # vim has its binding for escape but the other two should go to vim if ESC pressed
