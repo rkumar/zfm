@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-02-06 - 19:51
 #      License: GPL
-#  Last update: 2013-02-11 09:34
+#  Last update: 2013-02-11 18:56
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -120,16 +120,16 @@ function ins_key_handler() {
         "$ZFM_RESET_PATTERN_KEY")
             PATT=""
             ;;
-        "$ZFM_OPEN_FILES_KEY")
-            # I think this overrides what cursor.zsh defines
-            ## Open either selected files or what's under cursor
-            if [[ -n $selectedfiles ]];then 
-                call_fileoptions $selectedfiles
-            else
-                selection=$vpa[$CURSOR]
-            fi
-            [[ -n "$selection" ]] && break
-            ;; 
+        #"ZFM_OPEN_FILES_KEY")
+            ## I think this overrides what cursor.zsh defines
+            ### Open either selected files or what's under cursor
+            #if [[ -n $selectedfiles ]];then 
+                #call_fileoptions $selectedfiles
+            #else
+                #selection=$vpa[$CURSOR]
+            #fi
+            #[[ -n "$selection" ]] && break
+            #;; 
         "C-g" )
             PATT=
             ;;
