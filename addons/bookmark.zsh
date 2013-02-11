@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-11 00:41
+#  Last update: 2013-02-11 15:41
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
@@ -17,7 +17,9 @@
 #  THus we do not keep file names although we can. This hold true also if files are added or deleted
 #   but do NOTE that sorting will affect this. However, you can still jump to the directroy easily.
 #
-#vim_bind_key "m" zfm_mark
+vim_bind_key "m" zfm_mark
+## to enable users in other modes to set a mark, leader + m.
+zfm_bind_key "ML m" zfm_mark
 zfm_bind_key "'" zfm_jump_to_mark
 zfm_bind_subcommand "marks" zfm_print_marks
 
@@ -69,6 +71,10 @@ function zfm_jump_to_mark () {
     if [[ $reply =~ [a-z] ]]; then
         pos=$M_MARKS[$PWD:$reply]
         [[ -n $pos ]] && zfm_goto_line $pos
+        [[ -z $pos ]] && {
+            perror "No bookmark with $reply. Finding first match.."
+            vim_file_starting_with $reply
+        }
     elif [[ $reply =~ [A-Z] ]]; then 
         rep=$M_MARKS[$reply]
         if [[ -z $rep ]]; then
@@ -121,4 +127,24 @@ function zfm_print_marks() {
             fi
         fi
     done
+}
+function first_char_is() {
+    local file=$1:t
+    local ch=$2
+    [[ $file[1] == $ch ]] && return 0
+    return 1
+}
+function file_matching() {
+    local file=$1:t
+    local ch=$2
+    [[ $file =~ $ch ]] && return 0
+    return 1
+}
+function vim_file_starting_with() {
+    setopt noextendedglob
+    # to prevent ^ from getting globbed.
+    #offset=$(return_next_match first_char_is $1)
+    offset=$(return_next_match file_matching ^$1 )
+    setopt extendedglob
+    [[ -n $offset ]] && vim_motion $offset
 }
