@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-09 18:54
+# Last update: 2013-02-11 20:34
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -466,7 +466,7 @@ function handle_selection() {
             [[ $#selected_files -gt 0 ]] && {
             commandpost=${commandpost:-""}
             commandpre=${commandpre:-""}
-            vared -p "Enter command (e.g. mv) :" commandpre
+            vared -p "Enter command (e.g. git mv) :" commandpre
             [[ -z "$commandpre" ]] && { print "No action." ; return }
             vared -p "Enter command to place after filenames (e.g. target) :" commandpost
             pdebug "$commandpre $selected_files $commandpost"
