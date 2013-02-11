@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-11 21:05
+#  Last update: 2013-02-12 00:14
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -365,6 +365,10 @@ function subcommand() {
 
     if [[ $dcommand[1] == '!' ]]; then
         dcommand=${dcommand[2,-1]}
+        # subst selected files for %%  NOT TESTED
+        if [[ $dcommand = *%%* ]]; then
+            dcommand=${(S)dcommand//\%\%/${selectedfiles:q}}
+        fi
         eval "$dcommand"
         pause
         return
@@ -378,6 +382,7 @@ function subcommand() {
     fi
 
     case "$dcommand" in
+        # these two save and pop ae quite stupid, are we ever gonna use it
         "S"|"save")
             print "Saving $PWD to directory stack"
             push_pwd
@@ -566,7 +571,7 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.13-fomalhaut"
+ZFM_VERSION="0.1.13-galileo"
 M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/11"
 #  Array to place selected files
 typeset -U selectedfiles
