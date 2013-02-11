@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-11 19:09
+#  Last update: 2013-02-11 21:11
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -35,23 +35,32 @@ function cursor_init() {
 [[ -z $M_CURSOR_MOVEMENT_LOADED ]] && cursor_init
 
 function cursor_down () {
-    PREV_CURSOR=$CURSOR
+    #PREV_CURSOR=$CURSOR
+    save_cursor
     $cursor_down_action
     [[ $? -eq 1 ]] && return
-    let CURSOR++
+    #let CURSOR++
+    local pos
+    (( pos = CURSOR++ ))
+
+    zfm_goto_line $pos
     # if exceeding page, try a page down
-    (( CURSOR > $#vpa )) && { zfm_next_page  }
+    #(( CURSOR > $#vpa )) && { zfm_next_page  }
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 function cursor_up () {
-    PREV_CURSOR=$CURSOR
+    #PREV_CURSOR=$CURSOR
+    save_cursor
     ## -le required for empty dirs
     $cursor_up_action
     #[[ $? -eq 1 ]] && return
-    let CURSOR--
+    #let CURSOR--
+    local pos
+    (( pos = CURSOR-- ))
+    zfm_goto_line $pos
     M_MESSAGE=
-    (( CURSOR < 1 )) && zfm_prev_page
-    (( CURSOR < 1 )) && CURSOR=1
+    #(( CURSOR < 1 )) && zfm_prev_page
+    #(( CURSOR < 1 )) && CURSOR=1
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 function _my_goto_parent() {
@@ -62,7 +71,8 @@ function _my_goto_parent() {
 # if no files on right, and on a dir, then goes into dir
 # XXX if we are not displayig entire list shouldnot right pan to other rows basically paging
 function cursor_right () {
-    PREV_CURSOR=$CURSOR
+    #PREV_CURSOR=$CURSOR
+    save_cursor
     $cursor_right_action
     [[ $? -eq 1 ]] && return
 
@@ -99,7 +109,8 @@ function _my_cd() {
 ## moves to files in left column
 # if pressed on first file, pops dir stack
 function cursor_left () {
-    PREV_CURSOR=$CURSOR
+    #PREV_CURSOR=$CURSOR
+    save_cursor
     ## -le required for empty dirs
     $cursor_left_action
     [[ $? -eq 1 ]] && return
@@ -128,23 +139,23 @@ ceiling_divide() {
 #
 # typically mapped to PgUp
 function cursor_top () {
-    PREV_CURSOR=$CURSOR
+    #PREV_CURSOR=$CURSOR
     #if [[ $CURSOR -eq 1 ]]; then
         #(( CURSOR = 0 ))
     #else
         #CURSOR=1
     #fi
-    if [[ $CURSOR -gt 1 ]]; then
-        (( CURSOR = 1 ))
-    else
-    fi
-        zfm_prev_page
+    #if [[ $CURSOR -gt 1 ]]; then
+        #(( CURSOR = 1 ))
+    #else
+    #fi
+    zfm_prev_page
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 #
 # typically mapped to PgDn
 function cursor_bottom () {
-    PREV_CURSOR=$CURSOR
+    #PREV_CURSOR=$CURSOR
     #if [[ $CURSOR -eq $VPACOUNT ]]; then
         #(( CURSOR = VPACOUNT + 1 ))
     #else
