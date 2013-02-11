@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-11 22:06
+#  Last update: 2013-02-12 00:00
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
@@ -146,6 +146,7 @@ function file_matching() {
     return 1
 }
 function vim_file_starting_with() {
+    setopt localoptions
     setopt noextendedglob
     # to prevent ^ from getting globbed.
     #offset=$(return_next_match first_char_is $1)
