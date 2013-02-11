@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-11 22:09
+#  Last update: 2013-02-11 22:26
 # ----------------------------------------------------------------------------- #
     typeset -Ag keymap_VIM
     typeset -Ag vim_selector
@@ -613,10 +613,17 @@ function vim_goto_end() {
     M_SELECTOR=
     vim_motion $n
 }
+## 
+# revert to last position of cursor
+#  VIM's '' (single quote two times)
+#
 function vim_goto_last_position(){
+    # save old values in temp vars before saving new values in old
+    # This way we can jump back
     local x y
     x=${PREV_CURSOR:-CURSOR}
     y=${OLD_STA:-1}
+
     save_cursor
     CURSOR=$x
     sta=$y
