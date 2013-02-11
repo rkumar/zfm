@@ -5,12 +5,15 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-02-06 - 19:51
 #      License: GPL
-#  Last update: 2013-02-09 19:35
+#  Last update: 2013-02-11 09:34
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
 function insmode_init() {
     mess "INS Mode: C-g: clear pattern, C-c: Exit mode"
+    local aa
+    aa=( "1-9" "Select" "a-Z" Filter C-g "Clr" Esc Vim)
+    M_HELP_INS=$( print_hash $aa )
 }
 function ins_key_handler() {
     local ans=$1
