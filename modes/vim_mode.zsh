@@ -5,8 +5,10 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-10 18:58
+#  Last update: 2013-02-11 18:59
 # ----------------------------------------------------------------------------- #
+    typeset -Ag keymap_VIM
+    typeset -Ag vim_selector
 function vimmode_init() {
     #M_MESSAGE="VIM Mode: q/C-q to Quit, i: insert mode, ': HINTS mode, o: open, x: select"
     MULTIPLIER=
@@ -15,17 +17,16 @@ function vimmode_init() {
 
     [[ -n $M_VIMMODE_LOADED ]] && return 1
     export M_VIMMODE_LOADED=1
-    typeset -Ag keymap_VIM
-    typeset -Ag vim_selector
+    #typeset -Ag keymap_VIM
+    #typeset -Ag vim_selector
     local aa
     aa=(i INS $ZFM_HINT_KEY HINT o Open)
     M_HELP_VIM=$( print_hash $aa )
 
-    #vim_bind_key "m" "zfm_mark"
     ## can use x for selecting as gmail and o for open
     ## can use ' or whatever for hints as in vimperator, it uses 'f' but f has naother meaning here
     # jump to hints for one selection
-    vim_bind_key "m" "zfm_mark"
+    #vim_bind_key "m" "zfm_mark"
     vim_bind_key "j" "vim_cursor_down"
     vim_bind_key "k" "vim_cursor_up"
     vim_bind_key "l" "cursor_right"
@@ -127,7 +128,6 @@ function exit_vim() {
    fi
 }
 function vim_bind_key() {
-    print "$0 gets :$1, :$2."
     # should we check for existing and refuse ?
     keymap_VIM[$1]=$2
     if (( ${+keymap_VIM[$1]} )); then
@@ -136,6 +136,9 @@ function vim_bind_key() {
         pause
     fi
 }
+## 
+# Bind both lowercase and uppercase character such as dd and D or yy and Y to related commands.
+#
 function vim_bind_pair() {
     local ch=$1
     local fn=$2
@@ -284,17 +287,25 @@ function is_dir() {
     [[ -d $1 ]] && return 0
     return 1
 }
+## 
+# call this method giving it the name of another which it will call with a filename
+# NOTE: the fullpath is sent not just basename
+# If the method is not in this file (and not sourced), it may not be found. No error will be reported.
+#
 function return_next_match() {
     #[[ $#selectedfiles -eq 0 ]] && { print $CURSOR; return 1}
 
-    local vp c ix first binding
+    local vp c ix first binding args
     binding=$1
+    shift
+    args=$*
     let c=1
     let ix=0
     vp=($PWD/${^viewport}) # prepend PWD to each element 2013-01-10 - 00:17
     for ff in $vp ; do
         #if [[ $selectedfiles[(i)$ff] -le $#selectedfiles ]]; then
-        if eval "$binding $ff"; then
+        #if eval "$binding $ff $args"; then
+        if $binding $ff $args; then
             first=${first:-$c}
             abs_cursor
             [[ $c -gt $ABS_CURSOR ]] && { ix=$c ; break }
@@ -318,7 +329,8 @@ function return_next_match() {
 function vim_motion() {
     local _pos=$1
     ## if pos is a constant then we expect it to be defined as a variable and having that value
-    if [[ $_pos =~ [A-Z] ]]; then
+    if [[ $_pos =~ ^[A-Z] ]]; then
+        # How are numbers coming in here ?
         pos=${(P)_pos}
         # in these cases MULT has no meaning and needs to be cleared
         # maybe in cases here
@@ -326,14 +338,14 @@ function vim_motion() {
 
         [[ -z $pos ]] && { 
             # UNTESTED UNUSED XXX
-            perror "$0 blank $_pos "
-            pause
-            if [[ -e $_pos ]]; then
-                ix=file_index($_pos)
-                pos=$ix
-            fi
+            #perror "$0 blank $_pos "
+            #pause
+            #if [[ -e $_pos ]]; then
+                #ix=file_index($_pos)
+                #pos=$ix
+            #fi
         }
-        [[ -z $pos ]] && { perror "$0:: Constant $_pos not defined"; pause; return 1 }
+        [[ -z $pos ]] && { perror "$0:: Constant ($_pos) not defined"; pause; return 1 }
     else
         pos=$_pos
     fi
@@ -651,8 +663,11 @@ function vim_help() {
     local str key
     str=" VIM MODE Help"
     str+=" \n"
-    str+=" set_pending implies that a motion or selector key is pending, e.g. dG d2k gs ds"
-    for key in ${(k)keymap_VIM} ; do
+    str+=" set_pending implies that a motion or selector key is pending, e.g. dG d2k gs ds\n"
+    local keys
+    keys=(${(k)keymap_VIM})
+    keys=(${(o)keys})
+    for key in ${keys} ; do
         str+=$(print "    $key  : $keymap_VIM[$key]")"\n"
     done
     print -l -- $str
