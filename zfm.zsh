@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-11 19:04
+#  Last update: 2013-02-11 21:05
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -566,8 +566,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.13-eridanus"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/10"
+ZFM_VERSION="0.1.13-fomalhaut"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/11"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -1100,7 +1100,7 @@ function init_file_menus() {
     FT_EXTNS[IMAGE]=" png jpg jpeg gif "    # ends with ~ not an extension
     FT_EXTNS[VIDEO]=" flv mp4 "    # ends with ~ not an extension
     FT_EXTNS[AUDIO]=" mp3 m4a aiff aac ogg "    # ends with ~ not an extension
-    FT_COMMON="open cmd mv trash auto clip chdir"
+    FT_COMMON="open cmd mv gitmv trash auto clip chdir"
     
     ## options displayed when you select multiple files
     ##  Sadly, this is not taking into account filetypes selected, thatcould be helpful
@@ -1156,6 +1156,7 @@ function init_file_menus() {
     COMMANDS[ffmp]='ffmpeg -i %% -vn ${${:-%%}:r}.m4a'
     COMMANDS[clip]='print -r -- %% | pbcopy && print "Copied filename to clipboard"'
     COMMANDS[tvf]='tar ztvf'
+    COMMANDS[gitmv]='git mv'
     # pdftohtml -stdout %% | links -stdin
     #FT_DEFAULT_PDF="pdftohtml"
     #export FT_TXT FT_ZIP FT_OTHERS COMMANDS COMMAND_HOTKEYS
@@ -1694,6 +1695,9 @@ function zfm_goto_start() {
 #  Value has to be between 1 and $tot
 #  Typically value is sta + CURSOR - 1
 #
+#  TODO we could save cursor here, if is ensured that callers do not update CURSOR
+#  but pass a position in.
+#
 function zfm_goto_line() {
     # when splitting output into multple pages, we are not showing absolute numbers
     # when going to a line, we need to page accordingly.
@@ -1713,6 +1717,8 @@ function zfm_goto_line() {
     (( ln > tot )) && { perror "$0: correcting $ln to $tot"; ln=$tot }
     (( ln < 1 && sta == 1 )) && ln=1
 
+    # we save cursor here, so please don't chang cursor in caller, just pass the new position
+    save_cursor
     calc_sta_offset $ln
     return
 
@@ -1757,7 +1763,7 @@ function zfm_bs () {
 }
 ## saves both start and curpos
 #  We need to move to using correct cursor position and not this page relative position
-function save_curpos() {
+function save_cursor() {
     PREV_CURSOR=$CURSOR
     PREV_STA=$sta
 }
