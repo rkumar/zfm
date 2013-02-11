@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-06 01:31
+#  Last update: 2013-02-11 19:09
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -154,7 +154,7 @@ function cursor_bottom () {
     [[ $PREV_CURSOR -ne $CURSOR ]] && on_enter_row
 }
 function select_current_line () {
-    [[ -z "$CURSOR" ]] && { perror "Cursor not on a row." 1>&2; return 1; }
+    [[ -z "$CURSOR" ]] && { perror "Cursor not on a row." ; return 1; }
     local selected
     M_NO_AUTO=1
     selected=$vpa[$CURSOR]
@@ -172,6 +172,7 @@ function select_current_line () {
 ## what to do when user enters a row, such as display some text or 
 # help or pop or enter dir
 function on_enter_row() {
+    local selected sd
     selected=$vpa[$CURSOR]
     if [[ -d "$selected" ]]; then
         #M_MESSAGE="=> Press Enter to cd into directory"
@@ -181,7 +182,8 @@ function on_enter_row() {
         ## only display details in multicol listing when file details are not shown
         if [[ $LIST_COLS -gt 1 ]]; then
             get_file_details $selected
-            M_MESSAGE="$M_HELP [$CURSOR] $_detail"
+            sd=${(S)_detail//$TAB/ }
+            M_MESSAGE="$M_HELP $sd"
         fi
     fi
 
