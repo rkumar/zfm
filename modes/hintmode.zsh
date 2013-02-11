@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-06 - 22:31
 #      License: GPL
-#  Last update: 2013-02-08 17:50
+#  Last update: 2013-02-11 17:44
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -37,7 +37,7 @@ function hint_key_handler() {
         "$ZFM_RESET_PATTERN_KEY")
             PATT=""
             ;;
-        "$ZFM_OPEN_FILES_KEY")
+        "ZFM_OPEN_FILES_KEY")
             # I think this overrides what cursor.zsh defines
             ## Open either selected files or what's under cursor
             if [[ -n $selectedfiles ]];then 
