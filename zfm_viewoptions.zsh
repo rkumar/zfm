@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-12 01:16
+# Last update: 2013-02-12 11:22
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -695,7 +695,7 @@ function filteroptions() {
         "Recent")
             filterstr=".om[1,15]"
             filterstr=".m-7"
-            [[ $M_EDIT == 1 ]] && vared -p "Edit modified less than (days): " filterstr
+            [[ $M_EDIT == 1 ]] && vared -p "Edit modified less than (days) m[Mwhms][+-]n : " filterstr
             ;;
         "Today")
             filterstr=".m0"
@@ -703,12 +703,12 @@ function filteroptions() {
         "Old")
             filterstr="Om[1,15]"
             filterstr="m+365"
-            [[ $M_EDIT == 1 ]] && vared -p "Edit older than (days): " filterstr
+            [[ $M_EDIT == 1 ]] && vared -p "Edit older than (days) m[Mwhms][+-]n : " filterstr
             ;;
         "Large")
             filterstr="OL[1,15]"
             filterstr="Lm+2"
-            [[ $M_EDIT == 1 ]] && vared -p "Edit Size (>MB): " filterstr
+            [[ $M_EDIT == 1 ]] && vared -p "Edit Size (>MB) L[kmp][+-]n: " filterstr
             ;;
         "Pattern")
             zfm_edit_pattern
@@ -1045,6 +1045,7 @@ function numbernine() {
     integer maxct=99
 
     while IFS= read -r line; do
+        ## pad number to 2 spaces
         sub="${(l:2:)c})"
         #sub="$c)"
         if [[ $c -gt $maxct ]]; then
