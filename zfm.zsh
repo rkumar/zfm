@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-12 00:14
+#  Last update: 2013-02-12 14:12
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -44,11 +44,9 @@ stty start '^-'
 # for printing details 
 zmodload zsh/stat
 zmodload -F zsh/stat b:zstat
-PAGESZ=59     # used for incrementing while paging
 M_SCROLL=${M_SCROLL:-10}
 export M_SCROLL
 
-(( PAGESZ1 = PAGESZ + 1 ))
 
 # list_printer {
 #  list_printer "Directory Listing" ./*
@@ -638,6 +636,11 @@ MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
 integer ZFM_COLS=$(tput cols)
 integer ZFM_LINES=$(tput lines)
+## we want 59 if we want no long list info, else lines -4 or 5
+PAGESZ=59     # used for incrementing while paging
+#(( PAGESZ = ZFM_LINES - 4 ))
+(( PAGESZ1 = PAGESZ + 1 ))
+
 integer CURSOR=1
 export ZFM_COLS ZFM_LINES CURSOR
 export ZFM_STRING
@@ -1338,7 +1341,7 @@ function toggle_options_menu() {
 
     toggle_menu_last_choice=FullIndexing
     #ML_COLS=2 menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase ApproxMatchToggle AutoView" "ihfcxa${ZFM_TOGGLE_MENU_KEY}"
-    ML_COLS=2 menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase MatchFromStart AutoView" "ihfcsa${ZFM_TOGGLE_MENU_KEY}"
+    ML_COLS=2 menu_loop "Toggle Options" "FullIndexing HiddenFiles FuzzyMatch IgnoreCase MatchFromStart AutoView LongList" "ihfcsal${ZFM_TOGGLE_MENU_KEY}"
     [[ $menu_text == $ZFM_TOGGLE_MENU_KEY ]] && { menu_text=$toggle_menu_last_choice }
     case "$menu_text" in
         "FullIndexing")
@@ -1367,6 +1370,15 @@ function toggle_options_menu() {
             else
                 pinfo "Files will NOT be viewed upon selection. Other actions may be performed"
             fi
+            ;;
+        "LongList")
+            local sz=59
+            if [[ $PAGESZ -eq $sz ]]; then
+                (( PAGESZ = ZFM_LINES - 4 ))
+            else
+                (( PAGESZ = sz ))
+            fi
+            (( PAGESZ1 = PAGESZ + 1 ))
             ;;
         *)
             [[ -n $menu_text ]] && {
