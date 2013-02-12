@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-09 11:36
+#  Last update: 2013-02-12 10:54
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -360,7 +360,7 @@ function eval_menu_text () {
             perror "got nothing in fileopt $menu_char. Coud be programmer error or key needs to be handled"
             }
             ;;
-        "mv") 
+        "mv"|"gitmv") 
             zfm_mv $files
             ;;
         "cp") 
@@ -590,8 +590,6 @@ function call_fileoptions() {
 function evaluate_command () {
     local menu_text=$1
     shift
-    #bombs if spaces in files
-    #local files="$@"
     local files _cmd
     files="$@"
     local ret=0
@@ -611,13 +609,7 @@ function evaluate_command () {
 
         ## check for file replacement marker
         if [[ $_cmd = *%%* ]]; then
-            ## NOTE: even though I am quoting spaces in string and it shows correctly in a debug
-            ##  statement, but pbcopy seems to strip the escapes -- this is for files with spaces
-            #
-            # I think it was print, after putting print -r -- in clip command it seems to be okay.
             _cmd=${(S)_cmd//\%\%/${files:q}}
-            ## the next lie tries putt double quotes around files but pbcopy seems to strip them off
-            #_cmd=${(S)_cmd//\%\%/${(qqq)files}}
             eval "$_cmd" && ret=0 || ret=1
         else
             ## no marker just send file names as argument to command
