@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-12 14:12
+#  Last update: 2013-02-12 14:29
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -891,6 +891,9 @@ function numberlines() {
 # this cannot be called in new process, must be called and then _detail used
 function get_file_details() {
     local line=$1
+    # TAB required because some methods will parse this when selection ??
+    # changed tab to spaces on 2013-02-12 - 14:29 BE CAREFUL if things stop working, revert to tab
+    local tt="  "
     local sz link
     _detail=$FILES_HASH[$line]
     if [[ -z $_detail ]]; then
@@ -907,7 +910,8 @@ function get_file_details() {
         #[[ $sz -gt 9999 ]] && {  (( sz = sz / 1024 )) ; sz="${sz}k" }
         link=$hash[link]
         [[ -n $link ]] && link=" -> $link"
-        _detail="${TAB}$sz${TAB}$mtime${TAB}"
+        #_detail="${TAB}$sz${TAB}$mtime${TAB}"
+        _detail="${tt}$sz${tt}$mtime${tt}"
         # cache details of file
         FILES_HASH[$line]=$_detail
     else
