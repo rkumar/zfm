@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-11 22:26
+#  Last update: 2013-02-12 16:17
 # ----------------------------------------------------------------------------- #
     typeset -Ag keymap_VIM
     typeset -Ag vim_selector
@@ -679,6 +679,7 @@ function vim_help() {
     str=" VIM MODE Help"
     str+=" \n"
     str+=" set_pending implies that a motion or selector key is pending, e.g. dG d2k gs ds\n"
+    str+=" vim_exec implies that the key takes a count, but no key after. e.g. G 2Y 10D C O \n"
     local keys
     keys=(${(k)keymap_VIM})
     keys=(${(o)keys})
