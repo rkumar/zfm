@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-12 14:18
+#  Last update: 2013-02-13 20:37
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -30,6 +30,7 @@ function cursor_init() {
     cursor_left_action=_my_popd
     cursor_right_action=_my_cd
     cursor_down_action=
+    add_hook "on_enter_row" display_file_details
 }
 
 [[ -z $M_CURSOR_MOVEMENT_LOADED ]] && cursor_init
@@ -185,8 +186,13 @@ function select_current_line () {
 function on_enter_row() {
     local selected sd
     selected=$vpa[$CURSOR]
+    execute_hooks "on_enter_row" $selected
+}
+function display_file_details() {
+    local selected=$1
     if [[ -d "$selected" ]]; then
-        #M_MESSAGE="=> Press Enter to cd into directory"
+        M_MESSAGE=
+        #
     else
         #M_MESSAGE="=> Press Enter to run command on file"
         #
@@ -202,5 +208,8 @@ function on_enter_row() {
 ## 
 # goto specified line
 function edit_cursor() {
-    vared -p "Goto line: " CURSOR
+    local pos
+    print -n "Goto Line: "
+    read pos
+    [[ -n $pos ]] && zfm_goto_line $pos
 }
