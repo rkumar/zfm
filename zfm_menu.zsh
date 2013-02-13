@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-12 10:54
+#  Last update: 2013-02-14 01:09
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -324,7 +324,8 @@ function fileopt() {
     [[ "$menu_char" = '-' ]] && { zfm_rem_option "$name" "$extn" }
     [[ -z "$menu_text" ]] && { return 1; } # q pressed
     eval_menu_text "$menu_text" $name
-    pause
+    [[ -z $NO_PAUSE ]] && pause
+    NO_PAUSE=
     # we can store def app in a hash so not queried each time
     #default_app=$(alias -s | grep $extn | cut -f2 -d= )
     #[[ -n "$extn" ]] && default_app=$(alias -s | grep "$extn" | cut -f2 -d= )
@@ -376,6 +377,7 @@ function eval_menu_text () {
             ## darn, if spaces then this gives an error on quotes
             files=${(Q)files}
             $ZFM_CD_COMMAND $files && post_cd
+            NO_PAUSE=1
             ;;
         "archive") 
             zfm_zip $files
@@ -384,6 +386,9 @@ function eval_menu_text () {
             # now again this needs to be done for all cases so we can't have such
             # a long loop repeated everywhere
             evaluate_command "$menu_text" $files
+            [[ $menu_text == $EDITOR || $menu_text =~ ^vi ]] && { 
+                NO_PAUSE=1
+            }
             [  $? -eq 0 ] && zfm_refresh
             ;;
     esac
@@ -494,7 +499,7 @@ function filetype(){
     fi
     str="$(file $name)"
     # string search for zip
-    ftpatts=(zip text video audio image SQLite)
+    ftpatts=(zip text video audio image SQLite tar archive)
     for _p in $ftpatts ; do
         ix=$str[(i)$_p]
         if [[ $ix -le $#str ]]; then
@@ -502,6 +507,8 @@ function filetype(){
             break
         fi
     done
+    [[ $type == "tar" ]] && type="zip"
+    [[ $type == "archive" ]] && type="zip"
     [[ $type == "text" ]] && type="txt"
     print $type
 }
@@ -558,6 +565,7 @@ function multifileopt() {
                 [[ $menu_text == $EDITOR || $menu_text =~ ^vi ]] && { 
                     last_viewed_files=$files 
                     execute_hooks "fileopen" $files
+                    NO_PAUSE=1
                 }
                 zfm_refresh
             }
