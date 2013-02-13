@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-13 20:35
+#  Last update: 2013-02-14 00:27
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -209,6 +209,13 @@ function list_printer() {
 
             [[ -n $M_SELECTION_MODE ]] && mode="[SEL $#selectedfiles] "
         fi # M_NO_REPRINT
+
+        ## ---
+        #  If we want a file preview we will have to put the code here, or 
+        #  a hook here for stuff that needs to be printed in addition to the listing
+        #  since this list will erase anything printed on the side.
+        #  ---
+
         M_NO_REPRINT=
         #print -n "$mode${mark}$PATT > "
         print -n "\r$mode${mark}$PATT > "
@@ -250,16 +257,19 @@ function list_printer() {
                     MODE_KEY_HANDLER=${ZFM_MODE:l}_key_handler
                 fi
                 ZFM_KEY=$ans
+                NO_BREAKING=
                 $MODE_KEY_HANDLER $ZFM_KEY
                 ans=
                 # should be not break only if selection has been set XXX
-                break
+                [[ -n $NO_BREAKING ]] || break
             # above is for modes
         else
             [[ $ZFM_QUIT_KEY == $ans ]] && { QUITTING=true; ans= ; break; }
 
             zfm_exec_key_binding $ans
-            [[ -n $binding ]] && {  ans= ; break }
+            [[ -n $binding ]] && {  ans= ; 
+                [[ -n $NO_BREAKING ]] || break
+            }
             #[[ -n $binding ]] && { $binding ; ans= ; break }
         fi
 
@@ -569,7 +579,7 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.13-hershel"
+ZFM_VERSION="0.1.13-io"
 M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/13"
 #  Array to place selected files
 typeset -U selectedfiles
@@ -1317,6 +1327,8 @@ function execute_hooks() {
     hooks=("${(s/ /)hooks}")
     for ev in $hooks; do
         #pinfo "  :: executing $ev"
+        # This is not correct : -x is only for files not for function names
+        # we need to call zfm_exec_binding or just try the first case TODO
         if [[ -x "$ev" ]]; then
             $ev $params
         else
