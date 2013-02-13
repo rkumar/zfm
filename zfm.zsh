@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-13 18:54
+#  Last update: 2013-02-13 20:35
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -1033,7 +1033,7 @@ function init_menu_options() {
 }
 function init_key_function_map() {
     typeset -gA zfm_hook
-    add_hook "chdir" chdir_message
+    #add_hook "chdir" chdir_message
     add_hook "chdir" restore_exoanded_state
     add_hook "fileopen" fileopen_hook
 
@@ -1315,7 +1315,6 @@ function execute_hooks() {
     local hooks
     hooks=$zfm_hook[$event]
     hooks=("${(s/ /)hooks}")
-    #perror "Executing $hooks..."
     for ev in $hooks; do
         #pinfo "  :: executing $ev"
         if [[ -x "$ev" ]]; then
@@ -1742,6 +1741,8 @@ function zfm_goto_line() {
     # we save cursor here, so please don't chang cursor in caller, just pass the new position
     save_cursor
     calc_sta_offset $ln
+
+    execute_hooks "on_enter_row" $vpa[$CURSOR]
     return
 
 }
