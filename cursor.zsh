@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-13 20:37
+#  Last update: 2013-02-14 21:09
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -22,7 +22,7 @@ function cursor_init() {
     zfm_bind_key "LEFT" "cursor_left"
     zfm_bind_key "PgDn" "cursor_bottom"
     zfm_bind_key "PgUp" "cursor_top"
-    zfm_bind_key "ENTER" "select_current_line"
+    zfm_bind_key "ENTER" "zfm_open_file"
     zfm_bind_key "ML g" "edit_cursor"
     # goto parent can be confusing and sudden, altho nice to have when you want it
     #   but i happens when you don't expect it too.
