@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-14 01:09
+#  Last update: 2013-02-15 01:00
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -261,6 +261,8 @@ function fileopt() {
             uft="${(U)file_type}"  # check PDF or TXT in FT_OPTIONS
             apps+=( $FT_OPTIONS[$uft] )
             #pdebug "$0 got apps $apps "
+            # If apps still blank, nwe file type defined like SQLIite but no FT_OPTIONS
+            [[ -z $apps ]] && { apps=( $FT_OPTIONS[OTHER] ) }
 
             ## store for that extension so we can quickly reuse
             ##  It could have been for file type but then we would have to calc that all over
@@ -619,6 +621,7 @@ function evaluate_command () {
         if [[ $_cmd = *%%* ]]; then
             _cmd=${(S)_cmd//\%\%/${files:q}}
             eval "$_cmd" && ret=0 || ret=1
+            #zfm_exec_binding $_cmd
         else
             ## no marker just send file names as argument to command
             pdebug "passing files as args $_cmd "
@@ -629,6 +632,9 @@ function evaluate_command () {
         [[ -n $ZFM_VERBOSE ]] && pdebug "213: $menu_text , $files"
         eval "$menu_text $files" && ret=0 || ret=1
     fi
+    # calling some external commands like sqlite3 disables C-q c-\ etc and 
+    # C-c aborts app.
+    stty_settings
     return $ret
 }
 #
