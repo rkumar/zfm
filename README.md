@@ -3,15 +3,14 @@ zfm
 
 zsh file explorer/manager for fast navigation and running commands on files or groups of files.
 
-##DOCUMENTATION OUTDATE WARNING!!##
-
-A lot has changed since the last update of this doc. Now we go directly into VIM mode (and yeah there is a vim mode, I  got sick of typing j and k) and I promoted it to the default startup mode. There;s an INS mode and a HINT mode (like Vimperator or Pentadactyl).
-
-I sorely need to update this doc.
-
-*End of Warning*
-
 This is a file navigator or explorer that attempts to make as many operations as possible on single keys so that a user can quickly navigate and execute commands. It is hoped that such paths will become second nature.
+
+There are 3 modes:
+  * VIM mode - vim motions and actions along with count
+  * HINT mode - all files in view have a single key shortcut which invokes the file or enters a dir
+  * INS mode - first 9 files are hotkeyed by number. Typing alpha characters filters files reducing the list. This is useful for large lists. 
+
+  It is easy to switch between modes. ESCAPE moves to VIM mode. From vim mode, ";" toggles HINT mode, and "i" goes to INS mode.
 
 The first 9 files or dirs in any view are given hotkeys from 1-9. After that with each successive key the files are reduced. This actually makes file navigation very fast. (This is in INS mode and in HINT mode.) In VIM mode numbers will mean a count. Jump to HINT mode using ; or use count-j or count-k to move and hit ENTER or "o" or "e".
 
@@ -19,9 +18,11 @@ In VIM mode, you can also jump to a file without opening it, using "f". This is 
 
 The "," key (lower case of "&lt;") is used to go up directory levels. There are many other shortcuts that allow for other usual operations to be done fast such as accessing favorite directories and files, and navigating deep structures quickly.
 
-Paging of long listings is done using Alt-n and Alt-p (earlier SPACEBAR, now SPACE selects). If you have dirs with lots of files containing spaces, you may want to change the ZFM_PAGE_KEY to some other key.
+Paging of long listings is done using Alt-n and Alt-p (now SPACE selects). 
 
-The motivation of yet another file manager is to automate as many file-related operations as I can: browsing, operating on multiple files, today's files, filtering file lists. I also use ``z``, ``v``, ``vifm``, and various other great utilities.
+The motivation of yet another file manager is to automate as many file-related operations as I can: browsing, operating on multiple files, today's files, filtering file lists. I also use ``z``, ``v``, ``vifm``, and various other great utilities. For example, i often run a locate command and then wish to further filter it, or sort on date and then open a file. Or use ack to search files and then open some. These use cases are easy with this utility. 
+
+If I only wish to open a file for editing, it can be easier to type "m" (or whatever alias you use) and hit the shortcut, rather than type "vim <char><TAB>" etc etc especially if you set ZFM_DEFAULT_MODE to "HINT".
 
 A Quick Session
 ---------------
@@ -36,6 +37,20 @@ If you like it, alias m or some other unused character to ~/bin/zfm.zsh in your 
     alias m='~/bin/zfm.zsh'
 
 Now type "m":
+
+The following assumes you are using VIM mode (that is currently the default startup mode).
+
+You can navigate using j and k with count, or gg G , use "e" to open a file or directory. Multiple files can be opened using "oo" with count, or combinations such as "oG" or "o(count)gg" etc. "x" selects single files.
+Use "ENTER" to see a menu of options for that filetype or dir.
+
+Note that file numbering in VIM mode is absolute if you type "g" or the last command was a "gg" command. If you use "j" or "k", numbering becomes relative.
+
+If your directroy has fewer than 15 files, you should get a long list. Otherwise, you will get 2 or 3 columns with just file names. You can toggle long listing with the toggle key "=" and "l" (Toggle-l).
+
+However, VIM mode is not the fastest mode to open a file that is far away from the cursor. You can press ";" to go to HINT mode and select the shortcut. You can also just jump to a file with "f" and the shortcut. This is like Vimperator's hint mode.
+
+
+A lot of this documention refers to INS mode which was the default mode prior to my writing the VIM mode. Let's type "i" from VIM mode to go to INS mode.
 
 You should see a listing of your directory with 9 files hot-keyed with numbers and the rest with the first letter.
 Press a hotkey. If it is a directory, you will automatically change into it. If its a file, you will get a menu of file options. (As of writing, now we automatically open the file using EDITOR). (MENU -> Options can be used to switch off default open behavior to get a menu).
@@ -57,7 +72,7 @@ Currently "q" is never mapped to a file, it quits. This is a feature cum bug. I 
 
 Type "/" (slash), now you can edit the pattern for filtering files, without the characters being interpreted as commands. You can type a number (if your file contains a number), or even characters that form a valid grep regex. Press Enter when done.
 
-Sometimes the file you want to select is within view, but is beyond the firt nine. You can toggle to FULL_INDEXING using the single quote character, or using the Toggle Menu Key (=). Now press the character that indexes the file. If the first few characters are common among many files, then this can be very helpful.
+Sometimes the file you want to select is within view, but is beyond the firt nine. You can toggle to HINT (earlier called FULL_INDEXING) using the ";" character, or using the Toggle Menu Key (=). Now press the character that indexes the file. If the first few characters are common among many files, then this can be very helpful.
 
 *The Menu*
 
@@ -85,7 +100,7 @@ To toggle various modes, use the TOGGLE_KEY (default =)  you can switch to "all 
 
 While navigating a directory which has many files with numbers, you may be unable to access certain numbered files. There is a check for numbered files that clash with the numbered hotkey (M_SWITCH_OFF_DUPE_CHECK) that can be set. I have not used this by default just to reduce processing.
 
-Some dirs such as Downloads may contain very long file names containing the same first 10 or 20 characters. In such case, drilling down is tedious. A quicker option is to have FULL_INDEXING. In this all files are indexed using 1-9, then a-zA-Z. However, this is not the default, since the user has to scan the list to see what the hotkey is. I have found that drilling down is much faster -- the first 2 characters of a file or dir often are all we need to get into a dir or get a file.
+Some dirs such as Downloads may contain very long file names containing the same first 10 or 20 characters. In such case, drilling down is tedious. A quicker option is to have HINT Mode. In this all files are indexed using 1-9, then a-zA-Z. However, this is not the default, since the user has to scan the list to see what the hotkey is. I have found that drilling down is much faster -- the first 2 characters of a file or dir often are all we need to get into a dir or get a file.
 
 Other downloaded files may contain funny or unusual characters such as quotes or brackets that i ignore or use for other purposes. Let me know if this is an issue, or use FULL_INDEXING for these cases. Full indexing is available with the TOGGLE_KEY or directly with single quote. You may also use "/" to edit the pattern and use numbers, brackets etc.
 
@@ -103,9 +118,12 @@ You can change the sort order of listings by pressing the ZFM_MENU_KEY (backtick
 
 ###Multiple Selection of files###
 
-There are 2 ways of Multiple Selection. One is from the menu: select any file listing or recursive listing and choose the line numbers. Press ENTER when done and chose a command, or enter a command to execute. This way you may zip or move or delete or view multiple files.
+There are 3 ways of Multiple Selection. One is from the menu: select any file listing or recursive listing and choose the line numbers. Press ENTER when done and chose a command, or enter a command to execute. This way you may zip or move or delete or view multiple files.
 
 The second way is from the file manager itself. There is a toggle key for SELECTION_MODE (currently @). After toggling selection on, any files selected will go into an array. When toggling off, a menu of operations for multiple files appears (zip, move, trash, or enter your own command).
+
+Space bar also allows use to select several files. In Vim mode, "x" selects (toggles) and moves to next file. Currently, "y" is also mapped to selection, yy Y and other combinations such as yG y10gg etc will also work.
+The open command "o" can be used to open selected files using the "s" selector, "os". ":file" will also show the options for multiple selection such as vim, vimdiff, git mv, git add etc. "C-o" is also mapped to File Open and will show a menu for selected files. 
 
 The first method from the menu, allows you to select based on a query such as recent files, todays files,
 files for an extension etc while keeping the file manager as-is. 
