@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-12 16:17
+#  Last update: 2013-02-14 21:07
 # ----------------------------------------------------------------------------- #
     typeset -Ag keymap_VIM
     typeset -Ag vim_selector
@@ -31,7 +31,6 @@ function vimmode_init() {
     vim_bind_key "k" "vim_cursor_up"
     vim_bind_key "l" "cursor_right"
     vim_bind_key "h" "cursor_left"
-    vim_bind_key "ENTER" "select_current_line"
     # i could have put the name of the fucntion to call here itself but the caller
     # does not do an eval, it executes the method and i don't want an eval happening
     vim_bind_key "g" "vim_set_pending vim_goto_line"
@@ -55,7 +54,7 @@ function vimmode_init() {
     vim_bind_pair "d" "$ZFM_RM_COMMAND"
     vim_bind_pair "o" "$EDITOR"
     # directly open the file, no count etc
-    vim_bind_key "e" "zfm_open_file"
+    vim_bind_key "e" "select_current_line"
     vim_bind_key "x" "zfm_toggle_file"
     #vim_bind_key "y y" "zfm_add_to_selection"
     #vim_bind_key "y G" "zfm_add_to_selection $CURSOR $VPACOUNT"
@@ -78,7 +77,7 @@ function vimmode_init() {
     vim_bind_key "t" "zfm_goto_dir"
     # optional for those who like pentadactyl vimperator
     vim_bind_key "f" "vim_jump_to_hint"
-    vim_bind_key "ENTER" "select_current_line"
+    vim_bind_key "ENTER" "zfm_open_file"
     vim_bind_key "g l" "select_current_line"
     vim_bind_key "i" "zfm_set_mode INS"
 
