@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-14 00:27
+#  Last update: 2013-02-14 20:28
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -493,6 +493,7 @@ function post_cd() {
     execute_hooks "chdir"
     CURSOR=1
     sta=1
+    revert_dir_pos
 }
 function zfm_refresh() {
     filterstr=${filterstr:-M}
@@ -585,6 +586,10 @@ M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/13"
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
 typeset -Ag FILES_HASH
+
+# hash to store position in dir when we went somewhere else such as into a child dir
+# We need to position cursor back when we come up.
+typeset -Ag DIR_POSITION
 ## M_SUBCOMMAND keeps a map of command shortname and function
 #  These are commands typed in on : prompt
 typeset -Ag ZFM_MODE_MAP M_SUBCOMMAND
@@ -596,6 +601,7 @@ typeset -U ZFM_DIR_STACK ZFM_FILE_STACK ZFM_EXPANDED_DIRS
 ZFM_DIR_STACK=()
 ZFM_FILE_STACK=()
 ZFM_EXPANDED_DIRS=()
+DIR_POSITION=()
 M_SUBCOMMAND=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
 export ZFM_CD_COMMAND
@@ -726,6 +732,7 @@ function zfm_open_file() {
 
     if [[ -d "$selection" ]]; then
         [[ -n $ZFM_VERBOSE ]] && print "got a directory $selection"
+        save_dir_pos
         $ZFM_CD_COMMAND $selection
         post_cd
     elif [[ -f "$selection" ]]; then
@@ -1423,6 +1430,7 @@ function zfm_show_menu() {
     fi
 }
 function zfm_goto_parent_dir() {
+    save_dir_pos
     #cd ..
     $ZFM_CD_COMMAND ..
     post_cd
@@ -1808,6 +1816,28 @@ function curpos() {
     # convert current cursor to abso
     local result_name=$1
     (( ${result_name} = sta + CURSOR - 1 ))
+}
+##
+# Saves directories last known position before user left to go into a child (at least)
+# or hopefull anywhere, so we can revert to that position
+# NOTE: this saves position not file name so if you drill down to a file then come back up
+#   then the saved cursor position will not be the correct one.
+#
+function save_dir_pos() {
+    DIR_POSITION[$PWD]="${sta}:${CURSOR}"
+    #pinfo "$0: saving $sta nd $CURSOR"
+}
+##
+# revert us to last position in directory
+#
+function revert_dir_pos() {
+    local pos elems
+    pos=$DIR_POSITION[$PWD]
+    [[ -z "$pos" ]] && { return }
+    elems=("${(s/:/)pos}")
+    sta=$elems[1]
+    CURSOR=$elems[2]
+    #pinfo "$0: reverting ($pos) $sta nd $CURSOR"
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
