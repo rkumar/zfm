@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-15 01:00
+#  Last update: 2013-02-15 13:34
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -736,52 +736,68 @@ function _read_keys() {
     read -k -s key
     ret=$?
     reply="${key}"
+
+    ## This is simpler and works. Keep checking for a key until time out
     if [[ '#key' -eq '#\\e' ]]; then
-        # M-...
-        read -t $(( KEYTIMEOUT / 1000 )) -k -s key2
-        ret=$?
-        if [[ "${key2}" == '[' ]]; then
-            # cursor keys
-            read -k -s key3
+        while (true); do
+            read -t $(( KEYTIMEOUT / 1000 )) -k -s key2
             ret=$?
-            if [[ "${key3}" == [0-9] ]]; then
-                # Home, End, PgUp, PgDn ...
-                # F5 etc take a fifth key, so a loop
-                #read -k -s key4
-                #ret=$?
-                #reply="${key}${key2}${key3}${key4}"
-                reply="${key}${key2}${key3}"
-                while (true); do
-                    read -t $(( KEYTIMEOUT / 1000 )) -k -s key4
-                    if [[ $? -eq 0 ]]; then
-                        reply+="$key4"
-                    else
-                        break
-                    fi
-                done
+            if [[ $ret -ne 0 ]]; then
+                ret=0
+                break
             else
-                # arrow keys
-                reply="${key}${key2}${key3}"
+                reply+="$key2"
             fi
-            resolve_key_codes
-        elif [[ $ret == "1" ]]; then
-            # we have an escape
-            ret=0
-        elif [[ "${key2}" == 'O' ]]; then
-            read -t $(( KEYTIMEOUT / 1000 )) -k -s key3
-            if [[ $? -eq 0 ]]; then
-                reply="${key}${key2}${key3}"
-                resolve_key_codes
-            fi
-        else
-            # alt keys
-            reply="${key}${key2}"
-            if (( key = 27 )); then
-                x=$((#key2))
-                y=${(#)x}
-                ckey="M-$y"
-            fi
-        fi
+        done
+        resolve_key_codes
+        ## the commented portion was unnece complex with several diff portions
+        # for diff kinds of keys. 2013-02-15 - 13:29 
+    #if [[ '#key' -eq '#\\e' ]]; then
+        ## M-...
+        #read -t $(( KEYTIMEOUT / 1000 )) -k -s key2
+        #ret=$?
+        #if [[ "${key2}" == '[' ]]; then
+            ## cursor keys
+            #read -k -s key3
+            #ret=$?
+            #if [[ "${key3}" == [0-9] ]]; then
+                ## Home, End, PgUp, PgDn ...
+                ## F5 etc take a fifth key, so a loop
+                ##read -k -s key4
+                ##ret=$?
+                ##reply="${key}${key2}${key3}${key4}"
+                #reply="${key}${key2}${key3}"
+                #while (true); do
+                    #read -t $(( KEYTIMEOUT / 1000 )) -k -s key4
+                    #if [[ $? -eq 0 ]]; then
+                        #reply+="$key4"
+                    #else
+                        #break
+                    #fi
+                #done
+            #else
+                ## arrow keys
+                #reply="${key}${key2}${key3}"
+            #fi
+            #resolve_key_codes
+        #elif [[ $ret == "1" ]]; then
+            ## we have an escape
+            #ret=0
+        #elif [[ "${key2}" == 'O' ]]; then
+            #read -t $(( KEYTIMEOUT / 1000 )) -k -s key3
+            #if [[ $? -eq 0 ]]; then
+                #reply="${key}${key2}${key3}"
+                #resolve_key_codes
+            #fi
+        #else
+            ## alt keys
+            #reply="${key}${key2}"
+            #if (( key = 27 )); then
+                #x=$((#key2))
+                #y=${(#)x}
+                #ckey="M-$y"
+            #fi
+        #fi
     else
         reply="${key}"
         ascii=$((#key))
@@ -807,6 +823,11 @@ function _read_keys() {
 
     return $ret
 }
+## This maps a user-friendly string to key codes of some keys
+#  You will have to change some of these if you TERM setting differs
+#  Sadly, I could not put the codes here are strings as zsh was crashing 
+#  out in some cases (PgDn etc) and simply not responding in some (Home End).
+#
 function init_key_codes() {
 # this is for those cases with 3 or 4 keys
     typeset -Ag kh;
@@ -831,12 +852,15 @@ function init_key_codes() {
     kh[(27 91 50 49 126)]="F10"
 
 }
-## if not found should we return UNKNOWN or since ckey is blank, reply will be checked.
+## Resolve complex key codes, convert string recieved into indiv codes and then check
+# hash for a user-fr string
+# if not found should we return UNKNOWN or since ckey is blank, reply will be checked.
 #
 function resolve_key_codes() {
 
     [[ -z $kh ]] && init_key_codes
 
+    ## break the string into individual codes and make an array of it.
     keyarr=()
     for (( i = 1; i <= $#reply; i++ )); do
         j=$reply[$i]
