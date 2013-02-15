@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-15 13:34
+#  Last update: 2013-02-15 15:19
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -831,25 +831,64 @@ function _read_keys() {
 function init_key_codes() {
 # this is for those cases with 3 or 4 keys
     typeset -Ag kh;
-    kh[(27)]="ESCAPE"
-    kh[(27 91 54 126)]="PgDn"
-    kh[(27 91 53 126)]="PgUp"
-    kh[(27 91 65)]="UP"
-    kh[(27 91 66)]="DOWN"
-    kh[(27 91 67)]="RIGHT"
-    kh[(27 91 68)]="LEFT"
-    kh[(27 91 72)]="Home"
-    kh[(27 91 70)]="End"
-    kh[(27 79 80)]="F1"
-    kh[(27 79 81)]="F2"
-    kh[(27 79 82)]="F3"
-    kh[(27 79 83)]="F4"
-    kh[(27 91 49 53 126)]="F5"
-    kh[(27 91 49 55 126)]="F6"
-    kh[(27 91 49 56 126)]="F7"
-    kh[(27 91 49 57 126)]="F8"
-    kh[(27 91 50 48 126)]="F9"
-    kh[(27 91 50 49 126)]="F10"
+    #kh[(27)]="ESCAPE"
+    kh[]="ESCAPE"
+    KEY_PGDN="[6~"
+    KEY_PGUP="[5~"
+    ## I needed to replace the O with a [ for this to work
+    #  in Vim Home comes as ^[OH whereas on the command line it is correct as ^[[H
+    KEY_HOME='[H'
+    KEY_END="[F"
+    KEY_F1="OP"
+    KEY_UP="[A"
+    KEY_DOWN="[B"
+    #kh[(27 91 54 126)]="PgDn"
+    #kh[(27 91 53 126)]="PgUp"
+    #kh[(27 91 65)]="UP"
+    #kh[(27 91 66)]="DOWN"
+    #kh[(27 91 67)]="RIGHT"
+    #kh[(27 91 68)]="LEFT"
+    #kh[(27 91 72)]="Home"
+    #kh[(27 91 70)]="End"
+    #kh[(27 79 80)]="F1"
+    #kh[(27 79 81)]="F2"
+    #kh[(27 79 82)]="F3"
+    #kh[(27 79 83)]="F4"
+    #kh[(27 91 49 53 126)]="F5"
+    #kh[(27 91 49 55 126)]="F6"
+    #kh[(27 91 49 56 126)]="F7"
+    #kh[(27 91 49 57 126)]="F8"
+    #kh[(27 91 50 48 126)]="F9"
+    #kh[(27 91 50 49 126)]="F10"
+
+    kh[$KEY_PGDN]="PgDn"
+    kh[$KEY_PGUP]="PgUp"
+    kh[$KEY_HOME]="Home"
+    kh[$KEY_END]="End"
+    kh[$KEY_F1]="F1"
+    kh[$KEY_UP]="UP"
+    kh[$KEY_DOWN]="DOWN"
+    KEY_LEFT='[D' 
+    KEY_RIGHT='[C' 
+    kh+=(
+       OQ  F2
+       OR  F3
+       OS  F4
+       $KEY_LEFT LEFT
+       $KEY_RIGHT RIGHT
+       )
+    KEY_F5='[15~'
+    KEY_F6='[17~'
+    KEY_F7='[18~'
+    KEY_F8='[19~'
+    KEY_F9='[20~'
+    KEY_F10='[21~'
+    kh[$KEY_F5]="F5"
+    kh[$KEY_F6]="F6"
+    kh[$KEY_F7]="F7"
+    kh[$KEY_F8]="F8"
+    kh[$KEY_F9]="F9"
+    kh[$KEY_F10]="F10"
 
 }
 ## Resolve complex key codes, convert string recieved into indiv codes and then check
@@ -861,15 +900,16 @@ function resolve_key_codes() {
     [[ -z $kh ]] && init_key_codes
 
     ## break the string into individual codes and make an array of it.
-    keyarr=()
-    for (( i = 1; i <= $#reply; i++ )); do
-        j=$reply[$i]
-        k=$((#j))
-        keyarr+=($k)
-    done
-    ckey=$kh[($keyarr)]
+    #keyarr=()
+    #for (( i = 1; i <= $#reply; i++ )); do
+        #j=$reply[$i]
+        #k=$((#j))
+        #keyarr+=($k)
+    #done
+    #ckey=$kh[($keyarr)]
+    ckey=$kh[$reply]
     if [[ -z $ckey ]]; then
-        perror "  insided blank $keyarr"
+        perror "  insided blank $keyarr, $#reply, $reply"
         # alt keys
         # there should be only 27 and one more
         # need to check with rbc about these keys, hundreds of other combos in there
