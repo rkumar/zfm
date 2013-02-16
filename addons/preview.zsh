@@ -5,13 +5,12 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-13 - 22:34
 #      License: GPL
-#  Last update: 2013-02-14 00:47
+#  Last update: 2013-02-16 18:38
 # ----------------------------------------------------------------------------- #
 #   preview.zsh  Copyright (C) 2012-2013 rahul kumar
 
 
 
-zfm_bind_key "M-p" pr_file_preview
 zfm_bind_key "ML p" pr_file_preview
 
 ## print a preview of file content on right side
