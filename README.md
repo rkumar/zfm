@@ -14,7 +14,7 @@ There are 3 modes:
 
 The first 9 files or dirs in any view are given hotkeys from 1-9. After that with each successive key the files are reduced. This actually makes file navigation very fast. (This is in INS mode and in HINT mode.) In VIM mode numbers will mean a count. Jump to HINT mode using ; or use count-j or count-k to move and hit ENTER or "o" or "e".
 
-In VIM mode, you can also jump to a file without opening it, using "f". This is like EasyMotion and will give the same HINT for each file, but instead of opening it, will position the cursor at that point.
+In VIM mode, you can also jump to a file *without* opening it, using "f". This is like EasyMotion and will give the same HINT for each file, but instead of opening it, will position the cursor at that point.
 
 The "," key (lower case of "&lt;") is used to go up directory levels. There are many other shortcuts that allow for other usual operations to be done fast such as accessing favorite directories and files, and navigating deep structures quickly.
 
@@ -22,7 +22,7 @@ Paging of long listings is done using Alt-n and Alt-p (now SPACE selects).
 
 The motivation of yet another file manager is to automate as many file-related operations as I can: browsing, operating on multiple files, today's files, filtering file lists. I also use ``z``, ``v``, ``vifm``, and various other great utilities. For example, i often run a locate command and then wish to further filter it, or sort on date and then open a file. Or use ack to search files and then open some. These use cases are easy with this utility. 
 
-If I only wish to open a file for editing, it can be easier to type "m" (or whatever alias you use) and hit the shortcut, rather than type "vim <char><TAB>" etc etc especially if you set ZFM_DEFAULT_MODE to "HINT".
+If I only wish to open a file for editing, it can be easier to type "m" (or whatever alias you use) and hit the shortcut, rather than type "vim abc TAB" etc etc especially if you set ZFM_DEFAULT_MODE to "HINT".
 
 A Quick Session
 ---------------
@@ -40,8 +40,8 @@ Now type "m":
 
 The following assumes you are using VIM mode (that is currently the default startup mode).
 
-You can navigate using j and k with count, or gg G , use "e" to open a file or directory. Multiple files can be opened using "oo" with count, or combinations such as "oG" or "o(count)gg" etc. "x" selects single files.
-Use "ENTER" to see a menu of options for that filetype or dir.
+You can navigate using j and k with count, or gg G , use ENTER or "e" to open a file or directory. ENTER will open the file in your EDITOR, whereas "e" gives you options of various programs to run, or give your own command to run on the file. Multiple files can be opened using "oo" with count, or combinations such as "oG" or "o(count)gg" etc. "x" selects single files.
+Use "e" to see a menu of options for that filetype or dir. MENU-1 may also be used to get a set of options for the file. MENU-2 gives options for selected files (such as zipping, searching, diffing, etc).
 
 Note that file numbering in VIM mode is absolute if you type "g" or the last command was a "gg" command. If you use "j" or "k", numbering becomes relative.
 
@@ -68,7 +68,7 @@ Press "?" to see what keys are available. This should work in menu's too.
 
 Press the colon (":") and type an arbitrary shell command. You can type "q" or "quit" to quit, help or ? should show you some canned actions.
 
-Currently "q" is never mapped to a file, it quits. This is a feature cum bug. I need to find another quit key and release the "q" so the "qt" guys don't sue me :)
+Currently "q" is never mapped to a file, it quits. This is a feature cum bug. I need to find another quit key and release the "q" so the "qt" guys don't sue me :)  (Update: Ctrl-\ always exits without checking any key. Ctrl-Q exits if you are in your default mode, if you are in some other mode, it comes back to default mode.)
 
 Type "/" (slash), now you can edit the pattern for filtering files, without the characters being interpreted as commands. You can type a number (if your file contains a number), or even characters that form a valid grep regex. Press Enter when done.
 
@@ -132,7 +132,7 @@ Single files may also be selected or deselected using the Ctrl-Spacebar key whil
 
 ### Finding a file based on filename###
 
-This is similar to the `find` command but uses zsh, to find a file given a string. Matches are displayed and can be filtered based on more keys, and files may be selected and edited. Currently, the location of this is MENU-/ or Alt-/. 
+This is similar to the `find` command but uses zsh, to find a file given a string. Matches are displayed and can be filtered based on more keys, and files may be selected and edited. Currently, the location of this is MENU-/ or Alt-/. I often find it faster from the prompt to type "m", Alt-/, type in a couple characters of the file name, and then select the file than any other alternative. (If you have Vim open in the right heirarchy, you can always press Ctrl-P which is superior). Similarly using ack/ag or locate from within zfm is often faster than from the prompt if you wish to select files for editing.
 
 ###Searching based on file content###
 
@@ -167,14 +167,31 @@ Currently, I use rupa's Z utility, so `zfmdirs` pulls out directory names from t
 Similarly, `zfmfiles` lists files from my $HOME/.viminfo file. You can replace the code in these
 files to interface with autojump or whatever other utility you use. I'd rather use an existing tool for this that re-invent the same functionality (all these utilities hook into cd or chpwd)
 
+##Bookmarks##
+
+If you ve got the addons directory correctly located (ZFM_DOTDIR) you should be able to use the bookmark feature. Use the "m" key to save locations a to z in each dir. Locations A to Z are across directories. To access the bookmarks use the single quote char. This can be a fast way of moving across the filesystem.
+
+Currently, if you have not set a bookmark for a character, then the cursor moves to the first (or next) file starting with that char. So this is a fast way to jump to another location (in addition to using the "f" key, or going into HINT mode).
+
+##Other addons##
+
+I've just added a preview addon, it prints the first 25 lines of a file on the right side (currently mapped to forward-slash-p (leader-p). The preview gets erase after a key-stroke since the list reprints. It's just something i tried out for fun.
+
 ##Issues##
 
-    * selection does not keep path, so cd'ing and selecting from two folders means that
-      some files will give errors. Let's see what i can do ... hmmm
+I've tested this out only on OSX Mountain Lion using TERM=screen-256color. I use zsh-5.0.x (latest homebrew).
+
+It's very possible that your arrow keys, function keys, or PgDn/Home/End do not work. You'll have to update the codes for your system in zfm_menu.zsh (init_key_codes). On you command-line, enter C-v and enter the key, that's what you should have in the program. Send me the codes, so i can add them. 
+
+Since I clear the screen prior to printing, an error message thrown up by zsh could get hidden. This rarely happens, usually when I make a change to the code and there's a syntax error (missing bracket, quote etc). This can also happen if some files are missing in your install. The keys will not work. (e.g., j and k will not work in VIM mode). You can scroll up to see the error. I've not found a way of handling zsh's own errors, ideally the program should exit on these errors.
+
+As of 0.1.13, zfm doesn't write to any files or save state. It should do so soon, so visited dirs and files and bookmarks can be used across sessions.
 
 ##Changes##
 
 A summary of version-wise changes. 
+
+(not updated for a long time, too many changes and additions)
 
 ###0.1.8###
 
