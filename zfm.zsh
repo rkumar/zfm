@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-15 18:55
+#  Last update: 2013-02-17 11:28
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -35,14 +35,14 @@ set_auto_view
 #stty_settings
 ttysave=$(stty -g)
 #stty raw echo
-    ## We need C-c for mappings, so we disable it 
-    #stty intr '^-'
-    ## this is strangely eating up C-o
-    #stty flush '^-'
-    ## so we can trap C-\ to abort
-    #stty quit '^-'
-    ## so we can trap C-q to quit
-    #stty start '^-'
+    # We need C-c for mappings, so we disable it 
+    stty intr '^-'
+    # this is strangely eating up C-o
+    stty flush '^-'
+    # so we can trap C-\ to abort
+    stty quit '^-'
+    # so we can trap C-q to quit
+    stty start '^-'
 
 #
 # for printing details 
@@ -584,8 +584,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.13-kepler4"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/15"
+ZFM_VERSION="0.1.13-kepler5"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/17"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
