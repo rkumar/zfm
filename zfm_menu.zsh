@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-15 15:19
+#  Last update: 2013-02-18 23:52
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -909,7 +909,6 @@ function resolve_key_codes() {
     #ckey=$kh[($keyarr)]
     ckey=$kh[$reply]
     if [[ -z $ckey ]]; then
-        perror "  insided blank $keyarr, $#reply, $reply"
         # alt keys
         # there should be only 27 and one more
         # need to check with rbc about these keys, hundreds of other combos in there
