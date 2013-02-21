@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-12 00:00
+#  Last update: 2013-02-21 19:37
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
@@ -22,6 +22,7 @@ vim_bind_key "m" zfm_mark
 zfm_bind_key "ML m" zfm_mark
 zfm_bind_key "'" zfm_jump_to_mark
 zfm_bind_subcommand "marks" zfm_print_marks
+zfm_bind_subcommand "write" config_write
 
 # also :marks to list marks
 # NOTE: TODO These are also selectors so one should be able to do d'a or y'b etc
@@ -54,9 +55,12 @@ function zfm_mark () {
     if [[ $reply =~ [a-z] ]]; then
         M_MARKS[$PWD:$reply]=$pos
         pinfo "$0 set mark ($PWD:$reply) for $pos"
+        #M_MODIFIED=1
     elif [[ $reply =~ [A-Z] ]]; then 
         M_MARKS[$reply]="$PWD:$pos"
         pinfo "$0 set mark ($reply) for $PWD $pos"
+        # updated so we can save later on exit
+        M_MODIFIED=1
     else
         perror "$0: $reply is not handled as a mark"
         pause
