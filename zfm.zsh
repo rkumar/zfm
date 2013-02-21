@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-21 19:34
+#  Last update: 2013-02-21 20:38
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -586,8 +586,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.13-kepler5"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/17"
+ZFM_VERSION="0.1.14-lyra"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/21"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -1895,15 +1895,15 @@ function config_write() {
         pinfo "Appending data to $conf, please edit."
         print -rl -- "## Updated config on: " >> $conf
         d=${(j#:#)ZFM_USED_DIRS}
-        print -rl -- "DIRS=$d" >> $conf
+        print -rl -- "DIRS=\"$d\"" >> $conf
         d=${(j#:#)ZFM_FILE_STACK}
-        print -rl -- "FILES=$d" >> $conf
+        print -rl -- "FILES=\"$d\"" >> $conf
         for key in ${(k)M_MARKS} ; do
             # this is okay for global marks but will fail on local ones which have a ":" inside
             # ignore local marks till we find a way
             if [[ $#key -eq 1 ]]; then
                 val=$M_MARKS[$key]
-                print -rl -- "BM_$key=$val" >> $conf
+                print -rl -- "BM_$key=\"$val\"" >> $conf
             fi
         done
     else
