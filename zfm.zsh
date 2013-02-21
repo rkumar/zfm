@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-21 20:38
+#  Last update: 2013-02-22 01:25
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -21,7 +21,7 @@ export ZFM_DIR
 export EDITOR=${EDITOR:-vi}
 ## This is the startup mode, also whenever escaping from another mode such as HINTs
 #  app will come back to this mode
-export ZFM_DEFAULT_MODE=${ZFM_DEFAULT_MODE:-VIM}
+export ZFM_DEFAULT_MODE=${ZFM_DEFAULT_MODE:-HINT}
 source ${ZFM_DIR}/zfm_menu.zsh
 source $ZFM_DIR/zfm_viewoptions.zsh
 setopt MARK_DIRS
@@ -62,7 +62,8 @@ function list_printer() {
     #integer ZFM_LINES=$(tput lines)
     #export ZFM_COLS ZFM_LINES
     local width=30
-    local title=$1
+    #local title=$1
+    title=$1
     shift
     #local viewport vpa fin
     myopts=("${(@f)$(print -rl -- $@)}")
@@ -264,22 +265,34 @@ function list_printer() {
                 NO_BREAKING=
                 $MODE_KEY_HANDLER $ZFM_KEY
                 ans=
+                ## 2013-02-22 - 00:36 LP added next line so break from mode can happen
+                [[ -n $QUITTING ]] && break
                 # should be not break only if selection has been set XXX
-                [[ -n $NO_BREAKING ]] || break
+            # 2013-02-22 - 00:14 LP commented off next line
+                #[[ -n $NO_BREAKING ]] || break
             # above is for modes
         else
             [[ $ZFM_QUIT_KEY == $ans ]] && { QUITTING=true; ans= ; break; }
 
             zfm_exec_key_binding $ans
             [[ -n $binding ]] && {  ans= ; 
-                [[ -n $NO_BREAKING ]] || break
+            # 2013-02-22 - 00:14 LP commented off next line
+                #[[ -n $NO_BREAKING ]] || break
+                ## added 2013-02-22 - 00:31 LP
+                [[ -n $QUITTING ]] && break
             }
             #[[ -n $binding ]] && { $binding ; ans= ; break }
         fi
+        ## added 2013-02-22 - 00:31 LP 3 lines
+        [[ -n $QUITTING ]] && break
+        [[ -n $selection ]] && zfm_open_file $selection
+        selection=
+        ## end added LP
 
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
         ## was causing the unused error to keep popping up when no rows were returned
-        [[ $sta -ge $tot ]] && { sta=1; ans= ;  pinfo "...Wrapping around"; break }
+        ## 2013-02-22 - 01:05 LP break removed from next line
+        [[ $sta -ge $tot ]] && { sta=1; ans= ;  pinfo "...Wrapping around"; }
         # break takes control back to MARK1 section below
 
     done
@@ -491,7 +504,11 @@ function post_cd() {
     PATT=""
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
-    [[ $#param -eq 0 ]] && {
+    ## added 2013-02-22 - 00:50 LP myopts
+    title=$PWD
+    myopts=("${(@f)$(print -rl -- $param)}")
+    param=
+    [[ $#myopts -eq 0 ]] && {
         M_MESSAGE="$#param files, use UP or ZFM_GOTO_PARENT_KEY to go to parent folder, LEFT to popd"
     }
     # clear hash of file details to avoid recomp
@@ -502,10 +519,12 @@ function post_cd() {
     revert_dir_pos
 }
 function zfm_refresh() {
+    title=$PWD
     filterstr=${filterstr:-M}
     param=$(eval "print -rl -- ${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)")
     restore_exoanded_state
     myopts=("${(@f)$(print -rl -- $param)}")
+    param=
     sms "Rescanned..."
 }
 
@@ -586,8 +605,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
 ##  global section
 ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.14-lyra"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/21"
+ZFM_VERSION="0.1.15-alpha"
+M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/22"
 #  Array to place selected files
 typeset -U selectedfiles
 # hash of file details to avoid recomp each time while inside a dir
@@ -695,36 +714,11 @@ M_MESSAGE="$M_HELP    $M_TITLE"
 param=$(print -rl -- *(M))
 # sta was local in list_printer, tring out belove
 sta=1
-    while (true)
-    do
         list_printer "${PWD} " $param
-        [[ -n $QUITTING ]] && break
-        # MARK1 section comes back when list_p breaks from SWALLOW
-        [[ -n $selection ]] && pdebug "returned with $selection"
-        # value selected is in selection, key pressed in ans
-        [[ -z "$selection" ]] && {
-            [[ "$ans" == $ZFM_QUIT_KEY ]] && break
-            case $ans in 
-                "~")
-                    selection=$HOME
-                    ;;
-                *)
-                    [[ "$ans" == $ZFM_REFRESH_KEY ]] && { perror "breaking";  break }
-            
-                    [[ -n $ans ]] && { 
-                        M_MESSAGE="$ans unused. $M_HELP"
-                        M_NO_REPRINT=1
-                    }
-                    ## NOTE messages will only be refreshed if key had some
-                    #  effect, else unused key warning won't do anything since we dont
-                    #  redraw.
-                    #
-                    ;;
-            esac
-            }
-
-            [[ -n $selection ]] && zfm_open_file $selection
-    done
+        ## 2013-02-22 - 00:11 LP
+        #break
+        ## removed everything after this so there are not two loops
+        # that really complicated matters.
     print "bye"
     #stty intr ''
     stty $ttysave
@@ -757,7 +751,7 @@ function zfm_open_file() {
     else
         [[ -n "$selection" ]] && {
             # sometimes comes here on a link (esp broken) and fileopt will check for -f and reject
-            pbold "Don't know how to handle $selection"
+            pbold "$0: Don't know how to handle $selection"
             file $selection
             fileopt $selection
             pause
@@ -1446,6 +1440,7 @@ function zfm_show_menu() {
     fi
 }
 function zfm_goto_parent_dir() {
+    clear_mess
     save_dir_pos
     #cd ..
     $ZFM_CD_COMMAND ..
@@ -1717,6 +1712,9 @@ function zfm_get_full_indexing_filename() {
         # like on f or some key, not open a file
         if [[ -z $M_HINT_POSITION_CURSOR_ONLY ]]; then
             selection=$vpa[$iix]
+            ## 2013-02-22 - 00:28 LP added
+            zfm_open_file $selection
+            selection=
         else
         fi
         (( CURSOR = iix ))
