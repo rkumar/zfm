@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-13 00:49
+# Last update: 2013-02-22 01:18
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -736,7 +736,10 @@ function filteroptions() {
     filterstr=${filterstr:-M}
     ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
     export ZFM_STRING
-    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    #myopts=("${(@f)$(print -rl -- $param)}")
+    ## adding 2013-02-22 - 01:15 LP
+    zfm_refresh
     export param
 }
 function sortoptions() {
@@ -771,11 +774,13 @@ function sortoptions() {
     ZFM_SORT_ORDER=$menu_text
     export ZFM_SORT_ORDER
     #param=$(eval "print -rl -- *${MFM_LISTORDER}")
-    filterstr=${filterstr:-M}
+    #filterstr=${filterstr:-M}
     #ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
     ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
     export ZFM_STRING
-    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    ## adding 2013-02-22 - 01:15 LP
+    zfm_refresh
     export param
 }
 # cycle through various views
@@ -793,11 +798,14 @@ function zfm_views() {
     ZFM_SORT_ORDER=$viewlabels[$viewcount]
     export ZFM_SORT_ORDER
     #param=$(eval "print -rl -- *${MFM_LISTORDER}")
-    filterstr=${filterstr:-M}
+    #filterstr=${filterstr:-M}
     #ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
     ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
     export ZFM_STRING
-    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    ## adding 2013-02-22 - 01:15 LP
+    #
+    zfm_refresh
     export param
 
 }
@@ -1110,7 +1118,9 @@ function zfm_edit_pattern() {
     vared -p "Enter pattern: " pattern
     pattern=${pattern:-"*"}
     ZFM_STRING="${pattern}${M_EXCLUDE_PATTERN}(${MFM_LISTORDER}$filterstr)"
-    param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+    ## adding 2013-02-22 - 01:15 LP
+    zfm_refresh
     M_MESSAGE="zsh pattern set to: $pattern"
 }
 function zfm_newfile() {
