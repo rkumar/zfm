@@ -187,6 +187,13 @@ Since I clear the screen prior to printing, an error message thrown up by zsh co
 
 As of 0.1.13, zfm doesn't write to any files or save state. It should do so soon, so visited dirs and files and bookmarks can be used across sessions.
 
+## SAVING CONFIG ##
+
+I have just taken a cautious approach to saving config. This is since once can have multiple instances of zfm running with bookmarks added to each one. First, i do not save upon exit. I also only save if there is already a $HOME/.zfminfo file. So if you want bookmarks saved, then please `touch ~/.zfminfo` else nothing is written. To save you can either give the command `:write` or quit using ":wq" or ":x".
+
+Also, the bookmarks are *appended* to the existing file to prevent multiple sessions from clobbering each other. So you can edit the differences after writing. At this moment, local bookmarks are not being saved. I am still deciding on the format of saving local bookmarks.
+
+
 ##Changes##
 
 A summary of version-wise changes. 
