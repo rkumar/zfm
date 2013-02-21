@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-06 - 22:31
 #      License: GPL
-#  Last update: 2013-02-11 19:14
+#  Last update: 2013-02-21 22:36
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -26,6 +26,9 @@ function hint_key_handler() {
     # is ix even used ?? XX
     local ix
     case $ans in
+        q)
+            QUITTING=true
+            ;; 
         [1-9a-zA-Z])
             zfm_get_full_indexing_filename $ans
             ## in case caller wishes to use once and exit
