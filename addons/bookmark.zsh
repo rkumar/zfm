@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-21 19:37
+#  Last update: 2013-02-21 22:17
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
@@ -70,6 +70,7 @@ function zfm_mark () {
 function zfm_jump_to_mark () {
     print -n "Enter character for mark [a-z A-Z]: "
     read -k reply
+    [[ $reply == "" || $reply == "" ]] && return
     local pos rep dir columns
     pos=1
     if [[ $reply =~ [a-z] ]]; then
