@@ -22,6 +22,7 @@
         "Home" zfm_goto_start
         "End" zfm_goto_end
         "ML l" zfm_goto_line
+        "M-m"  zfm_mark
         )
 
 
