@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-17 11:28
+#  Last update: 2013-02-21 19:34
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -374,6 +374,8 @@ function subcommand() {
     vared -p "Enter command (? - help): " dcommand
 
     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && { QUITTING=1 ; break }
+    [[ "$dcommand" = "wq" ]] && { config_write; QUITTING=1 ; break }
+    [[ "$dcommand" = "x" ]] && { [[ -n "$M_MODIFIED" ]] && config_write; QUITTING=1 ; break }
 
     if [[ $dcommand[1] == '!' ]]; then
         dcommand=${dcommand[2,-1]}
@@ -601,10 +603,11 @@ typeset -Ag ZFM_MODE_MAP M_SUBCOMMAND
 selectedfiles=()
 
 #  directory stack for jumping back, opened fies, and expanded dirs
-typeset -U ZFM_DIR_STACK ZFM_FILE_STACK ZFM_EXPANDED_DIRS
+typeset -U ZFM_DIR_STACK ZFM_FILE_STACK ZFM_EXPANDED_DIRS ZFM_USED_DIRS
 ZFM_DIR_STACK=()
 ZFM_FILE_STACK=()
 ZFM_EXPANDED_DIRS=()
+ZFM_USED_DIRS=()
 DIR_POSITION=()
 M_SUBCOMMAND=()
 ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
@@ -679,6 +682,7 @@ do
     source $ff
 done
 source_addons
+config_read
 zfm_set_mode $ZFM_DEFAULT_MODE
 # at this point read up users bindings
 #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
@@ -724,11 +728,11 @@ sta=1
     print "bye"
     #stty intr ''
     stty $ttysave
-    # do this only if is different from invoking dir
-    [[ "$PWD" == "$ZFM_START_DIR" ]] || {
-        print "sending $PWD to pbcopy"
-        print "$PWD" | pbcopy
-    }
+    ## do this only if is different from invoking dir
+    #[[ "$PWD" == "$ZFM_START_DIR" ]] || {
+        #print "sending $PWD to pbcopy"
+        #print "$PWD" | pbcopy
+    #}
 } # myzfm
 
 function zfm_open_file() {
@@ -1367,6 +1371,7 @@ function fileopen_hook () {
         files=($PWD/${^files}) # prepend PWD to each element
     fi
     ZFM_FILE_STACK+=($files)
+    ZFM_USED_DIRS+=($PWD)
 }
 function toggle_options_menu() {
     ## by default or first time pressing toggle key twice will toggle full-indexing
@@ -1859,6 +1864,51 @@ function stty_settings() {
     stty quit '^-'
     # so we can trap C-q to quit
     stty start '^-'
+}
+
+## read up dirs and fies and bookmarks
+#  bookmarks requires addons/bookmark.zsh to be loaded.
+function config_read() {
+    local conf="$HOME/.zfminfo"
+    if [[ -f "$conf" ]]; then
+        source $conf
+        [[ -n "$DIRS" ]] && ZFM_USED_DIRS=("${(s/:/)DIRS}")
+        [[ -n "$FILES" ]] && ZFM_FILE_STACK=("${(s/:/)FILES}")
+        local bm
+        setopt brace_ccl
+        bm=({A-Z})
+        for ch in $bm ; do
+            var=BM_$ch
+            [[ -n ${(P)var} ]] && M_MARKS[$ch]=${(P)var}
+        done
+    fi
+}
+# bound to write subcommand
+# :write , :wq , :x
+# Append config data to $conf, user should remove dupe entries
+# I don't want to overwrite stuff since its possible that multiple instances
+# are running and have separate bookmarks which could overwrite each other
+#
+function config_write() {
+    local conf="$HOME/.zfminfo"
+    if [[ -f "$conf" ]]; then
+        pinfo "Appending data to $conf, please edit."
+        print -rl -- "## Updated config on: " >> $conf
+        d=${(j#:#)ZFM_USED_DIRS}
+        print -rl -- "DIRS=$d" >> $conf
+        d=${(j#:#)ZFM_FILE_STACK}
+        print -rl -- "FILES=$d" >> $conf
+        for key in ${(k)M_MARKS} ; do
+            # this is okay for global marks but will fail on local ones which have a ":" inside
+            # ignore local marks till we find a way
+            if [[ $#key -eq 1 ]]; then
+                val=$M_MARKS[$key]
+                print -rl -- "BM_$key=$val" >> $conf
+            fi
+        done
+    else
+        pinfo "Config data not saved since $conf not found. Use touch $conf to save data."
+    fi
 }
 
 # comment out next line if sourcing .. sorry could not find a cleaner way
