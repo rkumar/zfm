@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-18 23:52
+#  Last update: 2013-02-22 14:23
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -18,6 +18,7 @@ autoload colors && colors
 export COLOR_DEFAULT="\\033[0m"
 export COLOR_RED="\\033[1;31m"
 export COLOR_GREEN="\\033[1;32m"
+export COLOR_BLUE='\\033[1;34m'
 export COLOR_BOLD="\\033[1m"
 export COLOR_BOLDOFF="\\033[22m"
 # edit these or override in ENV
