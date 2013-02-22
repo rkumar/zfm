@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-23 00:33
+#  Last update: 2013-02-23 01:44
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -290,7 +290,7 @@ function list_printer() {
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
         ## was causing the unused error to keep popping up when no rows were returned
         ## 2013-02-22 - 01:05 LP break removed from next line
-        [[ $sta -ge $tot ]] && { sta=1; ans= ;  pinfo "...Wrapping around"; }
+        [[ $sta -ge $tot ]] && { sta=1; ans= ; }
         # break takes control back to MARK1 section below
 
     done
