@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-22 01:25
+#  Last update: 2013-02-22 13:58
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -53,20 +53,18 @@ export M_SCROLL
 
 
 # list_printer {
-#  list_printer "Directory Listing" ./*
-#    param 1 title
-#    rest is files to list
+# Used to take title and data, now takes no parameters
+# This was called in a loop from the caller, everytime a file was selected we would return to caller
+# and come back here, now we only return when caller wants to exit.
+#
 function list_printer() {
-    selection="" # contains return value if anything chosen
-    #integer ZFM_COLS=$(tput cols) # it was here since it could change if resize, but not getting passed
-    #integer ZFM_LINES=$(tput lines)
-    #export ZFM_COLS ZFM_LINES
+    selection=
     local width=30
     #local title=$1
-    title=$1
-    shift
+    title="$PWD"
     #local viewport vpa fin
-    myopts=("${(@f)$(print -rl -- $@)}")
+    param=$(print -rl -- *(M))
+    myopts=("${(@f)$(print -rl -- $param)}")
     
 
     # using cols to calculate cursor movement right
@@ -381,14 +379,18 @@ function check_patt() {
 #  Someday we will allow history and completion
 #
 function subcommand() {
-    dcommand=${dcommand:-""}
-    [[ $dcommand == "?" ]] && dcommand=""
+    #dcommand=${dcommand:-""}
+    #[[ $dcommand == "?" ]] && dcommand=""
+    local dcommand
 
-    vared -p "Enter command (? - help): " dcommand
+    vared -h -p "Enter command (? - help): " dcommand
 
     [[ "$dcommand" = "q" || $dcommand = "quit" ]] && { QUITTING=1 ; break }
     [[ "$dcommand" = "wq" ]] && { config_write; QUITTING=1 ; break }
     [[ "$dcommand" = "x" ]] && { [[ -n "$M_MODIFIED" ]] && config_write; QUITTING=1 ; break }
+
+    # write command to history file
+    [[ -n $dcommand ]] && print -s -- "$dcommand"
 
     if [[ $dcommand[1] == '!' ]]; then
         dcommand=${dcommand[2,-1]}
@@ -564,8 +566,6 @@ function print_help_keys() {
        * Note: These may have been overriden by individual modes
 
     $ZFM_MENU_KEY	- Invoke menu (default: backtick)
-    $ZFM_FORWARD_KEY	- Paging of output (default M-n)
-    $ZFM_BACKWARD_KEY	- Previous page of listing (default M-p)
     ^	- toggle match from start of filename
     $ZFM_GOTO_DIR_KEY	- Enter directory name to jump to
     $ZFM_SELECTION_MODE_KEY	- Toggle selection mode
@@ -603,130 +603,116 @@ print -l -- "$str" | $PAGER
 # main {
 #   alias this to some single letter after sourcing this file in .zshrc
 function myzfm() {
-##  global section
-ZFM_APP_NAME="zfm"
-ZFM_VERSION="0.1.15-alpha"
-M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/22"
-#  Array to place selected files
-typeset -U selectedfiles
-# hash of file details to avoid recomp each time while inside a dir
-typeset -Ag FILES_HASH
+    ##  global section
+    ZFM_APP_NAME="zfm"
+    ZFM_VERSION="0.1.15-alpha"
+    M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/22"
+    #  Array to place selected files
+    typeset -U selectedfiles
+    # hash of file details to avoid recomp each time while inside a dir
+    typeset -Ag FILES_HASH
 
-# hash to store position in dir when we went somewhere else such as into a child dir
-# We need to position cursor back when we come up.
-typeset -Ag DIR_POSITION
-## M_SUBCOMMAND keeps a map of command shortname and function
-#  These are commands typed in on : prompt
-typeset -Ag ZFM_MODE_MAP M_SUBCOMMAND
+    # hash to store position in dir when we went somewhere else such as into a child dir
+    # We need to position cursor back when we come up.
+    typeset -Ag DIR_POSITION
+    ## M_SUBCOMMAND keeps a map of command shortname and function
+    #  These are commands typed in on : prompt
+    typeset -Ag ZFM_MODE_MAP M_SUBCOMMAND
 
-selectedfiles=()
+    selectedfiles=()
 
-#  directory stack for jumping back, opened fies, and expanded dirs
-typeset -U ZFM_DIR_STACK ZFM_FILE_STACK ZFM_EXPANDED_DIRS ZFM_USED_DIRS
-ZFM_DIR_STACK=()
-ZFM_FILE_STACK=()
-ZFM_EXPANDED_DIRS=()
-ZFM_USED_DIRS=()
-DIR_POSITION=()
-M_SUBCOMMAND=()
-ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
-export ZFM_CD_COMMAND
-ZFM_START_DIR="$PWD"
+    #  directory stack for jumping back, opened fies, and expanded dirs
+    typeset -U ZFM_DIR_STACK ZFM_FILE_STACK ZFM_EXPANDED_DIRS ZFM_USED_DIRS
+    ZFM_DIR_STACK=()
+    ZFM_FILE_STACK=()
+    ZFM_EXPANDED_DIRS=()
+    ZFM_USED_DIRS=()
+    DIR_POSITION=()
+    M_SUBCOMMAND=()
+    ZFM_CD_COMMAND="pushd" # earlier cd lets see if dirs affected
+    export ZFM_CD_COMMAND
+    ZFM_START_DIR="$PWD"
 
-## If user has passed in any keystrokes read them from here
-#  passed in keys will only work in our own read here, not in other
-# reads or vareds. They will be passed as a string, but we weill put into our array
-[[ -n $Z_KEY_STACK ]] && {
-    Z_KEY_STACK=("${(s/ /)Z_KEY_STACK}")
-}
-ZFM_FILE_SELECT_FUNCTION=fuzzyselectrow
-export ZFM_FILE_SELECT_FUNCTION
-export last_viewed_files
+    ## If user has passed in any keystrokes read them from here
+    #  passed in keys will only work in our own read here, not in other
+    # reads or vareds. They will be passed as a string, but we weill put into our array
+    [[ -n $Z_KEY_STACK ]] && {
+        Z_KEY_STACK=("${(s/ /)Z_KEY_STACK}")
+    }
+    ZFM_FILE_SELECT_FUNCTION=fuzzyselectrow
+    export ZFM_FILE_SELECT_FUNCTION
+    export last_viewed_files
 
-#  defaults KEYS
-#ZFM_PAGE_KEY=$'\n'  # trying out enter if files have spaces and i need to type a space
-#ZFM_FORWARD_KEY=${ZFM_FORWARD_KEY:-'M-n'}  # trying out enter if files have spaces and i need to type a space
-#ZFM_BACKWARD_KEY=${ZFM_BACKWARD_KEY:-'M-p'}  # trying out enter if files have spaces and i need to type a space
-ZFM_OPEN_FILES_KEY=${ZFM_OPEN_FILES_KEY:-'C-o'}  # pressing selects whatever cursor is on
-ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # trying out enter if files have spaces and i need to type a space
-ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
-ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto parent of this dir 
-#ZFM_RESET_PATTERN_KEY=${ZFM_RESET_PATTERN_KEY:-'\'}  # reset the pattern, use something else
-ZFM_POPD_KEY=${ZFM_POPD_KEY:-"<"}  # goto previously visited dir
-ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # toggle selection mode
-ZFM_SORT_KEY=${ZFM_SORT_KEY:-"%"}  # change sort options
-ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change filter options
-ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
-ZFM_TOGGLE_FILE_KEY=${ZFM_TOGGLE_FILE_KEY:-"SPACE"}  # change toggle options
-ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
-ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
-ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # quit application
-#ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-'*'}  # select all files on screen
-ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-"M-a"}  # select all files on screen
-ZFM_EDIT_REGEX_KEY=${ZFM_EDIT_REGEX_KEY:-"/"}  # edit PATT used to filter
-export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
-ZFM_MAP_LEADER=${ZFM_MAP_LEADER:-'\'}
-ZFM_HINT_KEY=${ZFM_HINT_KEY:-';'}
-#export ZFM_NO_COLOR   # use to swtich off color in selection
-M_SWITCH_OFF_DUPL_CHECK=
-MFM_LISTORDER=${MFM_LISTORDER:-""}
-M_EXCLUDE_PATTERN=
-pattern='*' # this is separate from patt which is a temp filter based on hotkeys
-filterstr="M"
-M_PRINT_COMMAND_DESC=1
-MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
-integer ZFM_COLS=$(tput cols)
-integer ZFM_LINES=$(tput lines)
-## we want 59 if we want no long list info, else lines -4 or 5
-PAGESZ=59     # used for incrementing while paging
-#(( PAGESZ = ZFM_LINES - 4 ))
-(( PAGESZ1 = PAGESZ + 1 ))
+    #  defaults KEYS
+    ZFM_OPEN_FILES_KEY=${ZFM_OPEN_FILES_KEY:-'C-o'}  # pressing selects whatever cursor is on
+    ZFM_MENU_KEY=${ZFM_MENU_KEY:-$'\`'}  # pops up menu
+    ZFM_GOTO_PARENT_KEY=${ZFM_GOTO_PARENT_KEY:-','}  # goto parent of this dir 
+    ZFM_GOTO_DIR_KEY=${ZFM_GOTO_DIR_KEY:-'+'}  # goto dir 
+    ZFM_POPD_KEY=${ZFM_POPD_KEY:-"."}  # goto previously visited dir
+    ZFM_SELECTION_MODE_KEY=${ZFM_SELECTION_MODE_KEY:-"@"}  # toggle selection mode
+    ZFM_SORT_KEY=${ZFM_SORT_KEY:-"%"}  # change sort options
+    ZFM_FILTER_KEY=${ZFM_FILTER_KEY:-"#"}  # change filter options
+    ZFM_TOGGLE_MENU_KEY=${ZFM_TOGGLE_MENU_KEY:-"="}  # change toggle options
+    ZFM_TOGGLE_FILE_KEY=${ZFM_TOGGLE_FILE_KEY:-"C-SPACE"}  # change toggle options
+    ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
+    ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
+    ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # quit application
+    ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-"M-a"}  # select all files on screen
+    ZFM_EDIT_REGEX_KEY=${ZFM_EDIT_REGEX_KEY:-"/"}  # edit PATT used to filter
+    export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
+    ZFM_MAP_LEADER=${ZFM_MAP_LEADER:-'\'}
+    ZFM_HINT_KEY=${ZFM_HINT_KEY:-';'}
+    #export ZFM_NO_COLOR   # use to swtich off color in selection
+    M_SWITCH_OFF_DUPL_CHECK=
+    MFM_LISTORDER=${MFM_LISTORDER:-""}
+    M_EXCLUDE_PATTERN=
+    pattern='*' # this is separate from patt which is a temp filter based on hotkeys
+    filterstr="M"
+    M_PRINT_COMMAND_DESC=1
+    MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
+    integer ZFM_COLS=$(tput cols)
+    integer ZFM_LINES=$(tput lines)
+    ## we want 59 if we want no long list info, else lines -4 or 5
+    PAGESZ=59     # used for incrementing while paging
+    #(( PAGESZ = ZFM_LINES - 4 ))
+    (( PAGESZ1 = PAGESZ + 1 ))
 
-integer CURSOR=1
-export ZFM_COLS ZFM_LINES CURSOR
-export ZFM_STRING
-init_key_function_map
-init_menu_options
-init_file_menus
-if [[ -f $ZFM_DIR/bindings.zsh ]]; then
-    source ${ZFM_DIR}/bindings.zsh
-else
-    perror  "Can't find bindings.zsh"
-    exit 1
-fi
-source $ZFM_DIR/cursor.zsh
-for ff in ${ZFM_DIR}/modes/*
-do
-    source $ff
-done
-source_addons
-config_read
-zfm_set_mode $ZFM_DEFAULT_MODE
-# at this point read up users bindings
-#print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
-aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle)
-M_HELP_GEN=$( print_hash $aa )
-ab="M_HELP_$ZFM_MODE"
-M_HELP="$M_HELP_GEN | ${(P)ab}"
-#print $M_HELP
-M_MESSAGE="$M_HELP    $M_TITLE"
-param=$(print -rl -- *(M))
-# sta was local in list_printer, tring out belove
-sta=1
-        list_printer "${PWD} " $param
-        ## 2013-02-22 - 00:11 LP
-        #break
-        ## removed everything after this so there are not two loops
-        # that really complicated matters.
+    integer CURSOR=1
+    export ZFM_COLS ZFM_LINES CURSOR
+    export ZFM_STRING
+    init_key_function_map
+    init_menu_options
+    init_file_menus
+    if [[ -f $ZFM_DIR/bindings.zsh ]]; then
+        source ${ZFM_DIR}/bindings.zsh
+    else
+        perror  "Can't find bindings.zsh"
+        exit 1
+    fi
+    source $ZFM_DIR/cursor.zsh
+    for ff in ${ZFM_DIR}/modes/*
+    do
+        source $ff
+    done
+    source_addons
+    config_read
+    zfm_set_mode $ZFM_DEFAULT_MODE
+    # at this point read up users bindings
+    #print "$ZFM_TOGGLE_MENU_KEY Toggle | $ZFM_MENU_KEY menu | ? help"
+    aa=( "?" Help  "$ZFM_MENU_KEY" Menu "$ZFM_TOGGLE_MENU_KEY" Toggle)
+    M_HELP_GEN=$( print_hash $aa )
+    ab="M_HELP_$ZFM_MODE"
+    M_HELP="$M_HELP_GEN | ${(P)ab}"
+    #print $M_HELP
+    M_MESSAGE="$M_HELP    $M_TITLE"
+    # sta was local in list_printer, tring out belove
+    # 2013-02-22 - we had a loop here, files were only opened on coming back, I've deleted the loop.
+    sta=1
+    list_printer 
     print "bye"
     #stty intr ''
     stty $ttysave
-    ## do this only if is different from invoking dir
-    #[[ "$PWD" == "$ZFM_START_DIR" ]] || {
-        #print "sending $PWD to pbcopy"
-        #print "$PWD" | pbcopy
-    #}
 } # myzfm
 
 function zfm_open_file() {
@@ -1867,6 +1853,11 @@ function stty_settings() {
 ## read up dirs and fies and bookmarks
 #  bookmarks requires addons/bookmark.zsh to be loaded.
 function config_read() {
+    
+    # pop existing history and automatically reload after function over
+    # This is part of subcommand, see vared -h 
+    fc -ap ~/.zfmhist 20 20
+
     local conf="$HOME/.zfminfo"
     if [[ -f "$conf" ]]; then
         source $conf
