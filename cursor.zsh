@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-14 21:09
+#  Last update: 2013-02-23 01:13
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -207,9 +207,20 @@ function display_file_details() {
 }
 ## 
 # goto specified line
+# Note: in hint mode user will not see line number, so he will use a hint.
+#       In INS mode its even worse, we could have displayed line numbers at this point
+#       like we do when "g" is pressed in VIM mode.
+#
 function edit_cursor() {
     local pos
     print -n "Goto Line: "
     read pos
+    # Assume if user pressed alpha he's in HINT mode and wants to jump to that hint.
+    if [[ $ZFM_MODE == "HINT" ]]; then
+        if [[ $pos =~ ^[a-zA-Z]$ ]]; then
+            iix=$MFM_NLIDX[(i)$pos]
+            pos=$iix
+        fi
+    fi
     [[ -n $pos ]] && zfm_goto_line $pos
 }
