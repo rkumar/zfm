@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-22 13:58
+#  Last update: 2013-02-23 00:33
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -605,7 +605,7 @@ print -l -- "$str" | $PAGER
 function myzfm() {
     ##  global section
     ZFM_APP_NAME="zfm"
-    ZFM_VERSION="0.1.15-alpha"
+    ZFM_VERSION="0.1.15-alnilam"
     M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/22"
     #  Array to place selected files
     typeset -U selectedfiles
@@ -1870,6 +1870,18 @@ function config_read() {
             var=BM_$ch
             [[ -n ${(P)var} ]] && M_MARKS[$ch]=${(P)var}
         done
+        ## local marks
+        arr=$( grep '#> ' $conf | cut -c 4- )
+        bm=("${(@f)$(print -rl -- $arr)}")
+        #perror "$0 got lbm: $#bm >>> $bm"
+        #pause
+        for ff in $bm
+        do
+            d=("${(s/:/)ff}")
+            M_LOCAL_MARKS[$d[1]]=$d[2]
+            #perror "$0: setting $ff to $d[1] : $M_LOCAL_MARKS[$d[1]] "
+            #pause
+        done
     fi
 }
 # bound to write subcommand
@@ -1887,6 +1899,7 @@ function config_write() {
         print -rl -- "DIRS=\"$d\"" >> $conf
         d=${(j#:#)ZFM_FILE_STACK}
         print -rl -- "FILES=\"$d\"" >> $conf
+        print -rl -- "# Global bookmarks:" >> $conf
         for key in ${(k)M_MARKS} ; do
             # this is okay for global marks but will fail on local ones which have a ":" inside
             # ignore local marks till we find a way
@@ -1894,6 +1907,13 @@ function config_write() {
                 val=$M_MARKS[$key]
                 print -rl -- "BM_$key=\"$val\"" >> $conf
             fi
+        done
+
+        print -rl -- "# Local bookmarks:" >> $conf
+        for key in ${(k)M_LOCAL_MARKS} ; do
+            val=$M_LOCAL_MARKS[$key]
+            # writing local bookmarks in a comment since the key is a dir which could have spaces etc
+            print -rl -- "#> $key:$val" >> $conf
         done
     else
         pinfo "Config data not saved since $conf not found. Use touch $conf to save data."
