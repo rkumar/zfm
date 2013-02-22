@@ -18,7 +18,7 @@ In VIM mode, you can also jump to a file *without* opening it, using "f". This i
 
 The "," key (lower case of "&lt;") is used to go up directory levels. There are many other shortcuts that allow for other usual operations to be done fast such as accessing favorite directories and files, and navigating deep structures quickly.
 
-Paging of long listings is done using Alt-n and Alt-p (now SPACE selects). 
+Paging of long listings is done using Alt-n and Alt-p (now SPACE pages too, Ctrl-Space selects). 
 
 The motivation of yet another file manager is to automate as many file-related operations as I can: browsing, operating on multiple files, today's files, filtering file lists. I also use ``z``, ``v``, ``vifm``, and various other great utilities. For example, i often run a locate command and then wish to further filter it, or sort on date and then open a file. Or use ack to search files and then open some. These use cases are easy with this utility. 
 
@@ -38,14 +38,14 @@ If you like it, alias m or some other unused character to ~/bin/zfm.zsh in your 
 
 Now type "m":
 
-The following assumes you are using VIM mode (that is currently the default startup mode).
+The following assumes you are using VIM mode (that is currently the default startup mode). Please check the bottom left (prompt) to see what mode you are in, I have now changed to default to HINT, since I usually want to jump to a file straight, and not navigate. (Use ESC to go to VIM, or hit the leader key twice (backslash)).
 
-You can navigate using j and k with count, or gg G , use ENTER or "e" to open a file or directory. ENTER will open the file in your EDITOR, whereas "e" gives you options of various programs to run, or give your own command to run on the file. Multiple files can be opened using "oo" with count, or combinations such as "oG" or "o(count)gg" etc. "x" selects single files.
+(In VIM mode) You can navigate using j and k with count, or gg G , use ENTER or "e" to open a file or directory. ENTER will open the file in your EDITOR, whereas "e" gives you options of various programs to run, or give your own command to run on the file. Multiple files can be opened using "oo" with count, or combinations such as "oG" or "o(count)gg" etc. "x" selects single files.
 Use "e" to see a menu of options for that filetype or dir. MENU-1 may also be used to get a set of options for the file. MENU-2 gives options for selected files (such as zipping, searching, diffing, etc).
 
 Note that file numbering in VIM mode is absolute if you type "g" or the last command was a "gg" command. If you use "j" or "k", numbering becomes relative.
 
-If your directroy has fewer than 15 files, you should get a long list. Otherwise, you will get 2 or 3 columns with just file names. You can toggle long listing with the toggle key "=" and "l" (Toggle-l).
+If your directory has fewer than 15 files, you should get a long list. Otherwise, you will get 2 or 3 columns with just file names. You can toggle long listing with the toggle key "=" and "l" (Toggle-l).
 
 However, VIM mode is not the fastest mode to open a file that is far away from the cursor. You can press ";" to go to HINT mode and select the shortcut. You can also just jump to a file with "f" and the shortcut. This is like Vimperator's hint mode.
 
