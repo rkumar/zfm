@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-02-06 - 19:51
 #      License: GPL
-#  Last update: 2013-02-11 18:56
+#  Last update: 2013-02-23 01:42
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -70,28 +70,30 @@ function ins_key_handler() {
                     selection=$vpa[$ans]
                     ins_set_cursor $ans
                 fi
-            [[ -n "$selection" ]] && break
+                [[ -n "$selection" ]] && {
+                    zfm_open_file $selection
+                    selection=
+                }
             ;;
         [a-zA-Z_0\.\ \*])
             ## UPPER CASE upper section alpha characters
             (( sta = 1 ))
 
                 if [[ $PATT = "" ]]; then
-                    [[ $ans = '.' ]] && { 
-                        # i will be doing this each time dot is pressed
-                        # ad changing setting for calling shell too ! XXX
-                        pdebug "I should only set and do this if nothing is showing or glob dots is off"
-                        #pbold "Setting glob_dots ..."
-                        #setopt GLOB_DOTS
-                        show_hidden_toggle
-                        #setopt globdots
-                        param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
-                        myopts=("${(@f)$(print -rl -- $param)}")
-                        pbold "count is $#myopts"
-                    }
+                    #[[ $ans = '.' ]] && { 
+                        ## i will be doing this each time dot is pressed
+                        ## ad changing setting for calling shell too ! XXX
+                        #pdebug "I should only set and do this if nothing is showing or glob dots is off"
+                        ##pbold "Setting glob_dots ..."
+                        ##setopt GLOB_DOTS
+                        #show_hidden_toggle
+                        ##setopt globdots
+                        #param=$(eval "print -rl -- ${pattern}(${MFM_LISTORDER}$filterstr)")
+                        #myopts=("${(@f)$(print -rl -- $param)}")
+                        #pbold "count is $#myopts"
+                    ##}
                     PATT="${ans}"
                 else
-                    [[ -n $ZFM_VERBOSE ]] && pdebug "comes here 1"
 
                     ## Fpatt is either unset or contains .*
                     PATT+="${FPATT}$ans"
@@ -100,7 +102,11 @@ function ins_key_handler() {
                 lines=$(check_patt $PATT)
                 ct=$(print -rl -- $lines | wc -l)
                 if [[ $ct -eq 1 ]]; then
-                    [[ -n "$lines" ]] && { selection=$lines; break }
+                    [[ -n "$lines" ]] && { 
+                        selection=$lines; 
+                        zfm_open_file $selection
+                        selection=
+                    }
                 fi
             ;;
         BACKSPACE)
@@ -120,16 +126,6 @@ function ins_key_handler() {
         "$ZFM_RESET_PATTERN_KEY")
             PATT=""
             ;;
-        #"ZFM_OPEN_FILES_KEY")
-            ## I think this overrides what cursor.zsh defines
-            ### Open either selected files or what's under cursor
-            #if [[ -n $selectedfiles ]];then 
-                #call_fileoptions $selectedfiles
-            #else
-                #selection=$vpa[$CURSOR]
-            #fi
-            #[[ -n "$selection" ]] && break
-            #;; 
         "C-g" )
             PATT=
             ;;
