@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-06 - 22:31
 #      License: GPL
-#  Last update: 2013-02-21 22:36
+#  Last update: 2013-02-22 22:46
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -13,7 +13,7 @@ function hintmode_init() {
     #mess "HINT Mode: C-c: Exit mode"
     clear_mess
     M_FULL_INDEXING=1
-    [[ $ZFM_PREV_MODE == "HINT" ]] || ZFM_PREV_MODE=$ZFM_MODE
+    #[[ $ZFM_PREV_MODE == "HINT" ]] || ZFM_PREV_MODE=$ZFM_MODE
 
 
     # do once 
