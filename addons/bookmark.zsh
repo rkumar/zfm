@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-21 22:17
+#  Last update: 2013-02-22 22:38
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
@@ -29,6 +29,12 @@ zfm_bind_subcommand "write" config_write
 
 typeset -Ag M_MARKS
 M_MARKS=()
+# I am now trying to keep local marks in a different format that can be saved and read up
+# and will take less memory
+# LOCAL_MARKS[$PWD]="a 10 b 30 t 55 y 12"
+# The above is a string but can be used as a hash
+typeset -Ag M_LOCAL_MARKS
+M_LOCAL_MARKS=()
 
 
 function zfm_mark () {
@@ -48,14 +54,29 @@ function zfm_mark () {
     #  however the desc says something else
     #
     #
-    print -n "Enter character for mark [a-z A-Z]: "
+    print -n "Enter character to create mark [a-z A-Z]: "
     read -k reply
+    [[ $reply == "" || $reply == "" ]] && return
     local pos
     curpos pos
     if [[ $reply =~ [a-z] ]]; then
-        M_MARKS[$PWD:$reply]=$pos
-        pinfo "$0 set mark ($PWD:$reply) for $pos"
-        #M_MODIFIED=1
+        local mm
+        #M_MARKS[$PWD:$reply]=$pos
+        mm=$M_LOCAL_MARKS[$PWD]
+        if [[ -z $mm ]]; then
+            mm="$reply $pos"
+        else
+            # why I did a hash was to prevent dupes, then i forgot and made it a string
+            typeset -A mmh
+            mmh=( $(print $mm) )
+            mmh[$reply]=$pos
+            mm=( ${(kv)mmh} )
+            #mm+=" $reply $pos"
+        fi
+        M_LOCAL_MARKS[$PWD]=$mm
+        #pinfo "$0 set mark ($PWD:$reply) for $pos"
+        pinfo "$0 set mark $M_LOCAL_MARKS[$PWD]"
+        M_MODIFIED=1
     elif [[ $reply =~ [A-Z] ]]; then 
         M_MARKS[$reply]="$PWD:$pos"
         pinfo "$0 set mark ($reply) for $PWD $pos"
@@ -68,13 +89,20 @@ function zfm_mark () {
 
 }
 function zfm_jump_to_mark () {
-    print -n "Enter character for mark [a-z A-Z]: "
+    print -n "Enter mark to jump to [a-z A-Z]: "
     read -k reply
     [[ $reply == "" || $reply == "" ]] && return
     local pos rep dir columns
     pos=1
     if [[ $reply =~ [a-z] ]]; then
-        pos=$M_MARKS[$PWD:$reply]
+        #pos=$M_MARKS[$PWD:$reply]
+        mm=$M_LOCAL_MARKS[$PWD]
+        if [[ -n $mm ]]; then
+            typeset -A mmh
+            mmh=( $( print $mm ) )
+            pos=$mmh[$reply]
+            unset mmh mm
+        fi
         [[ -n $pos ]] && zfm_goto_line $pos
         [[ -z $pos ]] && {
             perror "No bookmark with $reply. Finding first match.."
@@ -122,6 +150,8 @@ function zfm_print_marks() {
     print
     pbold "Local marks"
     print
+    mm=$M_LOCAL_MARKS[$PWD]
+    print "Marks for $PWD are : $mm"
     for key in ${(k)M_MARKS} ; do
         if [[ $key =~ ^[A-Z]$ ]]; then
             #print "ignoring $key"
