@@ -18,6 +18,7 @@
     zfm_keymap+=(
         "/"    zfm_edit_regex
         "M-n"  zfm_next_page
+        "SPACE"  zfm_next_page
         "M-p"  zfm_prev_page
         "Home" zfm_goto_start
         "End" zfm_goto_end
