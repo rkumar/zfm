@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-22 22:38
+#  Last update: 2013-02-23 20:52
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
@@ -64,12 +64,14 @@ function zfm_mark () {
         #M_MARKS[$PWD:$reply]=$pos
         mm=$M_LOCAL_MARKS[$PWD]
         if [[ -z $mm ]]; then
-            mm="$reply $pos"
+            #mm="$reply $pos"
+            mm="$reply $vpa[$CURSOR]"
         else
             # why I did a hash was to prevent dupes, then i forgot and made it a string
             typeset -A mmh
             mmh=( $(print $mm) )
             mmh[$reply]=$pos
+            mmh[$reply]=$vpa[$CURSOR]
             mm=( ${(kv)mmh} )
             #mm+=" $reply $pos"
         fi
@@ -96,18 +98,23 @@ function zfm_jump_to_mark () {
     pos=1
     if [[ $reply =~ [a-z] ]]; then
         #pos=$M_MARKS[$PWD:$reply]
+        pos=
         mm=$M_LOCAL_MARKS[$PWD]
         if [[ -n $mm ]]; then
             typeset -A mmh
             mmh=( $( print $mm ) )
-            pos=$mmh[$reply]
+            #pos=$mmh[$reply]
+            fn=$mmh[$reply]
+            # convert filename to position, we need abso position since we could be on some other page
+            pos=$viewport[(i)$fn]
             unset mmh mm
         fi
-        [[ -n $pos ]] && zfm_goto_line $pos
-        [[ -z $pos ]] && {
-            perror "No bookmark with $reply. Finding first match.."
+        if [[ -n $pos ]]; then
+            zfm_goto_line $pos
+        else
+            pinfo "No bookmark with $reply. Finding first match.."
             vim_file_starting_with $reply
-        }
+        fi
     elif [[ $reply =~ [A-Z] ]]; then 
         rep=$M_MARKS[$reply]
         if [[ -z $rep ]]; then
