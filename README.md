@@ -1,6 +1,9 @@
 zfm
 ===
 
+2013-02-23 - 22:33 : I've just don't some major refactoring/flow simplifications, and there's a possibility
+of the app quitting unexpectedly in some lesser used case. (v0.1.15). 
+
 zsh file explorer/manager for fast navigation and running commands on files or groups of files.
 
 This is a file navigator or explorer that attempts to make as many operations as possible on single keys so that a user can quickly navigate and execute commands. It is hoped that such paths will become second nature.
@@ -106,11 +109,11 @@ Other downloaded files may contain funny or unusual characters such as quotes or
 
 ###Match from start or anywhere:###
 
-The default when you type characters is to match from start. If you type "^" anywhere during the command, the match toggles between start and match anywhere in string. Once you start remembering file positions, it helps to always keep in the match-from-start position.
+(INS MODE) The default when you type characters is to match from start. If you type "^" anywhere during the command, the match toggles between start and match anywhere in string. Once you start remembering file positions, it helps to always keep in the match-from-start position.
 
 ###Matching dot-files###
 
-By default this is off. You can either go to the setting to change the option or if you type a dot at the beginning of a file name, I switch on GLOB_DOTS.
+You can no longer type a dot for matching files in INS Mode. You may either use the TOGGLE KEY (=) to enable hidden files, or use the edit_regex ("/") to add something like ".*" inside a pattern. This way the dot remains consisently for popping directories, just as the comma goes to the parent directory.
 
 ###Sorting and Filtering###
 
@@ -189,12 +192,22 @@ As of 0.1.13, zfm doesn't write to any files or save state. It should do so soon
 
 ## SAVING CONFIG ##
 
-I have just taken a cautious approach to saving config. This is since once can have multiple instances of zfm running with bookmarks added to each one. First, i do not save upon exit. I also only save if there is already a $HOME/.zfminfo file. So if you want bookmarks saved, then please `touch ~/.zfminfo` else nothing is written. To save you can either give the command `:write` or quit using ":wq" or ":x".
+I have just taken a cautious approach to saving config. This is since one can have multiple instances of zfm running with bookmarks added to each one. First, i do not save upon exit. I also only save if there is already a $HOME/.zfminfo file. So if you want bookmarks saved, then please `touch ~/.zfminfo` else nothing is written. To save you can either give the command `:write` or quit using ":wq" or ":x".
 
-Also, the bookmarks are *appended* to the existing file to prevent multiple sessions from clobbering each other. So you can edit the differences after writing. At this moment, local bookmarks are not being saved. I am still deciding on the format of saving local bookmarks.
+Also, the bookmarks are *appended* to the existing file to prevent multiple sessions from clobbering each other. So you can edit the differences after writing. Local bookmarks are now stored not as positions but as filenames. This means that despite sort order or changes to directory entries the bookmark is gauranteed to get you to the file as long as it exists. ":marks" displays global and local marks.
+
+## Other points ##
+
+* 2013-02-23 - 21:17 : Pressing ":" now will not show the previous command. It will show a blank string just as vim does, you can use the up arrow to get to history, to run previous commands. THis is so the user does not need to clear the line to run a command each time, especially if one is exiting using ":q" or ":wq" or "x".
+(Thanks to Bart Shaefer for telling me how to get history working with vared inside a script).
+   
+   ":p" or ":pwd" will put the current dir into clipboard using `pbcopy`, this in case the user wishes to quit and immediately `cd` to that directory and work there.
 
 
 ##Changes##
+
+* 2013-02-23 - 22:28 : I don't think there are any more feature plans, only bug-fixes or tweaks.
+I'll be using the HINT mode as my default and seeing how it goes. I'll keep my eyes open for faster ways of navigating or doing stuff in HINT mode.
 
 A summary of version-wise changes. 
 
