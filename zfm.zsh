@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-23 01:44
+#  Last update: 2013-02-23 20:33
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -290,7 +290,7 @@ function list_printer() {
         ## 2013-01-24 - 20:24 thre break in the next line without clearing ans
         ## was causing the unused error to keep popping up when no rows were returned
         ## 2013-02-22 - 01:05 LP break removed from next line
-        [[ $sta -ge $tot ]] && { sta=1; ans= ; }
+        #[[ $sta -ge $tot ]] && { sta=1; CURSOR=1;  ans= ; pinfo "wrapping"; }
         # break takes control back to MARK1 section below
 
     done
@@ -453,6 +453,7 @@ function subcommand() {
             print "     helpful if you have auto-actions on but want to execute"
             print "     another action on selected file"
             print "'a'  ack (search string) in files"
+            print "'p'  'pwd' copy PWD ( $PWD ) to clipboard"
             print "'q' 'quit' - quit application"
             print "You may enter any other command too such as 'git status'"
             print 
@@ -468,6 +469,9 @@ function subcommand() {
         ;;
     "l"|"locate")
         zfm_locate
+        ;;
+    "p"|"pwd") print -r -- $PWD | pbcopy
+        pinfo "Copied $PWD to clipboard"
         ;;
     *)
         # actually it should have had a ! before it. We should not allow this.
@@ -1148,7 +1152,7 @@ function init_file_menus() {
     # This doesn't allow us to do stuff inside a dir like mkdir or newfile since 
     #  we are not inside a dir
     # added 2013-01-23 - 20:46 
-    FT_OPTIONS[DIR]="chdir archive trash du dush ncdu cmd"
+    FT_OPTIONS[DIR]="chdir archive trash du dush ncdu clip pwd cmd"
 
     ## -- how to specify a space, no mnemonic?
     #FT_TEXT=(v vim : cmd l less # mv D ${ZFM_RM_COMMAND} z archive t tail h head o open a auto)
@@ -1175,6 +1179,7 @@ function init_file_menus() {
     ## convert selected flv file to m4a using ffmpeg
     COMMANDS[ffmp]='ffmpeg -i %% -vn ${${:-%%}:r}.m4a'
     COMMANDS[clip]='print -r -- %% | pbcopy && print "Copied filename to clipboard"'
+    COMMANDS[pwd]='print -r -- $PWD/%% | pbcopy && print "Copied PWD to clipboard"'
     COMMANDS[tvf]='tar ztvf'
     COMMANDS[gitmv]='git mv'
     COMMANDS[tables]='sqlite3 %% .tables'
