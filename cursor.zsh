@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-01-21 - 13:22
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-23 01:13
+#  Last update: 2013-02-23 20:23
 # ----------------------------------------------------------------------------- #
 # ## maybe we should have an initi method to be called by zfm
 # and we shd put a check that this file is not sourced more than once
@@ -42,7 +42,8 @@ function cursor_down () {
     [[ $? -eq 1 ]] && return
     #let CURSOR++
     local pos
-    (( pos = CURSOR + 1 ))
+    curpos pos 
+    (( pos += 1 ))
 
     zfm_goto_line $pos
     # if exceeding page, try a page down
@@ -57,7 +58,8 @@ function cursor_up () {
     #[[ $? -eq 1 ]] && return
     #let CURSOR--
     local pos
-    (( pos = CURSOR - 1 ))
+    curpos pos 
+    (( pos -= 1 ))
     zfm_goto_line $pos
     M_MESSAGE=
     #(( CURSOR < 1 )) && zfm_prev_page
