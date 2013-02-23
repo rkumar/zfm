@@ -4,7 +4,8 @@
     zfm_bind_key "M-x" "zfm_views"
     zfm_bind_key "M-o" "settingsmenu"
     zfm_bind_key "M-s" "sortoptions"
-    zfm_bind_key "M-f" "filteroptions"
+    #zfm_bind_key "M-f" "filteroptions"
+    zfm_bind_key "M-f" "visited_files"
     zfm_bind_key "F1" "print_help_keys"
     zfm_bind_key "F2" "zfm_goto_dir"
     zfm_bind_key "|" "zfm_filter_list"
@@ -12,6 +13,7 @@
     zfm_bind_key "M-e" "zfm_exclude_pattern"
     zfm_bind_key "M-/" "zfm_ffind"
     zfm_bind_key "ML '" "visited_dirs"
+    zfm_bind_key "M-d" "visited_dirs"
     #zfm_bind_key "C-x '" "visited_dirs"
     zfm_bind_key "ML v" "visited_files"
     zfm_bind_key "$ZFM_SIBLING_DIR_KEY" sibling_dir
