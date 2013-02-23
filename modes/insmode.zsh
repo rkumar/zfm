@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2013-02-06 - 19:51
 #      License: GPL
-#  Last update: 2013-02-23 01:42
+#  Last update: 2013-02-23 11:14
 # ----------------------------------------------------------------------------- #
 #  Copyright (C) 2012-2013 rahul kumar
 
@@ -53,14 +53,12 @@ function ins_key_handler() {
                         ct=0
                     fi
                     [[ -n $lines ]] || ct=0
-                    [[ -n $ZFM_VERBOSE ]] && pdebug "comes here $ct , ($lines)"
                     if [[ $ct -eq 1 ]]; then
-                        [[ -n "$lines" ]] && { selection=$lines; break }
+                        [[ -n "$lines" ]] && { selection=$lines; 
+                    }
                     elif [[ $ct -eq 0 ]]; then
                         selection=$vpa[$ans]
                         ins_set_cursor $ans
-                        #selection=$myopts[$ix] # fails on filtering
-                        [[ -n $ZFM_VERBOSE ]] && print " selected $selection"
                     else
                         PATT=$npatt
                     fi
@@ -75,7 +73,9 @@ function ins_key_handler() {
                     selection=
                 }
             ;;
-        [a-zA-Z_0\.\ \*])
+        [a-zA-Z_0])
+            # 2013-02-23 - 11:13 removed space from above check and dot-star, use "/"
+            # (edit_pattern) to use .*
             ## UPPER CASE upper section alpha characters
             (( sta = 1 ))
 
