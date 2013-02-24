@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-23 21:03
+#  Last update: 2013-02-25 00:48
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -609,8 +609,8 @@ print -l -- "$str" | $PAGER
 function myzfm() {
     ##  global section
     ZFM_APP_NAME="zfm"
-    ZFM_VERSION="0.1.15-alnitak"
-    M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/23"
+    ZFM_VERSION="0.1.15-alnitak2"
+    M_TITLE="$ZFM_APP_NAME $ZFM_VERSION 2013/02/25"
     #  Array to place selected files
     typeset -U selectedfiles
     # hash of file details to avoid recomp each time while inside a dir
@@ -1695,10 +1695,13 @@ function zfm_toggle_expanded_state() {
         done
     fi
 }
+## open file related to hint HINT
+#
 function zfm_get_full_indexing_filename() {
     local ans=$1
     iix=$MFM_NLIDX[(i)$ans]
     [[ -n "$iix" ]] && { 
+        (( CURSOR = iix ))
         # from vim or other modes we may want to use this only to position the cursor
         # like on f or some key, not open a file
         if [[ -z $M_HINT_POSITION_CURSOR_ONLY ]]; then
@@ -1708,7 +1711,6 @@ function zfm_get_full_indexing_filename() {
             selection=
         else
         fi
-        (( CURSOR = iix ))
     }
 }
 
