@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-22 01:18
+# Last update: 2013-02-24 18:24
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -731,6 +731,7 @@ function filteroptions() {
             [[ -z $M_EDIT ]] && (( M_EDIT = -1 ))
             (( M_EDIT = M_EDIT * -1 ))
             pinfo "Toggling edit of some filters such as size and modification time."
+            pause
             ;;
     esac
     filterstr=${filterstr:-M}
