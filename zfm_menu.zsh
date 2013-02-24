@@ -6,7 +6,7 @@ autoload colors && colors
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-09 - 21:08 
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-22 14:23
+#  Last update: 2013-02-24 17:39
 # ----------------------------------------------------------------------------- #
 # see tools.zsh for how to use:
 # source this file
@@ -389,10 +389,11 @@ function eval_menu_text () {
             # now again this needs to be done for all cases so we can't have such
             # a long loop repeated everywhere
             evaluate_command "$menu_text" $files
+            ret=$?
             [[ $menu_text == $EDITOR || $menu_text =~ ^vi ]] && { 
                 NO_PAUSE=1
             }
-            [  $? -eq 0 ] && zfm_refresh
+            [[  $ret -eq 0 ]] && zfm_refresh
             ;;
     esac
 }
@@ -621,17 +622,20 @@ function evaluate_command () {
         ## check for file replacement marker
         if [[ $_cmd = *%%* ]]; then
             _cmd=${(S)_cmd//\%\%/${files:q}}
-            eval "$_cmd" && ret=0 || ret=1
+            eval "$_cmd" 
+            ret=$?
             #zfm_exec_binding $_cmd
         else
             ## no marker just send file names as argument to command
             pdebug "passing files as args $_cmd "
-            eval "$_cmd $files" && ret=0 || ret=1
+            eval "$_cmd $files"
+            ret=$?
         fi
     else
         # no translation just use the title as is
         [[ -n $ZFM_VERBOSE ]] && pdebug "213: $menu_text , $files"
-        eval "$menu_text $files" && ret=0 || ret=1
+        eval "$menu_text $files" 
+        ret=$?
     fi
     # calling some external commands like sqlite3 disables C-q c-\ etc and 
     # C-c aborts app.
