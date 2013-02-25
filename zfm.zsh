@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-25 00:48
+#  Last update: 2013-02-25 13:26
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -694,6 +694,7 @@ function myzfm() {
         perror  "Can't find bindings.zsh"
         exit 1
     fi
+    source $ZFM_DIR/bookmark.zsh
     source $ZFM_DIR/cursor.zsh
     for ff in ${ZFM_DIR}/modes/*
     do
