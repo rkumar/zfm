@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-25 13:26
+#  Last update: 2013-02-25 14:49
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -694,12 +694,12 @@ function myzfm() {
         perror  "Can't find bindings.zsh"
         exit 1
     fi
-    source $ZFM_DIR/bookmark.zsh
     source $ZFM_DIR/cursor.zsh
     for ff in ${ZFM_DIR}/modes/*
     do
         source $ff
     done
+    source $ZFM_DIR/bookmark.zsh
     source_addons
     config_read
     zfm_set_mode $ZFM_DEFAULT_MODE
@@ -1440,12 +1440,27 @@ function zfm_goto_parent_dir() {
 }
 function zfm_goto_dir() {
     # push directory before changing
+    local tmp
     push_pwd
     #GOTO_PATH="/"
     GOTO_PATH=${GOTO_PATH:-"$HOME/"}
     # FIXME backspace etc issues in vared here, hist not working
     vared -h -p "Enter path: " GOTO_PATH
     selection=${(Q)GOTO_PATH}  # in case space got quoted, -d etc will all give errors
+    if [[ ! -d $selection ]]; then
+        tmp=${(P)selection}  # check if variable by that name
+        if [[ ! -d $tmp ]]; then
+            # check if in home dir
+            tmp=~/$selection
+            if [[ -d $tmp ]]; then
+                selection=$tmp
+            fi
+        else
+            selection=$tmp
+        fi
+    fi
+    [[ -d $selection ]] && print -s -- "$selection"
+
     PATT="" # 2012-12-26 - 00:54 
     push_pwd $selection
 }
