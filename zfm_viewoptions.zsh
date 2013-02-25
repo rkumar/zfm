@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-24 18:24
+# Last update: 2013-02-25 20:19
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -789,8 +789,8 @@ function sortoptions() {
 function zfm_views() {
     #typeset -A views
     #views=(om Newest Om Oldest OL Largest oL smallest)
-    views=(om Om OL oL On on /)
-    viewlabels=(Newest Oldest Largest Smallest Reverse Name Dirs)
+    views=(/ om oa Om OL oL On on)
+    viewlabels=(Dirs Newest Accessed Oldest Largest Smallest Reverse Name)
     viewcount=${viewcount:-0}
     let viewcount++
     (( viewcount > $#views )) && viewcount=0 # zero so that normal view (default) can be shown
