@@ -172,7 +172,9 @@ files to interface with autojump or whatever other utility you use. I'd rather u
 
 ##Bookmarks##
 
-If you ve got the addons directory correctly located (ZFM_DOTDIR) you should be able to use the bookmark feature. Use the "m" key (Vim mode, Alt-m in all modes) to save locations a to z in each dir. Locations A to Z are across directories. To access the bookmarks use the single quote char. This can be a fast way of moving across the filesystem.
+Update: moved bookmark to main folder, since it is integral to quick movement. It is no longer an addon.
+
+If you've got the addons directory correctly located (ZFM_DOTDIR) you should be able to use the bookmark feature. Use the "m" key (Vim mode, Alt-m in all modes) to save locations a to z in each dir. Locations A to Z are across directories. To access the bookmarks use the single quote char. This can be a fast way of moving across the filesystem.
 
 Currently, if you have not set a bookmark for a character, then the cursor moves to the first (or next) file starting with that char. So this is a fast way to jump to another location (in addition to using the "f" key, or going into HINT mode).
 
