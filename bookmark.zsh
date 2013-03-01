@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/zfm/
 #         Date: 2013-02-10 - 15:51
 #      License: GPL
-#  Last update: 2013-02-23 20:52
+#  Last update: 2013-03-01 18:04
 # ----------------------------------------------------------------------------- #
 #  bookmark.zsh  Copyright (C) 2012-2013 rahul kumar
 #
@@ -107,6 +107,7 @@ function zfm_jump_to_mark () {
             fn=$mmh[$reply]
             # convert filename to position, we need abso position since we could be on some other page
             pos=$viewport[(i)$fn]
+            [[ $pos -gt $#viewport ]] && pos=
             unset mmh mm
         fi
         if [[ -n $pos ]]; then
