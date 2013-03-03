@@ -7,7 +7,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date: 2012-12-17 - 19:21
 #      License: GPL
-#  Last update: 2013-02-25 14:55
+#  Last update: 2013-03-03 15:13
 #   This is the new kind of file browser that allows selection based on keys
 #   either chose 1-9 or drill down based on starting letters
 #
@@ -660,7 +660,7 @@ function myzfm() {
     ZFM_TOGGLE_FILE_KEY=${ZFM_TOGGLE_FILE_KEY:-"C-SPACE"}  # change toggle options
     ZFM_SIBLING_DIR_KEY=${ZFM_SIBLING_DIR_KEY:-"["}  # change to sibling dirs
     ZFM_CD_OLD_NEW_KEY=${ZFM_CD_OLD_NEW_KEY:-"]"}  # change to second cousins
-    ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'q'}  # quit application
+    ZFM_QUIT_KEY=${ZFM_QUIT_KEY:-'Q'}  # quit application
     ZFM_SELECT_ALL_KEY=${ZFM_SELECT_ALL_KEY:-"M-a"}  # select all files on screen
     ZFM_EDIT_REGEX_KEY=${ZFM_EDIT_REGEX_KEY:-"/"}  # edit PATT used to filter
     export ZFM_REFRESH_KEY=${ZFM_REFRESH_KEY:-'"'}  # refresh the listing
@@ -673,7 +673,7 @@ function myzfm() {
     pattern='*' # this is separate from patt which is a temp filter based on hotkeys
     filterstr="M"
     M_PRINT_COMMAND_DESC=1
-    MFM_NLIDX="123456789abcdefghijklmnoprstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    MFM_NLIDX="123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPRSTUVWXYZ"
     ZFM_STRING="${pattern}(${MFM_LISTORDER}$filterstr)"
     integer ZFM_COLS=$(tput cols)
     integer ZFM_LINES=$(tput lines)
