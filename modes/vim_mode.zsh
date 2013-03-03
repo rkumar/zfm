@@ -5,7 +5,7 @@
 #       Author: rkumar http://github.com/rkumar/rbcurse/
 #         Date:zfm_goto_dir 2013-02-02 - 00:48
 #      License: Same as Ruby's License (http://www.ruby-lang.org/LICENSE.txt)
-#  Last update: 2013-02-14 21:07
+#  Last update: 2013-03-03 15:19
 # ----------------------------------------------------------------------------- #
     typeset -Ag keymap_VIM
     typeset -Ag vim_selector
@@ -72,7 +72,7 @@ function vimmode_init() {
     vim_bind_key "ESCAPE" "vim_escape"
     vim_bind_key "C-c" "vim_escape"
     vim_bind_key "C-g" "vim_escape"
-    vim_bind_key "q" "exit_vim"
+    vim_bind_key "Q" "exit_vim"
     vim_bind_key "g h" "zfm_goto_parent_dir"
     vim_bind_key "t" "zfm_goto_dir"
     # optional for those who like pentadactyl vimperator
