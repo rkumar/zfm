@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-02-25 20:19
+# Last update: 2013-03-05 01:11
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -158,6 +158,7 @@ function fuzzyselectrow() {
         # only a physical tab was working, \t etc was not working
         # split row with tabs into an array
         selected_row=("${(s/	/)line}")
+        _CURSOR=$reply
         selected_file=$selected_row[-1]
         if [[ -n "$ZFM_SINGLE_SELECT" ]]; then
             # select as a user presses a number and get out
