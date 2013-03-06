@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Last update: 2013-03-05 01:11
+# Last update: 2013-03-06 14:47
 # Part of zfm, contains menu portion
 #
 # ----------------------------------
@@ -102,12 +102,16 @@ function fuzzyselectrow() {
         # typically in cases of directories pressing enter selects #1
         if [[ -n "$ZFM_SINGLE_SELECT" ]]; then
             reply=1 # in case of auto selection we need to exit with all select XXX
+            # 2013-03-06 - 14:47 auto-select what the cursor is on
+            reply=$_CURSOR
         #elif [[ $#deleted -eq 0 && $#vpa -eq 1 ]]; then
             # user has not selected anything, and there's only one row on screen
             # assume he is selecting
         elif [[ $#deleted -eq 0 ]]; then
             # user has not selected anything and presses enter, assume he selects first
-            line="$vpa[1]"
+            #line="$vpa[1]"
+            # 2013-03-06 - 14:47 auto-select what the cursor is on
+            line="$vpa[$_CURSOR]"
             # only a physical tab was working, \t etc was not working
             # split row with tabs into an array
             selected_row=("${(s/	/)line}")
